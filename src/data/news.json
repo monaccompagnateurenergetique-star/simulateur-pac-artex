@@ -1,0 +1,51 @@
+[
+  {
+    "id": "1",
+    "title": "Nouveaux barèmes MaPrimeRénov' 2025",
+    "date": "2025-01-15",
+    "category": "réglementation",
+    "summary": "Les barèmes MaPrimeRénov' ont été mis à jour pour 2025 avec des modifications sur les plafonds de prise en charge et les profils de revenus.",
+    "content": "À compter du 1er janvier 2025, les plafonds de MaPrimeRénov' sont révisés. Les ménages aux revenus très modestes (profil Bleu) bénéficient d'un plafond de prise en charge maintenu à 90%. Les profils Jaune et Violet conservent respectivement 75% et 60%. Le montant forfaitaire pour les PAC air/eau reste à 5 000€ pour le profil Bleu."
+  },
+  {
+    "id": "2",
+    "title": "Fiche BAR-TH-171 : Arrêté du 15 décembre 2025",
+    "date": "2025-12-20",
+    "category": "réglementation",
+    "summary": "Publication du nouvel arrêté modifiant la fiche CEE BAR-TH-171 pour les pompes à chaleur air/eau. Nouveaux coefficients et bonifications.",
+    "content": "L'arrêté du 15 décembre 2025 apporte des modifications significatives à la fiche BAR-TH-171. Les montants forfaitaires de base sont ajustés : 109 200 kWhc cumac pour une maison avec Etas ≥ 140% et 90 900 kWhc pour les performances standard. Le facteur de bonification ×5 est maintenu."
+  },
+  {
+    "id": "3",
+    "title": "Extension des fiches BAR-TH-174 et BAR-TH-175",
+    "date": "2026-01-10",
+    "category": "aides",
+    "summary": "Les fiches de rénovation globale BAR-TH-174 (maisons) et BAR-TH-175 (appartements) sont prolongées jusqu'en 2030.",
+    "content": "L'arrêté du 7 janvier 2026 prolonge la validité des opérations de rénovation globale. La fiche BAR-TH-174 pour les maisons individuelles est étendue jusqu'au 31 décembre 2030. La BAR-TH-175 pour les appartements en copropriété bénéficie également d'une prolongation avec des conditions d'éligibilité ajustées."
+  },
+  {
+    "id": "4",
+    "title": "Hausse du cours des CEE au T1 2026",
+    "date": "2026-03-05",
+    "category": "actualités",
+    "summary": "Le prix du MWh cumac atteint 7,50€ en moyenne sur le premier trimestre 2026, en hausse de 12% par rapport à fin 2025.",
+    "content": "Le marché des Certificats d'Économies d'Énergie connaît une hausse significative depuis le début 2026. Le prix moyen du MWh cumac s'établit à 7,50€, porté par une demande soutenue des obligés et un renforcement des objectifs de la 5ème période. Cette tendance haussière bénéficie aux artisans qui peuvent négocier de meilleures primes."
+  },
+  {
+    "id": "5",
+    "title": "Guide : Bien remplir les attestations sur l'honneur CEE",
+    "date": "2026-02-18",
+    "category": "guides",
+    "summary": "Les erreurs sur les attestations sont la première cause de rejet des dossiers CEE. Voici les points de vigilance essentiels.",
+    "content": "Pour éviter les rejets de dossiers CEE, veillez à : 1) Vérifier que la date d'engagement correspond bien à la date de signature du devis. 2) S'assurer que le devis mentionne explicitement la marque, référence et performances de l'équipement. 3) Faire signer l'attestation sur l'honneur AVANT le début des travaux. 4) Conserver les justificatifs de qualification RGE à jour."
+  },
+  {
+    "id": "6",
+    "title": "Nouveau guide ANAH : Aides financières 2026 (publié février 2026)",
+    "date": "2026-03-20",
+    "category": "réglementation",
+    "summary": "L'ANAH publie la version actualisée de son guide des aides financières pour la rénovation énergétique. Barèmes MPR, plafonds et conditions d'éligibilité mis à jour.",
+    "content": "Le guide des aides financières 2026 de l'ANAH (édition février 2026) recense l'ensemble des dispositifs d'aide à la rénovation énergétique : MaPrimeRénov' par geste, MaPrimeRénov' Parcours accompagné, CEE, éco-PTZ, TVA réduite. Points clés : les rampants de toiture sont éligibles à MPR (25€/m² Bleu, 20€/m² Jaune, 15€/m² Violet) mais les combles perdus ne sont PAS éligibles. Les plafonds de dépenses éligibles et les taux maximaux d'aide (90% Bleu, 75% Jaune, 60% Violet) sont maintenus. Source : anah.gouv.fr",
+    "link": "https://www.anah.gouv.fr/sites/default/files/2026-03/202602_guide-aides-financieres_WEB.pdf"
+  }
+]
