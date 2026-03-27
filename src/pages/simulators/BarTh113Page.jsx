@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Flame } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import CommercialStrategy from '../../components/simulator/CommercialStrategy'
@@ -12,6 +12,7 @@ import { BAR_TH_113 } from '../../lib/constants/barTh113'
 import { MPR_GRANTS } from '../../lib/constants/mpr'
 import { calculateBarTh113 } from '../../lib/calculators/barTh113'
 import { useCommercialStrategy } from '../../hooks/useCommercialStrategy'
+import { useClientContext } from '../../hooks/useClientContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarTh113Page() {
@@ -21,6 +22,13 @@ export default function BarTh113Page() {
   const [priceMWh, setPriceMWh] = useState(7.5)
   const [projectCost, setProjectCost] = useState(15000)
   const [ceePercent, setCeePercent] = useState(58)
+
+  const { prefill } = useClientContext()
+
+  useEffect(() => {
+    if (!prefill) return
+    if (prefill.mprCategory) setMprCategory(prefill.mprCategory)
+  }, [])
 
   const isPrecarite = mprCategory === 'Bleu' || mprCategory === 'Jaune'
   const mprGrants = MPR_GRANTS['bar-th-113'] || {}

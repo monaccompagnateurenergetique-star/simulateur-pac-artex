@@ -13,6 +13,9 @@ import BarTh174Page from './pages/simulators/BarTh174Page'
 import BarTh175Page from './pages/simulators/BarTh175Page'
 import SettingsPage from './pages/SettingsPage'
 import ToolboxPage from './pages/ToolboxPage'
+import ClientsPage from './pages/ClientsPage'
+import ClientFormPage from './pages/ClientFormPage'
+import ClientDetailPage from './pages/ClientDetailPage'
 
 export default function App() {
   return (
@@ -32,6 +35,10 @@ export default function App() {
           <Route path="/actualites" element={<NewsPage />} />
           <Route path="/parametrage" element={<SettingsPage />} />
           <Route path="/boite-a-outils" element={<ToolboxPage />} />
+          <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/clients/nouveau" element={<ClientFormPage />} />
+          <Route path="/clients/:id" element={<ClientDetailPage />} />
+          <Route path="/clients/:id/modifier" element={<ClientFormPage />} />
         </Routes>
       </main>
       <Footer />

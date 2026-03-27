@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Home, Calculator, Euro, TrendingUp, Award } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import SimulationSaveBar from '../../components/simulator/SimulationSaveBar'
@@ -21,6 +21,7 @@ import {
 } from '../../lib/constants/renovationGlobale'
 import { calculateRenovationGlobale } from '../../lib/calculators/renovationGlobale'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
+import { useClientContext } from '../../hooks/useClientContext'
 
 export default function BarTh174Page() {
   const [classInitiale, setClassInitiale] = useState('F')
@@ -33,6 +34,14 @@ export default function BarTh174Page() {
   const [priceMWhPrecaire, setPriceMWhPrecaire] = useState(PRIX_CEE_DEFAUT.precaire)
   const [priceMWhClassique, setPriceMWhClassique] = useState(PRIX_CEE_DEFAUT.classique)
   const [ceePercent, setCeePercent] = useState(100)
+
+  const { prefill } = useClientContext()
+
+  useEffect(() => {
+    if (!prefill) return
+    if (prefill.surface) setSurface(prefill.surface)
+    if (prefill.mprCategory) setMprCategory(prefill.mprCategory)
+  }, [])
 
   const jumps = CLASS_ORDER.indexOf(classCible) - CLASS_ORDER.indexOf(classInitiale)
   const isValidJump = jumps >= MIN_CLASS_JUMP

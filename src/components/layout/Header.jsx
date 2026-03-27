@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, Home, Calculator, History, Newspaper, Settings, BookOpen } from 'lucide-react'
+import { Menu, X, Home, Calculator, History, Newspaper, Settings, BookOpen, Users } from 'lucide-react'
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -8,6 +8,7 @@ export default function Header() {
 
   const navLinks = [
     { to: '/', label: 'Accueil', icon: Home },
+    { to: '/clients', label: 'Bénéficiaires', icon: Users },
     { to: '/historique', label: 'Historique', icon: History },
     { to: '/actualites', label: 'Actualités', icon: Newspaper },
     { to: '/boite-a-outils', label: 'Boîte à outils', icon: BookOpen },

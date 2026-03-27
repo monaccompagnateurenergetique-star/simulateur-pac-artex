@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Calculator } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import CommercialStrategy from '../../components/simulator/CommercialStrategy'
@@ -14,6 +14,7 @@ import { ZONE_OPTIONS } from '../../lib/constants/zones'
 import { MPR_GRANTS } from '../../lib/constants/mpr'
 import { calculateBarTh171 } from '../../lib/calculators/barTh171'
 import { useCommercialStrategy } from '../../hooks/useCommercialStrategy'
+import { useClientContext } from '../../hooks/useClientContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarTh171Page() {
@@ -27,6 +28,16 @@ export default function BarTh171Page() {
   const [projectCost, setProjectCost] = useState(12000)
   const [mprCategory, setMprCategory] = useState('Bleu')
   const [ceePercent, setCeePercent] = useState(58)
+
+  const { prefill } = useClientContext()
+
+  useEffect(() => {
+    if (!prefill) return
+    if (prefill.housingType) setHousingType(prefill.housingType)
+    if (prefill.surface) setSurface(prefill.surface)
+    if (prefill.zone) setZone(prefill.zone)
+    if (prefill.mprCategory) setMprCategory(prefill.mprCategory)
+  }, [])
 
   // CEE Calculation
   const ceeResult = useMemo(

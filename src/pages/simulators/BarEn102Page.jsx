@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Calculator, Info } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import CommercialStrategy from '../../components/simulator/CommercialStrategy'
@@ -13,6 +13,7 @@ import { ZONE_OPTIONS } from '../../lib/constants/zones'
 import { BAR_EN_102 } from '../../lib/constants/barEn102'
 import { calculateBarEn102 } from '../../lib/calculators/barEn102'
 import { useCommercialStrategy } from '../../hooks/useCommercialStrategy'
+import { useClientContext } from '../../hooks/useClientContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarEn102Page() {
@@ -22,6 +23,14 @@ export default function BarEn102Page() {
   const [priceMWh, setPriceMWh] = useState(7.5)
   const [projectCost, setProjectCost] = useState(8000)
   const [ceePercent, setCeePercent] = useState(58)
+
+  const { prefill } = useClientContext()
+
+  useEffect(() => {
+    if (!prefill) return
+    if (prefill.surface) setSurface(prefill.surface)
+    if (prefill.zone) setZone(prefill.zone)
+  }, [])
 
   const result = useMemo(
     () => calculateBarEn102({ surface, zone, priceMWh }),
