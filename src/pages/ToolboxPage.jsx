@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookOpen, Euro, BarChart3, Home, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { BookOpen, Euro, BarChart3, Home, Users, ChevronDown, ChevronUp, ClipboardCheck, FileText, AlertTriangle, CheckCircle } from 'lucide-react'
 
 // ─── DONNÉES BARÈMES ───
 
@@ -9,23 +9,23 @@ const PLAFONDS_RESSOURCES = {
   ileDeFrance: {
     label: 'Île-de-France',
     rows: [
-      { personnes: 1, tresModeste: 23541, modeste: 28657, intermediaire: 40018, superieur: '> 40 018' },
-      { personnes: 2, tresModeste: 34551, modeste: 42058, intermediaire: 58827, superieur: '> 58 827' },
-      { personnes: 3, tresModeste: 41493, modeste: 50513, intermediaire: 70382, superieur: '> 70 382' },
-      { personnes: 4, tresModeste: 48447, modeste: 58981, intermediaire: 82839, superieur: '> 82 839' },
-      { personnes: 5, tresModeste: 55427, modeste: 67473, intermediaire: 94844, superieur: '> 94 844' },
-      { personnes: '+1', tresModeste: 6970, modeste: 8486, intermediaire: 12006, superieur: '' },
+      { personnes: 1, tresModeste: 24031, modeste: 29253, intermediaire: 40018, superieur: '> 40 018' },
+      { personnes: 2, tresModeste: 35270, modeste: 42923, intermediaire: 58827, superieur: '> 58 827' },
+      { personnes: 3, tresModeste: 42357, modeste: 51539, intermediaire: 70382, superieur: '> 70 382' },
+      { personnes: 4, tresModeste: 49455, modeste: 60168, intermediaire: 82839, superieur: '> 82 839' },
+      { personnes: 5, tresModeste: 56580, modeste: 68821, intermediaire: 94844, superieur: '> 94 844' },
+      { personnes: '+1', tresModeste: 7116, modeste: 8656, intermediaire: 12006, superieur: '' },
     ],
   },
   autresRegions: {
     label: 'Autres régions',
     rows: [
-      { personnes: 1, tresModeste: 17009, modeste: 21805, intermediaire: 30549, superieur: '> 30 549' },
-      { personnes: 2, tresModeste: 24875, modeste: 31889, intermediaire: 44907, superieur: '> 44 907' },
-      { personnes: 3, tresModeste: 29917, modeste: 38349, intermediaire: 54071, superieur: '> 54 071' },
-      { personnes: 4, tresModeste: 34948, modeste: 44802, intermediaire: 63235, superieur: '> 63 235' },
-      { personnes: 5, tresModeste: 40002, modeste: 51281, intermediaire: 72400, superieur: '> 72 400' },
-      { personnes: '+1', tresModeste: 5045, modeste: 6462, intermediaire: 9165, superieur: '' },
+      { personnes: 1, tresModeste: 17363, modeste: 22256, intermediaire: 30549, superieur: '> 30 549' },
+      { personnes: 2, tresModeste: 25393, modeste: 32565, intermediaire: 44907, superieur: '> 44 907' },
+      { personnes: 3, tresModeste: 30540, modeste: 39147, intermediaire: 54071, superieur: '> 54 071' },
+      { personnes: 4, tresModeste: 35676, modeste: 45727, intermediaire: 63235, superieur: '> 63 235' },
+      { personnes: 5, tresModeste: 40835, modeste: 52338, intermediaire: 72400, superieur: '> 72 400' },
+      { personnes: '+1', tresModeste: 5148, modeste: 6594, intermediaire: 9165, superieur: '' },
     ],
   },
 }
@@ -37,21 +37,19 @@ const MONTANTS_PRIME_PAR_GESTE = [
       { label: 'PAC géothermique ou solarothermique', Bleu: 11000, Jaune: 9000, Violet: 6000, Rose: '-' },
       { label: 'PAC air/eau (dont hybride)', Bleu: 5000, Jaune: 4000, Violet: 3000, Rose: '-' },
       { label: 'Chaudière biomasse', Bleu: 7000, Jaune: 5500, Violet: 3000, Rose: '-' },
-      { label: 'Système solaire combiné', Bleu: 10000, Jaune: 8000, Violet: 6000, Rose: '-' },
+      { label: 'Système solaire combiné', Bleu: 10000, Jaune: 8000, Violet: 4000, Rose: '-' },
       { label: 'Chauffe-eau solaire individuel', Bleu: 4000, Jaune: 3000, Violet: 2000, Rose: '-' },
       { label: 'Chauffe-eau thermodynamique', Bleu: 1200, Jaune: 800, Violet: 400, Rose: '-' },
-      { label: 'Poêle à bûches / cuisinière', Bleu: 2500, Jaune: 2000, Violet: 1000, Rose: '-' },
-      { label: 'Poêle à granulés / cuisinière', Bleu: 2500, Jaune: 2000, Violet: 1500, Rose: '-' },
-      { label: 'Insert / foyer fermé bûches', Bleu: 2500, Jaune: 1500, Violet: 800, Rose: '-' },
-      { label: 'Insert / foyer fermé granulés', Bleu: 2500, Jaune: 2000, Violet: 1500, Rose: '-' },
+      { label: 'Poêle à bûches / cuisinière', Bleu: 1250, Jaune: 1000, Violet: 500, Rose: '-' },
+      { label: 'Poêle à granulés / cuisinière', Bleu: 1250, Jaune: 1000, Violet: 500, Rose: '-' },
+      { label: 'Insert / foyer fermé', Bleu: 1250, Jaune: 750, Violet: 750, Rose: '-' },
       { label: 'Réseau de chaleur / froid', Bleu: 1200, Jaune: 800, Violet: 400, Rose: '-' },
+      { label: 'Partie thermique d\'un équipement PVT eau', Bleu: 2500, Jaune: 2000, Violet: 1000, Rose: '-' },
     ],
   },
   {
     categorie: 'Isolation',
     aides: [
-      { label: 'Isolation thermique des murs (ITE)', Bleu: 75, Jaune: 60, Violet: 40, Rose: '-', unite: '€/m²' },
-      { label: 'Isolation thermique des murs (ITI)', Bleu: 25, Jaune: 20, Violet: 15, Rose: '-', unite: '€/m²' },
       { label: 'Isolation rampants de toiture / plafonds combles', Bleu: 25, Jaune: 20, Violet: 15, Rose: '-', unite: '€/m²' },
       { label: 'Isolation toitures-terrasses', Bleu: 75, Jaune: 60, Violet: 40, Rose: '-', unite: '€/m²' },
       { label: 'Fenêtres / portes-fenêtres (simple → double)', Bleu: 100, Jaune: 80, Violet: 40, Rose: '-', unite: '€/équipement' },
@@ -68,13 +66,21 @@ const MONTANTS_PRIME_PAR_GESTE = [
 ]
 
 const PLAFONDS_DEPENSES = [
-  { label: 'PAC géothermique/solarothermique', plafond: '18 000 €' },
-  { label: 'PAC air/eau', plafond: '12 000 €' },
-  { label: 'Chaudière biomasse', plafond: '16 000 € (manuelle) / 18 000 € (auto)' },
+  { label: 'PAC géothermique ou solarothermique', plafond: '18 000 €' },
+  { label: 'PAC air/eau (dont hybride)', plafond: '12 000 €' },
+  { label: 'Chaudière biomasse manuelle', plafond: '16 000 €' },
+  { label: 'Chaudière biomasse automatique', plafond: '18 000 €' },
   { label: 'Système solaire combiné', plafond: '16 000 €' },
   { label: 'Chauffe-eau solaire individuel', plafond: '7 000 €' },
   { label: 'Chauffe-eau thermodynamique', plafond: '3 500 €' },
-  { label: 'Poêle / insert bois', plafond: '4 000 €' },
+  { label: 'Poêle à granulés', plafond: '5 000 €' },
+  { label: 'Poêle à bûches / cuisinière', plafond: '4 000 €' },
+  { label: 'Insert / foyer fermé', plafond: '4 000 €' },
+  { label: 'Partie thermique PVT eau', plafond: '7 000 €' },
+  { label: 'Réseau de chaleur ou de froid', plafond: '1 800 €' },
+  { label: 'Rampants de toiture / combles', plafond: '75 €/m²' },
+  { label: 'Toitures-terrasses', plafond: '180 €/m²' },
+  { label: 'Fenêtres / portes-fenêtres', plafond: '1 000 €/équipement' },
   { label: 'VMC double flux', plafond: '6 000 €' },
   { label: 'Audit énergétique', plafond: '800 €' },
   { label: 'Dépose cuve fioul', plafond: '4 000 €' },
@@ -400,6 +406,151 @@ export default function ToolboxPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      </Section>
+
+      {/* 5. Check-list dossier CEE Chauffage */}
+      <Section title="Check-list dossier CEE — Chauffage" icon={ClipboardCheck} iconColor="text-orange-600" defaultOpen={false}>
+        <p className="text-xs text-gray-500 mb-4">Source : Sonergia — Check-list EP Chauffage V1.4 (11/03/2026)</p>
+
+        {/* Mentions obligatoires devis/facture */}
+        <div className="mb-6">
+          <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-indigo-600" />
+            Mentions obligatoires sur devis & facture
+          </h3>
+          <div className="space-y-2">
+            {[
+              'Raison sociale + SIRET + adresse de l\'installateur RGE',
+              'Si sous-traitance : raison sociale + SIRET du sous-traitant RGE',
+              'Nom + Prénom + adresse complète du bénéficiaire (identiques au compte MPR)',
+              'Adresse des travaux si différente (+ justificatif de domicile)',
+              'Le mot « Devis » ou « Proposition commerciale » (ou « Facture » + n°)',
+              'Date de création et/ou d\'édition',
+              'Détails des travaux avec une ligne par travaux éligibles + mentions techniques',
+              'Date et signature manuscrites par le bénéficiaire (APRÈS réception de la proposition de prime)',
+              'Pagination cohérente — toutes les pages fournies',
+              'Montant total HT et TTC',
+              'Acompte mentionné sans date (date ne doit pas précéder la proposition de prime)',
+              'Distinguer clairement remises commerciales et primes',
+              'Déduction CEE après le montant TTC (ou TVA à 0% dans le corps)',
+              'N° de qualification RGE + certificat annexé au devis',
+            ].map((item, i) => (
+              <div key={i} className="flex gap-2 items-start">
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                <p className="text-sm text-gray-700">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Coup de pouce chauffage */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <h4 className="text-sm font-bold text-amber-800 flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4" />
+            Coup de Pouce Chauffage
+          </h4>
+          <p className="text-sm text-amber-700">
+            Mention obligatoire : « Dépose/enlèvement/démontage d'une chaudière fioul/charbon/gaz ».
+            Sans cette mention, le dossier sera validé hors Coup de Pouce avec une prime réduite.
+            La dépose et la pose doivent être faites par le même installateur certifié RGE.
+          </p>
+        </div>
+
+        {/* MPR spécificités */}
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
+          <h4 className="text-sm font-bold text-indigo-800 mb-2">MaPrimeRénov' — Points spécifiques</h4>
+          <ul className="text-sm text-indigo-700 space-y-1 list-disc pl-4">
+            <li>Sous-total TTC lisible pour chaque travaux éligible MPR sur le même devis</li>
+            <li>Séparer les travaux sans lien avec les primes (décoration, etc.)</li>
+            <li>Déduction obligatoire avec mention « estimation de l'aide MPR »</li>
+            <li>Validité du devis : minimum 1 mois recommandé (3 mois par défaut)</li>
+            <li>Clause suspensive ANAH recommandée sur le devis</li>
+          </ul>
+        </div>
+
+        {/* Documents obligatoires */}
+        <div className="mb-6">
+          <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+            <ClipboardCheck className="w-4 h-4 text-orange-600" />
+            Documents obligatoires — 100% des dossiers
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[
+              'Devis signé & daté à la main par le bénéficiaire',
+              'Facture des travaux',
+              'Attestation sur l\'honneur (sans rature)',
+              'RIB du bénéficiaire (sauf si prime déduite)',
+              'Certificat RGE',
+            ].map((doc, i) => (
+              <div key={i} className="flex gap-2 items-center bg-orange-50 border border-orange-200 rounded-lg p-2.5">
+                <CheckCircle className="w-4 h-4 text-orange-500 shrink-0" />
+                <p className="text-sm text-gray-700 font-medium">{doc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Documents conditionnels */}
+        <div className="mb-6">
+          <h3 className="text-sm font-bold text-gray-700 mb-3">Documents supplémentaires selon le cas</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-orange-800 text-white">
+                  <th className="p-2 text-left">Situation</th>
+                  <th className="p-2 text-left">Document requis</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ['Prime bonifiée (revenus)', 'Avis d\'imposition N ou N-1'],
+                  ['Adresse travaux ≠ avis d\'imposition', 'Justificatif de domicile à l\'adresse des travaux'],
+                  ['Adresse imprécise (lieu-dit)', 'Coordonnées cadastrales (préfixe/section/n° parcelle)'],
+                  ['Résidence secondaire ou location', 'Preuve de propriété (acte, taxe foncière, bail)'],
+                  ['Travaux payés par le locataire', 'Attestation d\'autorisation du propriétaire'],
+                  ['Plusieurs propriétaires', 'Attestations signées par tous les propriétaires'],
+                  ['Prime déduite de la facture', 'Cadre de contribution indirect signé par l\'installateur'],
+                  ['PAC ou chaudière biomasse', 'Note de dimensionnement (nom bénéficiaire + adresse)'],
+                ].map(([situation, doc], i) => (
+                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="p-2 border-b text-gray-600">{situation}</td>
+                    <td className="p-2 border-b font-medium text-gray-800">{doc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Points de contrôle — rejet */}
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <h4 className="text-sm font-bold text-red-800 flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4" />
+            Points critiques — Causes de rejet
+          </h4>
+          <ul className="text-sm text-red-700 space-y-1 list-disc pl-4">
+            <li>Logement de + de 2 ans à la date d'acceptation du devis</li>
+            <li>Matériel dans la liste des matériels éligibles</li>
+            <li>Qualification RGE valide à la date de signature du devis</li>
+            <li>Proposition de prime reçue AVANT signature du devis, versement d'acompte et commande matériaux</li>
+            <li>Pas de double valorisation CEE avec un autre organisme</li>
+            <li>Facture de moins de 4 mois à la réception du dossier</li>
+            <li>Sous-traitance : maximum 2 rangs</li>
+            <li>Email de proposition de prime envoyé au bénéficiaire (jamais au professionnel)</li>
+          </ul>
+        </div>
+
+        {/* Attestation sur l'honneur */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="text-sm font-bold text-blue-800 mb-2">Attestation sur l'honneur — Points de vigilance</h4>
+          <ul className="text-sm text-blue-700 space-y-1 list-disc pl-4">
+            <li>Conserver l'original si fournie scannée (contrôle possible)</li>
+            <li>Pagination cohérente sur chaque page</li>
+            <li>Toutes les informations obligatoires (*) renseignées</li>
+            <li>Informations cohérentes avec les autres documents</li>
+            <li>Dates de signature postérieures à la date de facture / fin de travaux</li>
+          </ul>
         </div>
       </Section>
 

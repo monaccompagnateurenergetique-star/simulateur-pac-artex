@@ -1,11 +1,12 @@
 [
   {
     "id": "1",
-    "title": "Nouveaux barèmes MaPrimeRénov' 2025",
-    "date": "2025-01-15",
+    "title": "Nouveau barème de revenus 2026",
+    "date": "2026-01-01",
     "category": "réglementation",
-    "summary": "Les barèmes MaPrimeRénov' ont été mis à jour pour 2025 avec des modifications sur les plafonds de prise en charge et les profils de revenus.",
-    "content": "À compter du 1er janvier 2025, les plafonds de MaPrimeRénov' sont révisés. Les ménages aux revenus très modestes (profil Bleu) bénéficient d'un plafond de prise en charge maintenu à 90%. Les profils Jaune et Violet conservent respectivement 75% et 60%. Le montant forfaitaire pour les PAC air/eau reste à 5 000€ pour le profil Bleu."
+    "summary": "Les plafonds de ressources pour MaPrimeRénov' sont revalorisés au 1er janvier 2026. Nouveaux seuils pour les profils Bleu, Jaune, Violet et Rose.",
+    "content": "Au 1er janvier 2026, les plafonds de revenus fiscaux de référence sont mis à jour. En Île-de-France : 24 031 € (1 pers. très modeste), 35 270 € (2 pers.), etc. Hors IDF : 17 363 € (1 pers. très modeste), 25 393 € (2 pers.). Ces seuils déterminent la catégorie de revenus du ménage et donc le montant des aides MaPrimeRénov' et le taux de prise en charge. Consultez la boîte à outils pour les tableaux complets.",
+    "pdf": "docs/guide-anah-2026.pdf"
   },
   {
     "id": "2",
@@ -13,39 +14,58 @@
     "date": "2025-12-20",
     "category": "réglementation",
     "summary": "Publication du nouvel arrêté modifiant la fiche CEE BAR-TH-171 pour les pompes à chaleur air/eau. Nouveaux coefficients et bonifications.",
-    "content": "L'arrêté du 15 décembre 2025 apporte des modifications significatives à la fiche BAR-TH-171. Les montants forfaitaires de base sont ajustés : 109 200 kWhc cumac pour une maison avec Etas ≥ 140% et 90 900 kWhc pour les performances standard. Le facteur de bonification ×5 est maintenu."
+    "content": "L'arrêté du 15 décembre 2025 apporte des modifications significatives à la fiche BAR-TH-171. Les montants forfaitaires de base sont ajustés : 109 200 kWhc cumac pour une maison avec Etas ≥ 140% et 90 900 kWhc pour les performances standard. Le facteur de bonification ×5 est maintenu. Les coefficients de zone climatique restent inchangés (H1=1.2, H2=1.0, H3=0.7)."
   },
   {
     "id": "3",
-    "title": "Extension des fiches BAR-TH-174 et BAR-TH-175",
-    "date": "2026-01-10",
-    "category": "aides",
-    "summary": "Les fiches de rénovation globale BAR-TH-174 (maisons) et BAR-TH-175 (appartements) sont prolongées jusqu'en 2030.",
-    "content": "L'arrêté du 7 janvier 2026 prolonge la validité des opérations de rénovation globale. La fiche BAR-TH-174 pour les maisons individuelles est étendue jusqu'au 31 décembre 2030. La BAR-TH-175 pour les appartements en copropriété bénéficie également d'une prolongation avec des conditions d'éligibilité ajustées."
+    "title": "Modification des fiches BAR-TH-174 et BAR-TH-175",
+    "date": "2026-01-17",
+    "category": "réglementation",
+    "summary": "Nouvelles versions des fiches de rénovation globale (vA80-3). Montants unitaires CEE révisés et conditions d'éligibilité ajustées.",
+    "content": "Les fiches BAR-TH-174 (maison individuelle) et BAR-TH-175 (appartement) sont mises à jour en version A80-3 à compter du 17 janvier 2026. Les montants unitaires CEE sont fixés à : 360 200 kWhc cumac pour 2 sauts de classes, 447 900 pour 3 sauts, et 568 600 pour 4 sauts ou plus. Les facteurs correctifs de surface et le bonus précarité (×2 pour les ménages très modestes) sont maintenus. Rappel : les DPE E, F, G relèvent uniquement de MaPrimeRénov' Parcours Accompagné (pas de CEE). Les DPE C, D relèvent uniquement des CEE (pas de MPR).",
+    "pdf": "docs/BAR-TH-174.pdf",
+    "pdf2": "docs/BAR-TH-175.pdf",
+    "pdf2Label": "Fiche BAR-TH-175"
   },
   {
     "id": "4",
     "title": "Hausse du cours des CEE au T1 2026",
     "date": "2026-03-05",
     "category": "actualités",
-    "summary": "Le prix du MWh cumac atteint 7,50€ en moyenne sur le premier trimestre 2026, en hausse de 12% par rapport à fin 2025.",
-    "content": "Le marché des Certificats d'Économies d'Énergie connaît une hausse significative depuis le début 2026. Le prix moyen du MWh cumac s'établit à 7,50€, porté par une demande soutenue des obligés et un renforcement des objectifs de la 5ème période. Cette tendance haussière bénéficie aux artisans qui peuvent négocier de meilleures primes."
+    "summary": "Le prix du MWh cumac atteint 7,50 € en moyenne sur le premier trimestre 2026, en hausse de 12% par rapport à fin 2025.",
+    "content": "Le marché des Certificats d'Économies d'Énergie connaît une hausse significative depuis le début 2026. Le prix moyen du MWh cumac s'établit à 7,50 €, porté par une demande soutenue des obligés et un renforcement des objectifs de la 5ème période. Cette tendance haussière bénéficie aux artisans qui peuvent négocier de meilleures primes CEE pour leurs clients. Pour les ménages précaires (profil Bleu), le cours peut atteindre 12 €/MWh cumac."
   },
   {
     "id": "5",
+    "title": "Nouveau guide ANAH : Aides financières 2026",
+    "date": "2026-02-15",
+    "category": "réglementation",
+    "summary": "L'ANAH publie la version actualisée de son guide des aides financières pour la rénovation énergétique (édition février 2026).",
+    "content": "Le guide des aides financières 2026 de l'ANAH recense l'ensemble des dispositifs d'aide à la rénovation énergétique : MaPrimeRénov' par geste, MaPrimeRénov' Parcours Accompagné, CEE, éco-PTZ, TVA réduite. Points clés : les rampants de toiture sont éligibles à MPR (25 €/m² Bleu, 20 €/m² Jaune, 15 €/m² Violet) mais les combles perdus ne sont PAS éligibles. Les poêles à bûches/granulés passent à 1 250 € (Bleu). Nouveaux plafonds de ressources applicables. Consultez la boîte à outils pour les tableaux détaillés.",
+    "pdf": "docs/guide-anah-2026.pdf"
+  },
+  {
+    "id": "6",
+    "title": "Isolation des murs et chaudières biomasse : fin du financement MPR",
+    "date": "2026-01-01",
+    "category": "aides",
+    "summary": "À partir du 1er janvier 2026, l'isolation des murs (ITE/ITI) et les chaudières biomasse ne sont plus financés par MaPrimeRénov' par geste.",
+    "content": "Changement majeur au 1er janvier 2026 : l'isolation thermique des murs (ITE et ITI) ainsi que les chaudières biomasse sont retirés du dispositif MaPrimeRénov' par geste. Ces travaux restent éligibles aux Certificats d'Économies d'Énergie (CEE) via les fiches BAR-EN-102 (murs) et BAR-TH-113 (chaudière biomasse). Ils restent également finançables dans le cadre d'une rénovation d'ampleur (Parcours Accompagné) pour les logements classés E, F ou G. Cette mesure vise à recentrer MPR par geste sur les équipements de chauffage décarboné et l'isolation de toiture."
+  },
+  {
+    "id": "7",
+    "title": "Parcours Accompagné : rendez-vous France Rénov' obligatoire",
+    "date": "2026-01-01",
+    "category": "réglementation",
+    "summary": "Un rendez-vous personnalisé avec un conseiller France Rénov' est désormais obligatoire avant le dépôt de la demande d'aide pour le Parcours Accompagné.",
+    "content": "Pour toute demande de MaPrimeRénov' Parcours Accompagné (rénovation d'ampleur), un rendez-vous personnalisé avec un conseiller France Rénov' est désormais obligatoire AVANT le dépôt de la demande d'aide. Cette mesure vise à sécuriser les parcours de rénovation et à garantir la qualité des travaux financés. Le conseiller France Rénov' accompagne le ménage dans la définition de son projet, vérifie la cohérence du bouquet de travaux et s'assure que les conditions d'éligibilité sont remplies. Cette étape est gratuite et s'ajoute à l'intervention de Mon Accompagnateur Rénov' (MAR) qui reste obligatoire pour le suivi du projet."
+  },
+  {
+    "id": "8",
     "title": "Guide : Bien remplir les attestations sur l'honneur CEE",
     "date": "2026-02-18",
     "category": "guides",
     "summary": "Les erreurs sur les attestations sont la première cause de rejet des dossiers CEE. Voici les points de vigilance essentiels.",
     "content": "Pour éviter les rejets de dossiers CEE, veillez à : 1) Vérifier que la date d'engagement correspond bien à la date de signature du devis. 2) S'assurer que le devis mentionne explicitement la marque, référence et performances de l'équipement. 3) Faire signer l'attestation sur l'honneur AVANT le début des travaux. 4) Conserver les justificatifs de qualification RGE à jour."
-  },
-  {
-    "id": "6",
-    "title": "Nouveau guide ANAH : Aides financières 2026 (publié février 2026)",
-    "date": "2026-03-20",
-    "category": "réglementation",
-    "summary": "L'ANAH publie la version actualisée de son guide des aides financières pour la rénovation énergétique. Barèmes MPR, plafonds et conditions d'éligibilité mis à jour.",
-    "content": "Le guide des aides financières 2026 de l'ANAH (édition février 2026) recense l'ensemble des dispositifs d'aide à la rénovation énergétique : MaPrimeRénov' par geste, MaPrimeRénov' Parcours accompagné, CEE, éco-PTZ, TVA réduite. Points clés : les rampants de toiture sont éligibles à MPR (25€/m² Bleu, 20€/m² Jaune, 15€/m² Violet) mais les combles perdus ne sont PAS éligibles. Les plafonds de dépenses éligibles et les taux maximaux d'aide (90% Bleu, 75% Jaune, 60% Violet) sont maintenus. Source : anah.gouv.fr",
-    "link": "https://www.anah.gouv.fr/sites/default/files/2026-03/202602_guide-aides-financieres_WEB.pdf"
   }
 ]

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Newspaper } from 'lucide-react'
+import { Newspaper, FileText } from 'lucide-react'
 import newsData from '../data/news.json'
 
 const categoryColors = {
@@ -71,6 +71,32 @@ export default function NewsPage() {
             </div>
             <h2 className="text-lg font-bold text-gray-800 mb-2">{article.title}</h2>
             <p className="text-sm text-gray-600 leading-relaxed">{article.content}</p>
+            {(article.pdf || article.pdf2) && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {article.pdf && (
+                  <a
+                    href={`${import.meta.env.BASE_URL}${article.pdf}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-semibold hover:bg-red-100 transition"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    {article.pdf2 ? (article.pdf2Label ? 'Fiche BAR-TH-174' : 'Consulter le PDF') : 'Consulter le PDF'}
+                  </a>
+                )}
+                {article.pdf2 && (
+                  <a
+                    href={`${import.meta.env.BASE_URL}${article.pdf2}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-semibold hover:bg-red-100 transition"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    {article.pdf2Label || 'Consulter le PDF'}
+                  </a>
+                )}
+              </div>
+            )}
           </article>
         ))}
       </div>
