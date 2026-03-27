@@ -112,7 +112,7 @@ export default function BarTh174Page() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputField label="Surface habitable (m²)" id="surface" value={surface} onChange={setSurface} min={1} suffix="m²" />
+            <InputField label="Surface habitable (m²)" type="number" id="surface" value={surface} onChange={setSurface} min={1} suffix="m²" />
             <SelectField label="Profil de revenus" id="mprCategory" value={mprCategory} onChange={setMprCategory} options={MPR_INCOME_OPTIONS} />
           </div>
 
@@ -153,12 +153,14 @@ export default function BarTh174Page() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <InputField
                     label="Coût des travaux HT (€)"
+                    type="number"
                     id="projectCostHT" value={projectCostHT} onChange={setProjectCostHT}
                     min={1000} suffix="€ HT"
                     helper={`Plafond éligible : ${formatCurrency(MPR_PARCOURS_PLAFOND[Math.min(jumps >= 4 ? 4 : jumps, 4)] || 30000)} HT`}
                   />
                   <InputField
                     label="Coût total TTC (€)"
+                    type="number"
                     id="projectCostTTC" value={projectCostTTC} onChange={setProjectCostTTC}
                     min={1000} suffix="€ TTC"
                   />
@@ -167,12 +169,13 @@ export default function BarTh174Page() {
                 <>
                   <InputField
                     label="Coût total TTC du projet (€)"
+                    type="number"
                     id="projectCostTTC" value={projectCostTTC} onChange={setProjectCostTTC}
                     min={1000} suffix="€ TTC"
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputField label="Prix CEE précarité (€/MWhc)" id="pricePrecaire" value={priceMWhPrecaire} onChange={setPriceMWhPrecaire} step={0.5} suffix="€/MWhc" helper="Ménages très modestes (Bleu)" />
-                    <InputField label="Prix CEE classique (€/MWhc)" id="priceClassique" value={priceMWhClassique} onChange={setPriceMWhClassique} step={0.5} suffix="€/MWhc" helper="Autres profils" />
+                    <InputField label="Prix CEE précarité (€/MWhc)" type="number" id="pricePrecaire" value={priceMWhPrecaire} onChange={setPriceMWhPrecaire} step={0.5} suffix="€/MWhc" helper="Ménages très modestes (Bleu)" />
+                    <InputField label="Prix CEE classique (€/MWhc)" type="number" id="priceClassique" value={priceMWhClassique} onChange={setPriceMWhClassique} step={0.5} suffix="€/MWhc" helper="Autres profils" />
                   </div>
                 </>
               )}
@@ -308,6 +311,53 @@ export default function BarTh174Page() {
             title={`Réno maison ${classInitiale}→${classCible} (${isAnah ? 'MPR' : 'CEE'}) — ${surface}m²`}
             inputs={{ classInitiale, classCible, surface, mprCategory, projectCostHT, projectCostTTC, priceMWhPrecaire, priceMWhClassique, ceePercent, selectedWorks }}
             results={finalResult}
+            pdfData={{
+              ficheCode: 'BAR-TH-174',
+              ficheTitle: 'Rénovation globale — Maison',
+              params: [
+                { label: 'Classe DPE initiale', value: classInitiale },
+                { label: 'Classe DPE cible', value: classCible },
+                { label: 'Surface habitable', value: `${surface} m²` },
+                { label: 'Profil revenus', value: mprCategory },
+                { label: 'Travaux sélectionnés', value: selectedWorks.join(', ') },
+              ],
+              results: finalResult.mode === 'anah' ? [
+                { label: 'MaPrimeRénov\'', value: formatCurrency(finalResult.mprAmount) },
+                { label: 'Total aides', value: formatCurrency(finalResult.totalAides) },
+              ] : [
+                { label: 'Volume CEE', value: formatKWhc(finalResult.volumeCEE) },
+                { label: 'Valeur CEE (Base 100%)', value: formatCurrency(finalResult.ceeEuros) },
+              ],
+              summary: finalResult.mode === 'anah' ? {
+                projectCost: projectCostTTC,
+                ceeCommerciale: 0,
+                mprFinal: finalResult.mprAmount,
+                totalAid: finalResult.totalAides,
+                resteACharge: finalResult.resteACharge,
+                showMpr: true,
+              } : {
+                projectCost: projectCostTTC,
+                ceeCommerciale: finalResult.ceeFinal,
+                mprFinal: 0,
+                totalAid: finalResult.totalAides,
+                resteACharge: finalResult.resteACharge,
+                showMpr: false,
+              },
+              margin: finalResult.mode === 'cee' ? {
+                ceeBase: finalResult.ceeEuros,
+                ceeApplied: finalResult.ceeFinal,
+                margin: finalResult.ceeMargin,
+                marginPercent: finalResult.ceeMarginPercent,
+                showOnPdf: false,
+              } : {
+                ceeBase: 0,
+                ceeApplied: 0,
+                margin: 0,
+                marginPercent: 0,
+                showOnPdf: false,
+              },
+              mode: finalResult.mode,
+            }}
           />
         </>
       )}

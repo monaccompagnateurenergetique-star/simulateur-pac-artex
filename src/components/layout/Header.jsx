@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, Home, Calculator, History, Newspaper } from 'lucide-react'
+import { Menu, X, Home, Calculator, History, Newspaper, Settings, BookOpen } from 'lucide-react'
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -10,6 +10,8 @@ export default function Header() {
     { to: '/', label: 'Accueil', icon: Home },
     { to: '/historique', label: 'Historique', icon: History },
     { to: '/actualites', label: 'Actualités', icon: Newspaper },
+    { to: '/boite-a-outils', label: 'Boîte à outils', icon: BookOpen },
+    { to: '/parametrage', label: 'Paramétrage', icon: Settings },
   ]
 
   const isActive = (path) => location.pathname === path

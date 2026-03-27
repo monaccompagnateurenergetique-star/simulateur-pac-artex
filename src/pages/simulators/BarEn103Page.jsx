@@ -51,6 +51,7 @@ export default function BarEn103Page() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <InputField
               label="Surface du plancher (m²)"
+              type="number"
               id="surface"
               value={surface}
               onChange={setSurface}
@@ -66,6 +67,7 @@ export default function BarEn103Page() {
             />
             <InputField
               label="Prix CEE (€/MWhc)"
+              type="number"
               id="priceMWh"
               value={priceMWh}
               onChange={setPriceMWh}
@@ -121,6 +123,34 @@ export default function BarEn103Page() {
         title={`Isolation plancher — ${surface}m² ${zone}`}
         inputs={{ surface, zone, priceMWh, projectCost, ceePercent }}
         results={{ ...result, ...commercial }}
+        pdfData={{
+          ficheCode: 'BAR-EN-103',
+          ficheTitle: 'Isolation plancher bas',
+          params: [
+            { label: 'Surface du plancher', value: `${surface} m²` },
+            { label: 'Zone climatique', value: zone },
+            { label: 'Prix CEE', value: `${priceMWh} €/MWhc` },
+          ],
+          results: [
+            { label: 'Volume CEE', value: formatKWhc(result.volumeCEE) },
+            { label: 'Valeur CEE (Base 100%)', value: formatCurrency(result.ceeEuros) },
+          ],
+          summary: {
+            projectCost,
+            ceeCommerciale: commercial.ceeCommerciale,
+            mprFinal: 0,
+            totalAid: commercial.totalAid,
+            resteACharge: commercial.resteACharge,
+            showMpr: false,
+          },
+          margin: {
+            ceeBase: result.ceeEuros,
+            ceeApplied: commercial.ceeCommerciale,
+            margin: commercial.ceeMargin,
+            marginPercent: commercial.ceeMarginPercent,
+            showOnPdf: false,
+          },
+        }}
       />
 
       <div className="pt-4 text-center text-sm text-gray-500 border-t border-gray-100">

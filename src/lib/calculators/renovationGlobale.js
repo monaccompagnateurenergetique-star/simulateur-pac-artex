@@ -65,7 +65,8 @@ export function calculateANAH({ classInitiale, classCible, mprCategory, projectC
   if (jumps < 2) return { mprAmount: 0, plafondHT: 0, taux: 0, depenseEligible: 0, jumps }
 
   const clampedJumps = clampJumps(jumps)
-  const taux = MPR_PARCOURS_TAUX[mprCategory] || 0
+  const tauxByJumps = MPR_PARCOURS_TAUX[clampedJumps] || MPR_PARCOURS_TAUX[2]
+  const taux = tauxByJumps[mprCategory] || 0
   const plafondHT = MPR_PARCOURS_PLAFOND[clampedJumps] || 30000
 
   const depenseEligible = Math.min(projectCostHT, plafondHT)

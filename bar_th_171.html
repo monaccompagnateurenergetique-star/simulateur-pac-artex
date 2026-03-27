@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur Aides PAC Air/Eau (Complet)</title>
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chargement des icônes Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
+        .animate-result { animation: pulse-once 0.3s ease-in-out; }
+        @keyframes pulse-once {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
+
+    <div class="w-full max-w-3xl bg-white shadow-xl rounded-2xl border border-gray-200 overflow-hidden">
+        <!-- Logo Artex360 -->
+        <div class="p-4 flex justify-center bg-white border-b border-gray-100">
+             <img src="https://artex360.fr/static/img/logo_artex.png" alt="Logo Artex360" class="h-10 object-contain" 
+                 onerror="this.onerror=null; this.src='https://placehold.co/150x40/4f46e5/ffffff?text=Logo+Artex360'">
+        </div>
+        
+        <!-- En-tête -->
+        <div class="bg-indigo-900 p-6 text-center">
+            <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight">Simulateur Aides PAC Air/Eau (BAR-TH-171 & Commercial)</h1>
+            <p class="text-indigo-200 text-sm mt-1">Calcul CEE + Stratégie de Déduction et Plafond</p>
+        </div>
+
+        <div class="p-6 md:p-8 space-y-8">
+            
+            <!-- SECTION 1: CEE BAR-TH-171 CALCULATION -->
+            <h2 class="text-xl font-bold text-gray-800 border-b pb-2 flex items-center">
+                <i data-lucide="calculator" class="w-5 h-5 mr-2 text-indigo-600"></i> Calcul de la Prime CEE (Valeur Négociée)
+            </h2>
+            
+            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
+                
+                <!-- Résidence Principale -->
+                <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Le logement est-il occupé à titre de résidence principale ?
+                    </label>
+                    <div class="flex space-x-4">
+                        <button type="button" onclick="setResidence('Oui')" id="btnResOui" class="flex-1 py-2 px-4 rounded-lg border-2 border-green-600 bg-green-50 text-green-700 font-bold transition-all">OUI</button>
+                        <button type="button" onclick="setResidence('Non')" id="btnResNon" class="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 transition-all">NON</button>
+                    </div>
+                    <input type="hidden" id="isPrimaryResidence" value="Oui">
+                </div>
+                
+                <!-- Ligne 1 : Type de logement et Surface -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Type de Logement -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Type de Logement</label>
+                        <div class="flex space-x-2">
+                            <button type="button" onclick="setType('Maison')" id="btnMaison" class="flex-1 py-2 px-2 rounded-lg border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all text-sm">Maison</button>
+                            <button type="button" onclick="setType('Appartement')" id="btnAppart" class="flex-1 py-2 px-2 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 transition-all text-sm">Appart.</button>
+                        </div>
+                        <input type="hidden" id="housingType" value="Maison">
+                    </div>
+
+                    <!-- Surface Chauffée -->
+                    <div>
+                        <label for="surfaceInput" class="block text-sm font-semibold text-gray-700 mb-2">Surface (m²)</label>
+                        <div class="relative">
+                            <input type="number" id="surfaceInput" value="100" min="1" class="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg text-base" oninput="calculate()">
+                            <div class="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-500 text-sm">m²</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Zone Climatique -->
+                    <div>
+                        <label for="zoneSelect" class="block text-sm font-semibold text-gray-700 mb-2">Zone Climatique</label>
+                        <select id="zoneSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-base" onchange="calculate()">
+                            <option value="H1" selected>H1 (x1.2)</option> 
+                            <option value="H2">H2 (x1.0)</option>
+                            <option value="H3">H3 (x0.7)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Ligne 2 : Performance PAC et Prix MWh Cumac -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Efficacité Énergétique (Etas) -->
+                    <div>
+                        <label for="etasSelect" class="block text-sm font-semibold text-gray-700 mb-2">Efficacité (Etas)</label>
+                        <select id="etasSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-base" onchange="calculate()">
+                            <option value="high">Etas ≥ 140%</option>
+                            <option value="standard">111% ≤ Etas < 140%</option>
+                        </select>
+                    </div>
+
+                    <!-- Prix du MWh Cumac -->
+                    <div>
+                        <label for="priceInput" class="block text-sm font-semibold text-gray-700 mb-2">Prix CEE (€/MWhc)</label>
+                        <div class="relative">
+                            <input type="number" id="priceInput" value="7.50" step="0.1" class="w-full pl-3 pr-12 py-2 border border-gray-300 rounded-lg text-base" oninput="calculate()">
+                            <div class="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-500 text-sm">€/MWhc</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Résultat CEE Négociée (Valeur de base pour la stratégie commerciale) -->
+                <div class="mt-4 p-4 bg-indigo-100 rounded-lg border border-indigo-300 text-center">
+                    <p class="text-sm font-semibold text-indigo-700">Valeur CEE Négociée (Base 100%):</p>
+                    <p id="ceeEuroCalculatedDisplay" class="text-2xl font-extrabold text-indigo-900 mt-1">0 €</p>
+                    <p id="volumeDisplay" class="text-xs text-indigo-600 mt-1">0 kWhc</p>
+                </div>
+            </div>
+
+
+            <!-- SECTION 2: PARAMÈTRES FINANCIERS ET STRATÉGIE COMMERCIALE -->
+            <h2 class="text-xl font-bold text-gray-800 border-b pb-2 flex items-center">
+                <i data-lucide="tag" class="w-5 h-5 mr-2 text-green-600"></i> Stratégie Commerciale & Plafond
+            </h2>
+
+            <div class="bg-green-50 p-4 rounded-xl border border-green-200 space-y-4">
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <!-- Coût total TTC du projet -->
+                    <div>
+                        <label for="costInput" class="block text-sm font-bold text-gray-700 mb-1">
+                            Coût total TTC du projet (€)
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="costInput" value="12000" min="1000" 
+                                class="w-full pl-4 pr-16 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-lg font-medium"
+                                oninput="calculate()">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500 font-medium">€</div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Plafond éligible : 12 000 €.
+                        </p>
+                    </div>
+
+                    <!-- Profil de Revenus MaPrimeRénov' -->
+                    <div>
+                        <label for="mprIncomeSelect" class="block text-sm font-bold text-gray-700 mb-1">
+                            Profil de Revenus MaPrimeRénov'
+                        </label>
+                        <select id="mprIncomeSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" onchange="calculate()">
+                            <option value="Bleu">Bleu (90% Max)</option>
+                            <option value="Jaune">Jaune (75% Max)</option>
+                            <option value="Violet">Violet (60% Max)</option>
+                            <option value="Rose">Rose (0% Max)</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            MPR Forfaitaire Théorique : <span id="mprForfaitTheoriqueDisplay" class="font-medium text-green-700">5 000 €</span>
+                        </p>
+                    </div>
+                 </div>
+                 
+                <!-- Curseur de Pourcentage CEE Appliqué -->
+                <div class="pt-4 border-t border-green-200">
+                    <label for="ceePercentSlider" class="block text-sm font-bold text-gray-700 mb-2 flex justify-between items-center">
+                        <span><i data-lucide="percent" class="w-4 h-4 inline mr-1"></i> Pourcentage de la CEE (Base) appliqué sur le Devis :</span>
+                        <span id="ceePercentValue" class="text-xl font-extrabold text-indigo-600">50%</span>
+                    </label>
+                    <input type="range" id="ceePercentSlider" min="0" max="100" value="58" 
+                           class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer"
+                           oninput="updateSliderValue(); calculate()">
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>0% (Max Marge)</span>
+                        <span>100% (Max Aide Client)</span>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- MESSAGES D'ALERTE -->
+            <div id="ineligibilityMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative">
+                <p class="font-bold">Non éligible aux aides</p>
+                <p class="text-sm">Le logement doit être la résidence principale et le profil Rose n'a pas droit à la MPR forfaitaire.</p>
+            </div>
+            
+            <div id="mprAdjustmentMessage" class="hidden bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-xl relative">
+                <p class="font-bold">ATTENTION : Plafond d'Aide Dépassé !</p>
+                <p id="mprAdjustmentText" class="text-sm">
+                    L'aide totale (<span id="maxAidPercentText">0%</span> du Coût Éligible) est dépassée. La prime MaPrimeRénov' est réduite à <span id="mprAdjustedEuroText">0 €</span> pour respecter le plafond total.
+                </p>
+            </div>
+
+
+            <!-- SECTION 3: RÉSULTATS ET SYNTHÈSE FINANCIÈRE -->
+            <h2 class="text-xl font-bold text-gray-800 border-b pb-2 flex items-center mt-8">
+                 <i data-lucide="award" class="w-5 h-5 mr-2 text-yellow-600"></i> Synthèse Financière & Reste à Charge
+            </h2>
+            
+            <div id="resultBox" class="bg-indigo-900 rounded-xl p-6 text-white shadow-xl mt-4">
+                
+                <div class="grid grid-cols-2 gap-4 divide-x divide-indigo-700 text-center">
+                     <!-- CEE Commerciale -->
+                    <div>
+                        <p class="text-indigo-300 text-sm uppercase tracking-wider mb-1">CEE Déduite (Devis)</p>
+                        <p id="ceeCommercialEuroDisplay" class="font-extrabold text-2xl text-yellow-300">0 €</p>
+                    </div>
+                    <!-- MPR Finale -->
+                    <div>
+                        <p class="text-indigo-300 text-sm uppercase tracking-wider mb-1">MPR (Montant Final)</p>
+                        <p id="mprEuroFinalDisplay" class="font-extrabold text-2xl text-green-400">0 €</p>
+                    </div>
+                </div>
+                    
+                <hr class="border-indigo-700 my-4">
+
+                <!-- Ligne Total -->
+                <div class="flex justify-between items-center text-xl pt-2">
+                    <span class="font-bold text-white">TOTAL AIDES DÉDUITES:</span>
+                    <span id="totalAidDisplay" class="font-extrabold text-3xl text-yellow-300">0 €</span>
+                </div>
+                
+                 <!-- Reste à Charge -->
+                <div class="flex justify-between items-center text-lg pt-4 mt-2">
+                    <span class="font-bold text-indigo-200">RESTE À CHARGE CLIENT:</span>
+                    <span id="racDisplay" class="font-extrabold text-2xl text-white">0 €</span>
+                </div>
+            </div>
+
+            <!-- Analyse de la Marge -->
+            <div id="marginAnalysisBox" class="bg-blue-50 border border-blue-300 rounded-xl p-4 space-y-2 mt-4">
+                <h2 class="text-sm font-bold text-blue-800 flex items-center">
+                    <i data-lucide="trending-up" class="w-4 h-4 mr-1"></i> Marge CEE et Plafond
+                </h2>
+                <div class="text-gray-700 space-y-1 text-sm">
+                    <p>Valeur CEE Négociée (Base 100%): <span id="ceeNegotiatedValueText" class="font-medium">0 €</span></p>
+                    <p>Prime CEE Appliquée au Client: <span id="ceeAppliedValueText" class="font-medium text-indigo-600">0 €</span></p>
+                    <p class="font-bold">Marge CEE conservée (Bénéfice): <span id="ceeMarginValueText" class="font-extrabold text-red-600">0 €</span> (<span id="ceeMarginPercentText">0%</span>)</p>
+                </div>
+            </div>
+
+
+            <!-- Phrase du bas de l'écran/Disclaimer -->
+            <div class="pt-4 text-center text-sm text-gray-500 border-t border-gray-100 mt-6">
+                <p>Simulation basée sur la fiche CEE BAR-TH-171 (Arrêté du 15 décembre 2025) et la réglementation MPR (Plafonds 2024/2025). Montants donnés à titre indicatif et non contractuels.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // DONNÉES DU DÉCRET CEE (Page 17 - Arrêté du 15 décembre 2025)
+        const BASE_RATES = {
+            Maison: {
+                standard: 90900, 
+                high: 109200     
+            },
+            Appartement: {
+                standard: 48700, 
+                high: 58900      
+            }
+        };
+
+        const ZONE_FACTORS = {
+            H1: 1.2,
+            H2: 1.0,
+            H3: 0.7
+        };
+        
+        const FIXED_BONUS_FACTOR = 5;
+
+        // DONNÉES MA PRIME RÉNOV' (Montants 2024/2025 pour PAC Air/Eau)
+        const MPR_GRANTS = {
+            Bleu: 5000,     // Très Modestes
+            Jaune: 4000,    // Modestes
+            Violet: 3000,   // Intermédiaires
+            Rose: 0         // Supérieurs (Pas d'aide forfaitaire pour les PAC seules)
+        };
+        
+        // Dépense éligible maximale pour la PAC Air/Eau dans le cadre de MaPrimeRénov'
+        const MAX_MPR_ELIGIBLE_COST = 12000; 
+
+        // PLAFONDS MAXIMAUX DE PRISE EN CHARGE (Règle du Reste à Charge Minimal)
+        const MAX_AID_PERCENTAGE = {
+            Bleu: 0.90,     // Max 90% d'aide, 10% de reste à charge minimal
+            Jaune: 0.75,    // Max 75% d'aide, 25% de reste à charge minimal
+            Violet: 0.60,   // Max 60% d'aide, 40% de reste à charge minimal
+            Rose: 0.00      // Max 0% d'aide (Pas de plafond, seule la CEE s'applique)
+        };
+
+
+        // --- UI UTILITIES ---
+
+        function setResidence(status) {
+            document.getElementById('isPrimaryResidence').value = status;
+            const btnResOui = document.getElementById('btnResOui');
+            const btnResNon = document.getElementById('btnResNon');
+
+            if (status === 'Oui') {
+                btnResOui.className = "flex-1 py-2 px-4 rounded-lg border-2 border-green-600 bg-green-50 text-green-700 font-bold transition-all";
+                btnResNon.className = "flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 transition-all";
+            } else {
+                btnResNon.className = "flex-1 py-2 px-4 rounded-lg border-2 border-red-600 bg-red-50 text-red-700 font-bold transition-all";
+                btnResOui.className = "flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 transition-all";
+            }
+            calculate();
+        }
+
+        function setType(type) {
+            document.getElementById('housingType').value = type;
+            const btnMaison = document.getElementById('btnMaison');
+            const btnAppart = document.getElementById('btnAppart');
+            
+            if (type === 'Maison') {
+                btnMaison.className = "flex-1 py-2 px-2 rounded-lg border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all text-sm";
+                btnAppart.className = "flex-1 py-2 px-2 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 transition-all text-sm";
+            } else {
+                btnAppart.className = "flex-1 py-2 px-2 rounded-lg border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all text-sm";
+                btnMaison.className = "flex-1 py-2 px-2 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 transition-all text-sm";
+            }
+            calculate();
+        }
+
+        function updateSliderValue() {
+            const slider = document.getElementById('ceePercentSlider');
+            document.getElementById('ceePercentValue').innerText = slider.value + '%';
+            calculate();
+        }
+
+        function formatCurrency(amount) {
+            return Math.round(amount).toLocaleString('fr-FR', {
+                style: 'currency', 
+                currency: 'EUR',
+                maximumFractionDigits: 0
+            });
+        }
+        
+        function formatPercent(amount) {
+            return (amount * 100).toFixed(0) + '%';
+        }
+
+
+        // --- MAIN CALCULATION LOGIC ---
+
+        function calculate() {
+            // 1. Récupération des entrées
+            const isPrimaryResidence = document.getElementById('isPrimaryResidence').value;
+            const type = document.getElementById('housingType').value;
+            const surface = parseFloat(document.getElementById('surfaceInput').value) || 0;
+            const etas = document.getElementById('etasSelect').value; // 'standard' ou 'high'
+            const zone = document.getElementById('zoneSelect').value;
+            const priceMWh = parseFloat(document.getElementById('priceInput').value) || 0;
+            
+            const mprIncomeCategory = document.getElementById('mprIncomeSelect').value;
+            const projectCost = parseFloat(document.getElementById('costInput').value) || 0;
+            const ceePercentApplied = parseFloat(document.getElementById('ceePercentSlider').value) || 0;
+
+            // Variables de résultat
+            let ceeEurosBase = 0; // Valeur CEE 100% calculée par BAR-TH-171
+            let volumeCEE = 0;
+            let mprAmountTheorique = MPR_GRANTS[mprIncomeCategory] || 0;
+            
+            let ceeCommerciale = 0; // CEE déduite sur le devis (ajustée selon le slider)
+            let mprAmountFinal = mprAmountTheorique; // MPR après ajustement plafond
+            let maxTotalAid = 0;
+            let eligibleExpense = 0;
+            let totalAidDeducted = 0;
+            let resteACharge = projectCost;
+
+            // Réinitialisation des messages
+            document.getElementById('ineligibilityMessage').classList.add('hidden');
+            document.getElementById('mprAdjustmentMessage').classList.add('hidden');
+            
+            // Mise à jour du MPR forfaitaire affiché
+            document.getElementById('mprForfaitTheoriqueDisplay').innerText = formatCurrency(mprAmountTheorique);
+
+            if (isPrimaryResidence === 'Non') {
+                document.getElementById('ineligibilityMessage').classList.remove('hidden');
+            }
+
+            // --- A. CALCUL CEE BAR-TH-171 (Valeur de Base) ---
+            if (isPrimaryResidence === 'Oui') {
+                const baseAmount = BASE_RATES[type][etas];
+                
+                // Facteur Correctif de Surface (S)
+                let surfaceFactor = 1.0;
+                if (type === 'Maison') {
+                    if (surface < 70) { surfaceFactor = 0.5; } 
+                    else if (surface < 90) { surfaceFactor = 0.7; }
+                    else { surfaceFactor = 1.0; }
+                } else { // Appartement
+                    if (surface < 35) { surfaceFactor = 0.5; } 
+                    else if (surface < 60) { surfaceFactor = 0.7; } 
+                    else { surfaceFactor = 1.0; }
+                }
+
+                const zoneFactor = ZONE_FACTORS[zone];
+
+                // Volume CEE (kWhc)
+                volumeCEE = baseAmount * surfaceFactor * zoneFactor;
+
+                // Montant CEE en Euros (Bonifié x5)
+                ceeEurosBase = (volumeCEE / 1000) * priceMWh * FIXED_BONUS_FACTOR;
+            }
+            
+            // --- B. STRATÉGIE COMMERCIALE CEE ---
+            // CEE effectivement déduite sur le devis (basée sur le curseur)
+            ceeCommerciale = ceeEurosBase * (ceePercentApplied / 100);
+
+            // --- C. APPLICATION DU PLAFOND (Reste à Charge Minimal) ---
+            
+            const maxAidPercentage = MAX_AID_PERCENTAGE[mprIncomeCategory];
+            
+            if (isPrimaryResidence === 'Oui' && mprIncomeCategory !== 'Rose') {
+                
+                // Dépense éligible pour le plafond
+                eligibleExpense = Math.min(projectCost, MAX_MPR_ELIGIBLE_COST);
+                
+                // Montant total maximal d'aides autorisé (MPR + CEE)
+                maxTotalAid = eligibleExpense * maxAidPercentage;
+                
+                // Montant total que représente CEE Commerciale + MPR Forfaitaire théorique
+                const totalAidTheorique = ceeCommerciale + mprAmountTheorique;
+                
+                if (totalAidTheorique > maxTotalAid) {
+                    // Si le plafond est dépassé, on ajuste la prime MPR
+                    mprAmountFinal = Math.max(0, maxTotalAid - ceeCommerciale);
+                    totalAidDeducted = maxTotalAid;
+                    
+                    // Affichage du message d'ajustement
+                    document.getElementById('maxAidPercentText').innerText = formatPercent(maxAidPercentage);
+                    document.getElementById('mprAdjustedEuroText').innerText = formatCurrency(mprAmountFinal);
+                    document.getElementById('mprAdjustmentMessage').classList.remove('hidden');
+                } else {
+                    // Plafond non dépassé, on garde les montants théoriques
+                    mprAmountFinal = mprAmountTheorique;
+                    totalAidDeducted = totalAidTheorique;
+                }
+            } else {
+                // Cas "Non Résidence Principale" ou Profil "Rose"
+                // On garde la CEE commerciale et la MPR théorique (qui est 0 pour Rose)
+                mprAmountFinal = mprAmountTheorique;
+                totalAidDeducted = ceeCommerciale + mprAmountFinal;
+            }
+
+            // --- D. CALCUL FINAL & AFFICHAGE ---
+            
+            resteACharge = Math.max(0, projectCost - totalAidDeducted);
+
+            // Section CEE Calculée (100% Base)
+            document.getElementById('ceeEuroCalculatedDisplay').innerText = formatCurrency(ceeEurosBase);
+            document.getElementById('volumeDisplay').innerText = Math.round(volumeCEE).toLocaleString('fr-FR') + ' kWhc';
+
+            // Section Déduction
+            document.getElementById('ceeCommercialEuroDisplay').innerText = formatCurrency(ceeCommerciale);
+            document.getElementById('mprEuroFinalDisplay').innerText = formatCurrency(mprAmountFinal);
+            document.getElementById('totalAidDisplay').innerText = formatCurrency(totalAidDeducted);
+            document.getElementById('racDisplay').innerText = formatCurrency(resteACharge);
+            
+            // Section Marge CEE
+            const ceeMargin = ceeEurosBase - ceeCommerciale;
+            const ceeMarginPercent = ceeEurosBase > 0 ? (ceeMargin / ceeEurosBase) * 100 : 0;
+            
+            document.getElementById('ceeNegotiatedValueText').innerText = formatCurrency(ceeEurosBase);
+            document.getElementById('ceeAppliedValueText').innerText = formatCurrency(ceeCommerciale);
+            document.getElementById('ceeMarginValueText').innerText = formatCurrency(ceeMargin);
+            document.getElementById('ceeMarginPercentText').innerText = Math.round(ceeMarginPercent) + '%';
+            
+            // Animation
+            const box = document.getElementById('resultBox');
+            box.classList.remove('animate-result');
+            void box.offsetWidth; 
+            box.classList.add('animate-result');
+        }
+
+        // Init
+        window.onload = function() {
+            lucide.createIcons();
+            setResidence('Oui'); 
+            setType('Maison'); // Déclenche le premier calcul
+            updateSliderValue(); // Met à jour le texte du slider
+        };
+    </script>
+</body>
+</html>

@@ -11,6 +11,8 @@ import BarEn103Page from './pages/simulators/BarEn103Page'
 import BarTh113Page from './pages/simulators/BarTh113Page'
 import BarTh174Page from './pages/simulators/BarTh174Page'
 import BarTh175Page from './pages/simulators/BarTh175Page'
+import SettingsPage from './pages/SettingsPage'
+import ToolboxPage from './pages/ToolboxPage'
 
 export default function App() {
   return (
@@ -28,6 +30,8 @@ export default function App() {
           <Route path="/simulateur/bar-th-175" element={<BarTh175Page />} />
           <Route path="/historique" element={<HistoryPage />} />
           <Route path="/actualites" element={<NewsPage />} />
+          <Route path="/parametrage" element={<SettingsPage />} />
+          <Route path="/boite-a-outils" element={<ToolboxPage />} />
         </Routes>
       </main>
       <Footer />

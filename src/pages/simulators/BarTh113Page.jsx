@@ -88,6 +88,7 @@ export default function BarTh113Page() {
 
           <InputField
             label="Prix CEE (€/MWhc)"
+            type="number"
             id="priceMWh"
             value={priceMWh}
             onChange={setPriceMWh}
@@ -134,6 +135,37 @@ export default function BarTh113Page() {
         title={`Biomasse ${fuelType} remplace ${replacedEnergy}`}
         inputs={{ mprCategory, fuelType, replacedEnergy, priceMWh, projectCost, ceePercent }}
         results={{ ...result, ...commercial }}
+        pdfData={{
+          ficheCode: 'BAR-TH-113',
+          ficheTitle: 'Chaudière biomasse individuelle',
+          params: [
+            { label: 'Précarité énergétique', value: isPrecarite ? 'Oui' : 'Non' },
+            { label: 'Type de combustible', value: fuelType },
+            { label: 'Énergie remplacée', value: replacedEnergy },
+            { label: 'Prix CEE', value: `${priceMWh} €/MWhc` },
+            { label: 'Profil revenus', value: mprCategory },
+          ],
+          results: [
+            { label: 'Volume CEE', value: formatKWhc(result.volumeCEE) },
+            { label: 'Valeur CEE (Base 100%)', value: formatCurrency(result.ceeEuros) },
+            { label: 'MPR forfaitaire', value: formatCurrency(mprGrantTheorique) },
+          ],
+          summary: {
+            projectCost,
+            ceeCommerciale: commercial.ceeCommerciale,
+            mprFinal: commercial.mprFinal,
+            totalAid: commercial.totalAid,
+            resteACharge: commercial.resteACharge,
+            showMpr: true,
+          },
+          margin: {
+            ceeBase: result.ceeEuros,
+            ceeApplied: commercial.ceeCommerciale,
+            margin: commercial.ceeMargin,
+            marginPercent: commercial.ceeMarginPercent,
+            showOnPdf: false,
+          },
+        }}
       />
 
       <div className="pt-4 text-center text-sm text-gray-500 border-t border-gray-100">

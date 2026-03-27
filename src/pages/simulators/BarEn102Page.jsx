@@ -59,6 +59,7 @@ export default function BarEn102Page() {
             />
             <InputField
               label="Surface des murs (m²)"
+              type="number"
               id="surface"
               value={surface}
               onChange={setSurface}
@@ -77,6 +78,7 @@ export default function BarEn102Page() {
             />
             <InputField
               label="Prix CEE (€/MWhc)"
+              type="number"
               id="priceMWh"
               value={priceMWh}
               onChange={setPriceMWh}
@@ -132,6 +134,35 @@ export default function BarEn102Page() {
         title={`Isolation murs ${method === 'interieur' ? 'ITI' : 'ITE'} — ${surface}m² ${zone}`}
         inputs={{ surface, zone, method, priceMWh, projectCost, ceePercent }}
         results={{ ...result, ...commercial }}
+        pdfData={{
+          ficheCode: 'BAR-EN-102',
+          ficheTitle: 'Isolation des murs',
+          params: [
+            { label: 'Méthode d\'isolation', value: method === 'interieur' ? 'ITI (Intérieur)' : 'ITE (Extérieur)' },
+            { label: 'Surface des murs', value: `${surface} m²` },
+            { label: 'Zone climatique', value: zone },
+            { label: 'Prix CEE', value: `${priceMWh} €/MWhc` },
+          ],
+          results: [
+            { label: 'Volume CEE', value: formatKWhc(result.volumeCEE) },
+            { label: 'Valeur CEE (Base 100%)', value: formatCurrency(result.ceeEuros) },
+          ],
+          summary: {
+            projectCost,
+            ceeCommerciale: commercial.ceeCommerciale,
+            mprFinal: 0,
+            totalAid: commercial.totalAid,
+            resteACharge: commercial.resteACharge,
+            showMpr: false,
+          },
+          margin: {
+            ceeBase: result.ceeEuros,
+            ceeApplied: commercial.ceeCommerciale,
+            margin: commercial.ceeMargin,
+            marginPercent: commercial.ceeMarginPercent,
+            showOnPdf: false,
+          },
+        }}
       />
 
       <div className="pt-4 text-center text-sm text-gray-500 border-t border-gray-100">

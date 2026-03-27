@@ -95,6 +95,7 @@ export default function BarTh171Page() {
 
             <InputField
               label="Surface (m²)"
+              type="number"
               id="surface"
               value={surface}
               onChange={setSurface}
@@ -123,6 +124,7 @@ export default function BarTh171Page() {
 
             <InputField
               label="Prix CEE (€/MWhc)"
+              type="number"
               id="priceMWh"
               value={priceMWh}
               onChange={setPriceMWh}
@@ -181,13 +183,44 @@ export default function BarTh171Page() {
         />
       )}
 
-      {/* Save */}
+      {/* Save & PDF */}
       {!isIneligible && (
         <SimulationSaveBar
           type="BAR-TH-171"
           title={`PAC Air/Eau — ${housingType} ${surface}m² ${zone}`}
           inputs={{ housingType, surface, zone, etas, priceMWh, projectCost, mprCategory, ceePercent }}
           results={{ ceeEurosBase, volumeCEE, ...commercial }}
+          pdfData={{
+            ficheCode: 'BAR-TH-171',
+            ficheTitle: 'Simulateur Aides PAC Air/Eau',
+            params: [
+              { label: 'Type de logement', value: housingType },
+              { label: 'Surface chauffée', value: `${surface} m²` },
+              { label: 'Zone climatique', value: zone },
+              { label: 'Efficacité (Etas)', value: etas === 'high' ? '≥ 140%' : '111% à 140%' },
+              { label: 'Prix CEE', value: `${priceMWh} €/MWhc` },
+              { label: 'Profil revenus', value: mprCategory },
+            ],
+            results: [
+              { label: 'Volume CEE', value: formatKWhc(volumeCEE) },
+              { label: 'Valeur CEE (Base 100%)', value: formatCurrency(ceeEurosBase) },
+              { label: 'MPR forfaitaire', value: formatCurrency(mprGrantTheorique) },
+            ],
+            summary: {
+              projectCost,
+              ceeCommerciale: commercial.ceeCommerciale,
+              mprFinal: commercial.mprFinal,
+              totalAid: commercial.totalAid,
+              resteACharge: commercial.resteACharge,
+            },
+            margin: {
+              ceeBase: ceeEurosBase,
+              ceeApplied: commercial.ceeCommerciale,
+              margin: commercial.ceeMargin,
+              marginPercent: commercial.ceeMarginPercent,
+              showOnPdf: false,
+            },
+          }}
         />
       )}
 

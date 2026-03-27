@@ -67,6 +67,7 @@ export default function BarEn101Page() {
             />
             <InputField
               label="Surface à isoler (m²)"
+              type="number"
               id="surface"
               value={surface}
               onChange={setSurface}
@@ -85,6 +86,7 @@ export default function BarEn101Page() {
             />
             <InputField
               label="Prix CEE (€/MWhc)"
+              type="number"
               id="priceMWh"
               value={priceMWh}
               onChange={setPriceMWh}
@@ -154,6 +156,35 @@ export default function BarEn101Page() {
         title={`Isolation ${insulationType} — ${surface}m² ${zone}`}
         inputs={{ surface, zone, insulationType, priceMWh, projectCost, mprCategory, ceePercent }}
         results={{ ...result, ...commercial }}
+        pdfData={{
+          ficheCode: 'BAR-EN-101',
+          ficheTitle: 'Isolation combles / toitures',
+          params: [
+            { label: 'Type d\'isolation', value: insulationType === 'combles' ? 'Combles perdus' : 'Rampants de toiture' },
+            { label: 'Surface à isoler', value: `${surface} m²` },
+            { label: 'Zone climatique', value: zone },
+            { label: 'Prix CEE', value: `${priceMWh} €/MWhc` },
+          ],
+          results: [
+            { label: 'Volume CEE', value: formatKWhc(result.volumeCEE) },
+            { label: 'Valeur CEE (Base 100%)', value: formatCurrency(result.ceeEuros) },
+          ],
+          summary: {
+            projectCost,
+            ceeCommerciale: commercial.ceeCommerciale,
+            mprFinal: commercial.mprFinal || 0,
+            totalAid: commercial.totalAid,
+            resteACharge: commercial.resteACharge,
+            showMpr: isRampants,
+          },
+          margin: {
+            ceeBase: result.ceeEuros,
+            ceeApplied: commercial.ceeCommerciale,
+            margin: commercial.ceeMargin,
+            marginPercent: commercial.ceeMarginPercent,
+            showOnPdf: false,
+          },
+        }}
       />
 
       <div className="pt-4 text-center text-sm text-gray-500 border-t border-gray-100">

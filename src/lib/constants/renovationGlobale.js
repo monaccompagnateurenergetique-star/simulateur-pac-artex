@@ -85,11 +85,20 @@ export const MIN_CLASS_JUMP = 2
 export const CLASSES_ANAH = ['E', 'F', 'G']
 
 // Taux de financement MPR Parcours Accompagné (% du montant HT éligible)
+// Source : Communiqué Ministère du Logement 22/07/2025
 export const MPR_PARCOURS_TAUX = {
-  Bleu: 0.80,   // Très modestes
-  Jaune: 0.60,  // Modestes
-  Violet: 0.45, // Intermédiaires
-  Rose: 0.10,   // Supérieurs
+  2: { Bleu: 0.80, Jaune: 0.60, Violet: 0.45, Rose: 0.10 },
+  3: { Bleu: 0.80, Jaune: 0.60, Violet: 0.50, Rose: 0.15 },
+  4: { Bleu: 0.80, Jaune: 0.60, Violet: 0.50, Rose: 0.15 },
+}
+
+// Subventions AMO (Mon Accompagnateur Rénov') — Plafond TTC 2 000 €
+export const AMO_PLAFOND = 2000
+export const AMO_TAUX = {
+  Bleu: 1.00,   // 100% → 2 000 €
+  Jaune: 0.80,  // 80%  → 1 600 €
+  Violet: 0.40, // 40%  → 800 €
+  Rose: 0.20,   // 20%  → 400 €
 }
 
 // Plafonds de dépenses éligibles HT selon le nombre de sauts

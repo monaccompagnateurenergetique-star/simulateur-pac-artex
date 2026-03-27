@@ -27,6 +27,7 @@ export default function CommercialStrategy({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <InputField
             label="Coût total TTC du projet (€)"
+            type="number"
             id="projectCost"
             value={projectCost}
             onChange={onProjectCostChange}
