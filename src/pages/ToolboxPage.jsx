@@ -36,7 +36,7 @@ const MONTANTS_PRIME_PAR_GESTE = [
     aides: [
       { label: 'PAC géothermique ou solarothermique', Bleu: 11000, Jaune: 9000, Violet: 6000, Rose: '-' },
       { label: 'PAC air/eau (dont hybride)', Bleu: 5000, Jaune: 4000, Violet: 3000, Rose: '-' },
-      { label: 'Chaudière biomasse', Bleu: 7000, Jaune: 5500, Violet: 3000, Rose: '-' },
+      { label: 'Chaudière biomasse', Bleu: '-', Jaune: '-', Violet: '-', Rose: '-', note: 'Exclue de MPR depuis le 01/01/2026' },
       { label: 'Système solaire combiné', Bleu: 10000, Jaune: 8000, Violet: 4000, Rose: '-' },
       { label: 'Chauffe-eau solaire individuel', Bleu: 4000, Jaune: 3000, Violet: 2000, Rose: '-' },
       { label: 'Chauffe-eau thermodynamique', Bleu: 1200, Jaune: 800, Violet: 400, Rose: '-' },
@@ -68,8 +68,8 @@ const MONTANTS_PRIME_PAR_GESTE = [
 const PLAFONDS_DEPENSES = [
   { label: 'PAC géothermique ou solarothermique', plafond: '18 000 €' },
   { label: 'PAC air/eau (dont hybride)', plafond: '12 000 €' },
-  { label: 'Chaudière biomasse manuelle', plafond: '16 000 €' },
-  { label: 'Chaudière biomasse automatique', plafond: '18 000 €' },
+  { label: 'Chaudière biomasse manuelle', plafond: 'Exclue MPR 2026' },
+  { label: 'Chaudière biomasse automatique', plafond: 'Exclue MPR 2026' },
   { label: 'Système solaire combiné', plafond: '16 000 €' },
   { label: 'Chauffe-eau solaire individuel', plafond: '7 000 €' },
   { label: 'Chauffe-eau thermodynamique', plafond: '3 500 €' },
@@ -529,6 +529,7 @@ export default function ToolboxPage() {
                       <td className="p-2 border-b text-gray-700">
                         {aide.label}
                         {aide.unite && <span className="text-xs text-gray-400 ml-1">({aide.unite})</span>}
+                        {aide.note && <span className="block text-xs text-red-500 font-semibold">{aide.note}</span>}
                       </td>
                       <td className="p-2 text-right border-b font-semibold text-blue-700">{typeof aide.Bleu === 'number' ? formatN(aide.Bleu) : aide.Bleu}</td>
                       <td className="p-2 text-right border-b font-semibold text-yellow-700">{typeof aide.Jaune === 'number' ? formatN(aide.Jaune) : aide.Jaune}</td>

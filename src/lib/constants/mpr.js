@@ -2,7 +2,7 @@
 export const MPR_GRANTS = {
   'bar-th-171': { Bleu: 5000, Jaune: 4000, Violet: 3000, Rose: 0 },
   'bar-th-112': { Bleu: 1250, Jaune: 1000, Violet: 500, Rose: 0 },
-  'bar-th-113': { Bleu: 5000, Jaune: 4000, Violet: 3000, Rose: 0 },
+  'bar-th-113': { Bleu: 0, Jaune: 0, Violet: 0, Rose: 0 }, // Exclue de MPR depuis le 01/01/2026
   'bar-en-101': { Bleu: 0, Jaune: 0, Violet: 0, Rose: 0 },
   'bar-en-102': { Bleu: 75, Jaune: 60, Violet: 40, Rose: 0 }, // per m²
   'bar-en-103': { Bleu: 0, Jaune: 0, Violet: 0, Rose: 0 },
