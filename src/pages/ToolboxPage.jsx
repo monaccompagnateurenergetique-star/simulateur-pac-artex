@@ -206,15 +206,6 @@ const TRAVAUX_COMPLEMENTAIRES = [
   'PAC',
 ]
 
-const DOCUMENTS_ENEMAT = [
-  'Avis d\'imposition de l\'occupant du logement',
-  'Remise de la taxe foncière systématique',
-  'Photos avant TRAVAUX obligatoires sur RETINA',
-  'La référence du devis généré sur RETINA avec le scénario retenu',
-  'Le document de pré visite',
-  'Le fichier source de l\'audit en format PZ2 / PZ3 / LICIEL',
-  'Le rapport d\'audit',
-]
 
 // ─── COMPOSANTS ───
 
@@ -491,16 +482,6 @@ export default function ToolboxPage() {
           ))}
         </div>
 
-        {/* Documents ENEMAT */}
-        <h3 className="text-sm font-bold text-gray-700 mb-2">Documents à remettre à ENEMAT avant les travaux</h3>
-        <div className="space-y-2 mb-4">
-          {DOCUMENTS_ENEMAT.map((item, i) => (
-            <div key={i} className="flex gap-2 items-start">
-              <FileText className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
-              <p className="text-sm text-gray-700">{item}</p>
-            </div>
-          ))}
-        </div>
 
         {/* Alertes */}
         <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-4">
