@@ -62,8 +62,9 @@ export default function BarTh174Page() {
       classInitiale, classCible, surface, mprCategory,
       projectCostHT, projectCostTTC,
       priceMWhPrecaire, priceMWhClassique,
+      forceMode: eligibility.mode,
     })
-  }, [classInitiale, classCible, surface, mprCategory, projectCostHT, projectCostTTC, priceMWhPrecaire, priceMWhClassique, isEligible])
+  }, [classInitiale, classCible, surface, mprCategory, projectCostHT, projectCostTTC, priceMWhPrecaire, priceMWhClassique, isEligible, eligibility.mode])
 
   // Pour le mode CEE, appliquer le % commercial
   const finalResult = useMemo(() => {

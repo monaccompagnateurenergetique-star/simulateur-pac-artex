@@ -31,10 +31,12 @@
     "date": "2026-01-17",
     "category": "réglementation",
     "summary": "Nouvelles versions des fiches de rénovation globale (vA80-3). Montants unitaires CEE révisés et conditions d'éligibilité ajustées.",
-    "content": "Les fiches BAR-TH-174 (maison individuelle) et BAR-TH-175 (appartement) sont mises à jour en version A80-3 à compter du 17 janvier 2026. Les montants unitaires CEE sont fixés à : 360 200 kWhc cumac pour 2 sauts de classes, 447 900 pour 3 sauts, et 568 600 pour 4 sauts ou plus. Les facteurs correctifs de surface et le bonus précarité (×2 pour les ménages très modestes) sont maintenus. Rappel : les DPE E, F, G relèvent uniquement de MaPrimeRénov' Parcours Accompagné (pas de CEE). Les DPE C, D relèvent uniquement des CEE (pas de MPR).",
+    "content": "Les fiches BAR-TH-174 (maison individuelle) et BAR-TH-175 (appartement) sont mises à jour en version A80-3 à compter du 17 janvier 2026. Les montants unitaires CEE sont fixés à : 360 200 kWhc cumac pour 2 sauts de classes, 447 900 pour 3 sauts, et 568 600 pour 4 sauts ou plus. Les facteurs correctifs de surface et le bonus précarité (×2 pour les ménages très modestes) sont maintenus.\n\nÉLIGIBILITÉ PAR TYPE DE BÉNÉFICIAIRE (depuis le 17/01/2026) :\n• Bailleur social / SCI / Société → CEE pour toutes les classes DPE\n• Personne physique occupant → DPE C/D = CEE, DPE E/F/G = MaPrimeRénov'\n• Résidence secondaire (personne physique) → Non éligible CEE",
     "pdf": "docs/BAR-TH-174.pdf",
     "pdf2": "docs/BAR-TH-175.pdf",
-    "pdf2Label": "Fiche BAR-TH-175"
+    "pdf2Label": "Fiche BAR-TH-175",
+    "link": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000041400291",
+    "linkLabel": "Source Légifrance"
   },
   {
     "id": "4",

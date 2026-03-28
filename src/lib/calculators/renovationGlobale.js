@@ -1,9 +1,10 @@
 /**
  * Calculateur BAR-TH-174 / BAR-TH-175 — Rénovation d'ampleur
  *
- * DEUX MODES EXCLUSIFS :
- * - DPE E, F, G → Uniquement MaPrimeRénov' Parcours Accompagné (pas de CEE)
- * - DPE C, D    → Uniquement CEE BAR-TH-174/175 (pas de MPR)
+ * Le mode (CEE vs ANAH) dépend du DPE ET du profil bénéficiaire :
+ * - PP + DPE E/F/G → MaPrimeRénov' Parcours Accompagné
+ * - PP + DPE C/D   → CEE BAR-TH-174/175
+ * - Personne morale (SCI, bailleur social) → Toujours CEE (toutes classes)
  */
 import {
   MONTANT_UNITAIRE,
@@ -77,6 +78,10 @@ export function calculateANAH({ classInitiale, classCible, mprCategory, projectC
 
 // ─── Calcul complet ───
 
+/**
+ * @param {Object} params
+ * @param {string} [params.forceMode] - 'cee' ou 'anah' — si fourni, ignore la logique DPE pour le choix du mode
+ */
 export function calculateRenovationGlobale({
   classInitiale,
   classCible,
@@ -86,12 +91,13 @@ export function calculateRenovationGlobale({
   projectCostTTC,
   priceMWhPrecaire = 12,
   priceMWhClassique = 7,
+  forceMode = null,
 }) {
-  const isAnah = CLASSES_ANAH.includes(classInitiale)
+  const isAnah = forceMode ? forceMode === 'anah' : CLASSES_ANAH.includes(classInitiale)
   const jumps = getClassJump(classInitiale, classCible)
 
   if (isAnah) {
-    // ── DPE E/F/G → Uniquement MPR Parcours Accompagné ──
+    // ── Mode MPR Parcours Accompagné ──
     const anah = calculateANAH({ classInitiale, classCible, mprCategory, projectCostHT })
     return {
       mode: 'anah',
@@ -103,7 +109,7 @@ export function calculateRenovationGlobale({
     }
   }
 
-  // ── DPE C/D → Uniquement CEE ──
+  // ── Mode CEE ──
   const cee = calculateCEE({
     classInitiale, classCible, surface, mprCategory,
     priceMWhPrecaire, priceMWhClassique,

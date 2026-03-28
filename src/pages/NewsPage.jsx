@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Newspaper, FileText, AlertTriangle } from 'lucide-react'
+import { Newspaper, FileText, AlertTriangle, ExternalLink } from 'lucide-react'
 import newsData from '../data/news.json'
 
 const categoryColors = {
@@ -90,7 +90,7 @@ export default function NewsPage() {
             <p className={`text-sm leading-relaxed whitespace-pre-line ${article.important ? 'text-orange-800' : 'text-gray-600'}`}>
               {article.content}
             </p>
-            {(article.pdf || article.pdf2) && (
+            {(article.pdf || article.pdf2 || article.link) && (
               <div className="flex flex-wrap gap-2 mt-4">
                 {article.pdf && (
                   <a
@@ -112,6 +112,17 @@ export default function NewsPage() {
                   >
                     <FileText className="w-3.5 h-3.5" />
                     {article.pdf2Label || 'Consulter le PDF'}
+                  </a>
+                )}
+                {article.link && (
+                  <a
+                    href={article.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold hover:bg-indigo-100 transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    {article.linkLabel || 'Voir la source'}
                   </a>
                 )}
               </div>

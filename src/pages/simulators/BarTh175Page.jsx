@@ -51,8 +51,9 @@ export default function BarTh175Page() {
     return calculateRenovationGlobale({
       classInitiale, classCible, surface, mprCategory,
       projectCostHT, projectCostTTC, priceMWhPrecaire, priceMWhClassique,
+      forceMode: eligibility.mode,
     })
-  }, [classInitiale, classCible, surface, mprCategory, projectCostHT, projectCostTTC, priceMWhPrecaire, priceMWhClassique, isEligible])
+  }, [classInitiale, classCible, surface, mprCategory, projectCostHT, projectCostTTC, priceMWhPrecaire, priceMWhClassique, isEligible, eligibility.mode])
 
   const finalResult = useMemo(() => {
     if (!result) return null
