@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookOpen, Euro, BarChart3, Home, Users, ChevronDown, ChevronUp, ClipboardCheck, FileText, AlertTriangle, CheckCircle } from 'lucide-react'
+import { BookOpen, Euro, BarChart3, Home, Users, ChevronDown, ChevronUp, ClipboardCheck, FileText, AlertTriangle, CheckCircle, Zap } from 'lucide-react'
 
 // ─── DONNÉES BARÈMES ───
 
@@ -133,6 +133,88 @@ const RENOVATION_AMPLEUR = {
     ],
   },
 }
+
+// ─── RÉNOVATION D'AMPLEUR CEE — BAR-TH-174/175 Coup de Pouce ───
+
+const BENEFICIAIRES_ELIGIBLES = {
+  title: 'Bénéficiaires éligibles — Devis signé à compter du 17/01/2026',
+  source: 'Guide CEE ENEMAT — BAR-TH-174/175 Coup de Pouce',
+  rows: [
+    {
+      type: 'Bailleur social',
+      occupation: 'Résidence principale',
+      avant17: '✓ Éligible',
+      apres17: '✓ Éligible',
+      avantColor: 'text-green-700',
+      apresColor: 'text-green-700',
+    },
+    {
+      type: 'SCI, SARL, SAS, SASU…\n(propriétaire bailleur)',
+      occupation: 'Résidence principale',
+      avant17: '✓ Éligible',
+      apres17: '✓ Éligible',
+      avantColor: 'text-green-700',
+      apresColor: 'text-green-700',
+    },
+    {
+      type: 'Personne physique\n(propriétaire)',
+      occupation: 'Résidence secondaire',
+      avant17: '✓ Éligible',
+      apres17: '✗ Relève de l\'ANAH',
+      avantColor: 'text-green-700',
+      apresColor: 'text-red-600',
+    },
+    {
+      type: 'Personne physique\n(propriétaire occupant)',
+      occupation: 'Résidence principale',
+      avant17: '✗ Relève de l\'ANAH',
+      apres17: '✓ Éligible si DPE C ou D',
+      avantColor: 'text-red-600',
+      apresColor: 'text-amber-700',
+    },
+  ],
+}
+
+const VALORISATION_CEE_COUP_DE_POUCE = {
+  title: 'Valorisation CEE Coup de Pouce — en fonction du saut de classes',
+  source: 'Base de 12 €/MWh cumac (précaire)',
+  headers: ['Shab > 35m²', '35 ≤ Shab < 60', '60 ≤ Shab < 90', '90 ≤ Shab < 110', '110 ≤ Shab ≤ 130', 'Shab > 130'],
+  rows: [
+    { sauts: '2', values: ['3 458 €', '4 322 €', '6 916 €', '8 645 €', '10 374 €', '11 238 €'] },
+    { sauts: '3', values: ['4 300 €', '5 375 €', '8 600 €', '10 750 €', '12 900 €', '13 974 €'] },
+    { sauts: '≥ 4', values: ['5 459 €', '6 823 €', '10 917 €', '13 646 €', '16 376 €', '17 740 €'] },
+  ],
+}
+
+const PROCEDURE_RENO_AMPLEUR = [
+  'L\'opération doit générer un gain d\'au moins 2 classes énergétiques',
+  'Un contrôle Cofrac après travaux est obligatoire',
+  '2 gestes d\'isolation sont nécessaires pour un minimum de 25% de l\'enveloppe',
+  'L\'audit énergétique doit être réalisé physiquement par l\'auditeur',
+]
+
+const TRAVAUX_ISOLATION_ELIGIBLE = [
+  'Isolation des murs par l\'extérieur ou par l\'intérieur',
+  'Remplacement des fenêtres',
+  'Isolation des planchers bas (appartements en RDC)',
+  'Isolation de la toiture / des combles (appartements en dernier étage)',
+]
+
+const TRAVAUX_COMPLEMENTAIRES = [
+  'VMC',
+  'Ballon Thermodynamique',
+  'PAC',
+]
+
+const DOCUMENTS_ENEMAT = [
+  'Avis d\'imposition de l\'occupant du logement',
+  'Remise de la taxe foncière systématique',
+  'Photos avant TRAVAUX obligatoires sur RETINA',
+  'La référence du devis généré sur RETINA avec le scénario retenu',
+  'Le document de pré visite',
+  'Le fichier source de l\'audit en format PZ2 / PZ3 / LICIEL',
+  'Le rapport d\'audit',
+]
 
 // ─── COMPOSANTS ───
 
@@ -318,6 +400,127 @@ export default function ToolboxPage() {
               <p className="font-bold text-xl text-indigo-700">{row.taux}</p>
             </div>
           ))}
+        </div>
+      </Section>
+
+      {/* 2b. Rénovation d'ampleur CEE — BAR-TH-174/175 Coup de Pouce */}
+      <Section title="CEE Rénovation d'ampleur — BAR-TH-174/175 Coup de Pouce" icon={Zap} iconColor="text-orange-600">
+        <p className="text-xs text-gray-500 mb-1">{BENEFICIAIRES_ELIGIBLES.source}</p>
+        <p className="text-xs text-red-600 font-bold mb-4">ATTENTION : Aucun CDP entre le 1er et le 16 janvier 2026</p>
+
+        {/* Bénéficiaires éligibles */}
+        <h3 className="text-sm font-bold text-gray-700 mb-2">{BENEFICIAIRES_ELIGIBLES.title}</h3>
+        <div className="overflow-x-auto mb-6">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-orange-800 text-white text-xs">
+                <th className="p-2 text-left">Bénéficiaire (signataire du devis)</th>
+                <th className="p-2 text-left">Occupation du logement</th>
+                <th className="p-2 text-center">Devis signé AVANT le 17/01/2026</th>
+                <th className="p-2 text-center">Devis signé À COMPTER du 17/01/2026</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BENEFICIAIRES_ELIGIBLES.rows.map((row, i) => (
+                <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="p-2 border-b font-medium text-gray-800 whitespace-pre-line">{row.type}</td>
+                  <td className="p-2 border-b text-gray-600">{row.occupation}</td>
+                  <td className={`p-2 border-b text-center font-semibold ${row.avantColor}`}>{row.avant17}</td>
+                  <td className={`p-2 border-b text-center font-semibold ${row.apresColor}`}>{row.apres17}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Valorisation par saut de classes */}
+        <h3 className="text-sm font-bold text-gray-700 mb-2">{VALORISATION_CEE_COUP_DE_POUCE.title}</h3>
+        <p className="text-xs text-gray-500 mb-2">{VALORISATION_CEE_COUP_DE_POUCE.source}</p>
+        <div className="overflow-x-auto mb-6">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-orange-700 text-white text-xs">
+                <th className="p-2 text-left">Sauts de classe</th>
+                {VALORISATION_CEE_COUP_DE_POUCE.headers.map((h, i) => (
+                  <th key={i} className="p-2 text-right">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {VALORISATION_CEE_COUP_DE_POUCE.rows.map((row, i) => (
+                <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="p-2 border-b font-bold text-gray-800">{row.sauts}</td>
+                  {row.values.map((v, j) => (
+                    <td key={j} className="p-2 text-right border-b font-semibold text-green-700">{v}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Procédure */}
+        <h3 className="text-sm font-bold text-gray-700 mb-2">Procédure pour déposer un dossier</h3>
+        <div className="space-y-2 mb-4">
+          {PROCEDURE_RENO_AMPLEUR.map((item, i) => (
+            <div key={i} className="flex gap-2 items-start">
+              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+              <p className="text-sm text-gray-700">{item}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Travaux d'isolation éligibles */}
+        <h3 className="text-sm font-bold text-gray-700 mb-2">Gestes d'isolation éligibles</h3>
+        <div className="space-y-1 mb-4">
+          {TRAVAUX_ISOLATION_ELIGIBLE.map((item, i) => (
+            <div key={i} className="flex gap-2 items-center">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+              <p className="text-sm text-gray-700">{item}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Travaux complémentaires */}
+        <h3 className="text-sm font-bold text-gray-700 mb-2">Travaux complémentaires possibles</h3>
+        <div className="flex gap-2 mb-6">
+          {TRAVAUX_COMPLEMENTAIRES.map((item, i) => (
+            <span key={i} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg border border-indigo-200">
+              {item}
+            </span>
+          ))}
+        </div>
+
+        {/* Documents ENEMAT */}
+        <h3 className="text-sm font-bold text-gray-700 mb-2">Documents à remettre à ENEMAT avant les travaux</h3>
+        <div className="space-y-2 mb-4">
+          {DOCUMENTS_ENEMAT.map((item, i) => (
+            <div key={i} className="flex gap-2 items-start">
+              <FileText className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+              <p className="text-sm text-gray-700">{item}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Alertes */}
+        <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-4">
+          <h4 className="text-sm font-bold text-amber-800 flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4" />
+            VIGILANCE DOUBLONS
+          </h4>
+          <p className="text-sm text-amber-700">
+            Si les opérations d'isolation ont déjà été effectuées, vérifier qu'elles n'ont pas déjà fait l'objet d'une valorisation CEE.
+          </p>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h4 className="text-sm font-bold text-red-800 flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4" />
+            OPÉRATION NON ÉLIGIBLE
+          </h4>
+          <p className="text-sm text-red-700">
+            Si l'équipement de chauffage ou de production d'eau chaude sanitaire a un niveau d'émission de gaz à effet de serre supérieur à 300 gCO₂eq/kWh PCI.
+          </p>
         </div>
       </Section>
 
