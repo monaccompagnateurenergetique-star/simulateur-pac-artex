@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, Home, Calculator, History, Newspaper, Settings, BookOpen, Users } from 'lucide-react'
+import { Menu, X, Home, Calculator, History, Newspaper, Settings, BookOpen, Users, Thermometer } from 'lucide-react'
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -9,9 +9,10 @@ export default function Header() {
   const navLinks = [
     { to: '/', label: 'Accueil', icon: Home },
     { to: '/clients', label: 'Bénéficiaires', icon: Users },
-    { to: '/historique', label: 'Historique', icon: History },
-    { to: '/actualites', label: 'Actualités', icon: Newspaper },
+    { to: '/prospection-dpe', label: 'Prospection DPE', icon: Thermometer },
     { to: '/boite-a-outils', label: 'Boîte à outils', icon: BookOpen },
+    { to: '/historique', label: 'Historique', icon: History },
+    { to: '/actualites', label: 'Actualités', icon: Newspaper, badge: true },
     { to: '/parametrage', label: 'Paramétrage', icon: Settings },
   ]
 
@@ -33,11 +34,11 @@ export default function Header() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map(({ to, label, icon: Icon }) => (
+            {navLinks.map(({ to, label, icon: Icon, badge }) => (
               <Link
                 key={to}
                 to={to}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   isActive(to)
                     ? 'bg-lime-500/20 text-lime-400'
                     : 'text-gray-300 hover:text-white hover:bg-white/10'
@@ -45,6 +46,9 @@ export default function Header() {
               >
                 <Icon className="w-4 h-4" />
                 {label}
+                {badge && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                )}
               </Link>
             ))}
           </nav>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Newspaper, FileText } from 'lucide-react'
+import { Newspaper, FileText, AlertTriangle } from 'lucide-react'
 import newsData from '../data/news.json'
 
 const categoryColors = {
@@ -7,14 +7,22 @@ const categoryColors = {
   aides: 'bg-green-100 text-green-700 border-green-200',
   actualités: 'bg-blue-100 text-blue-700 border-blue-200',
   guides: 'bg-purple-100 text-purple-700 border-purple-200',
+  alerte: 'bg-orange-100 text-orange-700 border-orange-200',
 }
 
-const allCategories = [...new Set(newsData.map((a) => a.category))]
+// Tri par date décroissante, alertes en premier
+const sortedNews = [...newsData].sort((a, b) => {
+  if (a.important && !b.important) return -1
+  if (!a.important && b.important) return 1
+  return new Date(b.date) - new Date(a.date)
+})
+
+const allCategories = [...new Set(sortedNews.map((a) => a.category))]
 
 export default function NewsPage() {
   const [filter, setFilter] = useState('all')
 
-  const filtered = filter === 'all' ? newsData : newsData.filter((a) => a.category === filter)
+  const filtered = filter === 'all' ? sortedNews : sortedNews.filter((a) => a.category === filter)
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
@@ -51,17 +59,24 @@ export default function NewsPage() {
         {filtered.map((article) => (
           <article
             key={article.id}
-            className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
+            className={`rounded-xl border p-6 hover:shadow-md transition-shadow ${
+              article.important
+                ? 'bg-orange-50 border-orange-300 ring-1 ring-orange-200'
+                : 'bg-white border-gray-200'
+            }`}
           >
             <div className="flex items-center gap-2 mb-3">
+              {article.important && <AlertTriangle className="w-4 h-4 text-orange-600" />}
               <span
                 className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                  categoryColors[article.category] || 'bg-gray-100 text-gray-600'
+                  article.important
+                    ? 'bg-orange-200 text-orange-800'
+                    : categoryColors[article.category] || 'bg-gray-100 text-gray-600'
                 }`}
               >
-                {article.category}
+                {article.important ? 'ALERTE' : article.category}
               </span>
-              <span className="text-xs text-gray-400">
+              <span className={`text-xs ${article.important ? 'text-orange-600 font-medium' : 'text-gray-400'}`}>
                 {new Date(article.date).toLocaleDateString('fr-FR', {
                   day: '2-digit',
                   month: 'long',
@@ -69,8 +84,12 @@ export default function NewsPage() {
                 })}
               </span>
             </div>
-            <h2 className="text-lg font-bold text-gray-800 mb-2">{article.title}</h2>
-            <p className="text-sm text-gray-600 leading-relaxed">{article.content}</p>
+            <h2 className={`text-lg font-bold mb-2 ${article.important ? 'text-orange-900' : 'text-gray-800'}`}>
+              {article.title}
+            </h2>
+            <p className={`text-sm leading-relaxed whitespace-pre-line ${article.important ? 'text-orange-800' : 'text-gray-600'}`}>
+              {article.content}
+            </p>
             {(article.pdf || article.pdf2) && (
               <div className="flex flex-wrap gap-2 mt-4">
                 {article.pdf && (

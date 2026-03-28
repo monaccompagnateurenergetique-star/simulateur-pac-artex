@@ -16,6 +16,7 @@ import ToolboxPage from './pages/ToolboxPage'
 import ClientsPage from './pages/ClientsPage'
 import ClientFormPage from './pages/ClientFormPage'
 import ClientDetailPage from './pages/ClientDetailPage'
+import DpeProspectionPage from './pages/DpeProspectionPage'
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/clients/nouveau" element={<ClientFormPage />} />
           <Route path="/clients/:id" element={<ClientDetailPage />} />
           <Route path="/clients/:id/modifier" element={<ClientFormPage />} />
+          <Route path="/prospection-dpe" element={<DpeProspectionPage />} />
         </Routes>
       </main>
       <Footer />

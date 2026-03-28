@@ -1,16 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { UserPlus, Save, ArrowLeft } from 'lucide-react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { UserPlus, Save, ArrowLeft, MapPin, Check } from 'lucide-react'
 import InputField from '../components/ui/InputField'
 import SelectField from '../components/ui/SelectField'
 import { useClients } from '../hooks/useClients'
 import { getRevenueCategory } from '../lib/revenueCategory'
-
-const ZONE_OPTIONS = [
-  { value: 'H1', label: 'H1 — Nord / Est / Montagne' },
-  { value: 'H2', label: 'H2 — Ouest / Sud-Ouest' },
-  { value: 'H3', label: 'H3 — Méditerranée' },
-]
+import { getLocationInfo } from '../utils/postalCode'
 
 const TYPE_LOGEMENT = [
   { value: 'maison', label: 'Maison individuelle' },
@@ -19,31 +14,50 @@ const TYPE_LOGEMENT = [
 
 export default function ClientFormPage() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { clients, addClient, updateClient } = useClients()
   const isEdit = id && id !== 'nouveau'
   const existing = isEdit ? clients.find((c) => c.id === id) : null
 
-  const [form, setForm] = useState({
-    lastName: '',
-    firstName: '',
-    phone: '',
-    email: '',
-    address: '',
-    city: '',
-    postalCode: '',
-    personnes: 1,
-    rfr: '',
-    isIDF: false,
-    typeLogement: 'maison',
-    surface: '',
-    anneeConstruction: '',
-    zone: 'H1',
+  const [form, setForm] = useState(() => {
+    // Pre-fill from URL params (e.g. from DPE prospection)
+    const fromUrl = {
+      address: searchParams.get('address') || '',
+      postalCode: searchParams.get('postalCode') || '',
+      city: searchParams.get('city') || '',
+    }
+    return {
+      lastName: '',
+      firstName: '',
+      phone: '',
+      email: '',
+      address: fromUrl.address,
+      city: fromUrl.city,
+      postalCode: fromUrl.postalCode,
+      personnes: 1,
+      rfr: '',
+      typeLogement: 'maison',
+      surface: '',
+    }
   })
 
   useEffect(() => {
     if (existing) {
-      setForm((prev) => ({ ...prev, ...existing }))
+      setForm((prev) => ({
+        ...prev,
+        lastName: existing.lastName || '',
+        firstName: existing.firstName || '',
+        phone: existing.phone || '',
+        email: existing.email || '',
+        address: existing.address || '',
+        city: existing.city || '',
+        postalCode: existing.postalCode || '',
+        personnes: existing.personnes || 1,
+        rfr: existing.rfr || '',
+        typeLogement: existing.typeLogement || 'maison',
+        surface: existing.surface || '',
+      }))
     }
   }, [existing])
 
@@ -51,10 +65,18 @@ export default function ClientFormPage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
+  // Auto-detect location from postal code
+  const locationInfo = useMemo(
+    () => (form.postalCode.length >= 5 ? getLocationInfo(form.postalCode) : null),
+    [form.postalCode]
+  )
+
+  // Auto-calculate revenue category
   const revenueInfo = useMemo(() => {
     if (!form.rfr || !form.personnes) return null
-    return getRevenueCategory(Number(form.rfr), Number(form.personnes), form.isIDF)
-  }, [form.rfr, form.personnes, form.isIDF])
+    const isIDF = locationInfo?.isIDF || false
+    return getRevenueCategory(Number(form.rfr), Number(form.personnes), isIDF)
+  }, [form.rfr, form.personnes, locationInfo])
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -63,7 +85,12 @@ export default function ClientFormPage() {
       rfr: form.rfr ? Number(form.rfr) : null,
       personnes: Number(form.personnes),
       surface: form.surface ? Number(form.surface) : null,
-      anneeConstruction: form.anneeConstruction ? Number(form.anneeConstruction) : null,
+      // Auto-detected from postal code
+      region: locationInfo?.region || null,
+      departement: locationInfo?.departement || null,
+      zoneClimatique: locationInfo?.zoneClimatique || null,
+      zone: locationInfo?.zoneSimplifiee || null,
+      isIDF: locationInfo?.isIDF || false,
       category: revenueInfo?.category || null,
       categoryLabel: revenueInfo?.label || null,
     }
@@ -153,6 +180,7 @@ export default function ClientFormPage() {
                 value={form.postalCode}
                 onChange={(v) => set('postalCode', v)}
                 placeholder="38000"
+                maxLength={5}
               />
               <InputField
                 label="Ville"
@@ -162,6 +190,28 @@ export default function ClientFormPage() {
                 placeholder="Grenoble"
               />
             </div>
+
+            {/* Auto-detected info from postal code */}
+            {locationInfo && (
+              <div className="flex flex-wrap gap-2 mt-1">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                  <MapPin className="w-3 h-3" />
+                  {locationInfo.region}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                  Zone {locationInfo.zoneClimatique}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                  Dept. {locationInfo.departement}
+                </span>
+                {locationInfo.isIDF && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+                    <Check className="w-3 h-3" />
+                    Île-de-France
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </fieldset>
 
@@ -190,28 +240,6 @@ export default function ClientFormPage() {
               />
             </div>
 
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-semibold text-gray-700">Région :</label>
-              <button
-                type="button"
-                onClick={() => set('isIDF', false)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  !form.isIDF ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Hors Île-de-France
-              </button>
-              <button
-                type="button"
-                onClick={() => set('isIDF', true)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  form.isIDF ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Île-de-France
-              </button>
-            </div>
-
             {/* Catégorie auto-calculée */}
             {revenueInfo && (
               <div className={`flex items-center gap-3 p-4 rounded-xl border-2 ${CATEGORY_COLORS[revenueInfo.category]}`}>
@@ -219,7 +247,7 @@ export default function ClientFormPage() {
                 <div>
                   <p className="font-bold text-sm">Profil {revenueInfo.category} — {revenueInfo.label}</p>
                   <p className="text-xs opacity-75">
-                    Calculé automatiquement selon les plafonds {form.isIDF ? 'IDF' : 'hors IDF'} 2026
+                    Calculé automatiquement selon les plafonds {locationInfo?.isIDF ? 'IDF' : 'hors IDF'} 2026
                     pour {form.personnes} personne{form.personnes > 1 ? 's' : ''}
                   </p>
                 </div>
@@ -239,13 +267,6 @@ export default function ClientFormPage() {
               onChange={(v) => set('typeLogement', v)}
               options={TYPE_LOGEMENT}
             />
-            <SelectField
-              label="Zone climatique"
-              id="zone"
-              value={form.zone}
-              onChange={(v) => set('zone', v)}
-              options={ZONE_OPTIONS}
-            />
             <InputField
               label="Surface habitable"
               id="surface"
@@ -254,14 +275,6 @@ export default function ClientFormPage() {
               onChange={(v) => set('surface', v)}
               suffix="m²"
               placeholder="100"
-            />
-            <InputField
-              label="Année de construction"
-              id="anneeConstruction"
-              type="number"
-              value={form.anneeConstruction}
-              onChange={(v) => set('anneeConstruction', v)}
-              placeholder="1985"
             />
           </div>
         </fieldset>

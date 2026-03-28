@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 
 const COLORS = {
   primary: [30, 27, 75],       // indigo-900
@@ -133,7 +133,7 @@ export function generateSimulationPDF({
   doc.text('Paramètres de la simulation', marginX, y)
   y += 2
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     margin: { left: marginX, right: marginX },
     head: [['Paramètre', 'Valeur']],
@@ -168,7 +168,7 @@ export function generateSimulationPDF({
     doc.text('Résultats du calcul', marginX, y)
     y += 2
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: y,
       margin: { left: marginX, right: marginX },
       head: [['Indicateur', 'Valeur']],

@@ -1,5 +1,14 @@
 [
   {
+    "id": "9",
+    "title": "URGENT — Guichets MaPrimeRénov' suspendus : incident technique ANAH",
+    "date": "2026-03-28",
+    "category": "alerte",
+    "important": true,
+    "summary": "Les guichets MaPrimeRénov' (par geste et rénovation d'ampleur) sont temporairement suspendus en raison d'un incident technique lié à la protection des données fiscales.",
+    "content": "Depuis plusieurs jours, les guichets MaPrimeRénov' (par geste et rénovation d'ampleur) sont temporairement suspendus en raison d'un incident technique.\n\nLa cause : un défaut de protection des données dans le cadre de l'application d'échange de l'ANAH avec l'administration fiscale. Lors de la création des comptes ANAH, une vérification des données fiscales (sur la base de l'identifiant fiscal renseigné par le bénéficiaire) est requise afin de sécuriser l'identité des bénéficiaires. C'est cette vérification qui est actuellement défaillante.\n\n« Nous sommes conscients de la gêne occasionnée pour les ménages et les professionnels concernés. Nos équipes sont pleinement mobilisées, en lien avec les services de l'administration fiscale, pour permettre un retour à la normale dans les meilleurs délais » précise l'ANAH à MoneyVox.\n\nIMPACT POUR LES PROFESSIONNELS :\n• Les nouvelles créations de compte ANAH sont impossibles pour le moment\n• Les nouveaux dossiers MaPrimeRénov' ne peuvent pas être déposés\n• Les dossiers déjà créés peuvent continuer leurs démarches normalement\n• Les dossiers CEE ne sont PAS impactés\n\nCONSEIL : Anticipez en préparant vos dossiers (devis, attestations) pour être prêts dès la réouverture. Orientez vos prospects vers les aides CEE en attendant."
+  },
+  {
     "id": "1",
     "title": "Nouveau barème de revenus 2026",
     "date": "2026-01-01",
