@@ -17,6 +17,7 @@ import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarTh112Page() {
   const [zone, setZone] = useState('H1')
+  const [etas, setEtas] = useState('high')
   const [appareilType, setAppareilType] = useState('poele_granules')
   const [mprCategory, setMprCategory] = useState('Bleu')
   const [priceMWh, setPriceMWh] = useState(7.5)
@@ -33,8 +34,8 @@ export default function BarTh112Page() {
 
   // CEE Calculation
   const ceeResult = useMemo(
-    () => calculateBarTh112({ zone, mprCategory, priceMWh }),
-    [zone, mprCategory, priceMWh]
+    () => calculateBarTh112({ etas, zone, mprCategory, priceMWh }),
+    [etas, zone, mprCategory, priceMWh]
   )
 
   const ceeEurosBase = ceeResult.ceeEuros
@@ -58,6 +59,7 @@ export default function BarTh112Page() {
   const isGranules = appareilType === 'poele_granules'
   const conditions = isGranules ? BAR_TH_112.CONDITIONS.granules : BAR_TH_112.CONDITIONS.buches
   const appareilLabel = BAR_TH_112.APPAREIL_TYPES.find(a => a.value === appareilType)?.label || ''
+  const etasLabel = BAR_TH_112.ETAS_OPTIONS.find(e => e.value === etas)?.label || ''
 
   return (
     <SimulatorLayout
@@ -69,7 +71,7 @@ export default function BarTh112Page() {
       <section>
         <h2 className="text-xl font-bold text-gray-800 border-b pb-2 flex items-center gap-2 mb-4">
           <Calculator className="w-5 h-5 text-indigo-600" />
-          Calcul de la Prime CEE
+          Calcul de la Prime CEE — Coup de Pouce Chauffage 2026
         </h2>
 
         <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
@@ -93,8 +95,15 @@ export default function BarTh112Page() {
             </div>
           </div>
 
-          {/* Zone + Prix CEE + Profil revenus */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Etas + Zone */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SelectField
+              label="Efficacité énergétique saisonnière (Etas)"
+              id="etas"
+              value={etas}
+              onChange={setEtas}
+              options={BAR_TH_112.ETAS_OPTIONS}
+            />
             <SelectField
               label="Zone climatique"
               id="zone"
@@ -102,7 +111,10 @@ export default function BarTh112Page() {
               onChange={setZone}
               options={ZONE_OPTIONS}
             />
+          </div>
 
+          {/* Prix CEE + Profil revenus */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputField
               label="Prix CEE (€/MWhc)"
               type="number"
@@ -112,17 +124,16 @@ export default function BarTh112Page() {
               step={0.5}
               suffix="€/MWhc"
             />
-
             <SelectField
               label="Profil de revenus"
               id="mprCategory"
               value={mprCategory}
               onChange={setMprCategory}
               options={[
-                { value: 'Bleu', label: 'Bleu — Très modestes (×2)' },
-                { value: 'Jaune', label: 'Jaune — Modestes (×2)' },
-                { value: 'Violet', label: 'Violet — Intermédiaires (×1)' },
-                { value: 'Rose', label: 'Rose — Supérieurs (×1)' },
+                { value: 'Bleu', label: 'Bleu — Très modestes (×5)' },
+                { value: 'Jaune', label: 'Jaune — Modestes (×5)' },
+                { value: 'Violet', label: 'Violet — Intermédiaires (×4)' },
+                { value: 'Rose', label: 'Rose — Supérieurs (×4)' },
               ]}
             />
           </div>
@@ -130,11 +141,14 @@ export default function BarTh112Page() {
           {/* Détail calcul */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600">
             <div className="bg-white p-3 rounded-lg border">
-              <span className="font-semibold">Montant base :</span> {formatKWhc(ceeResult.baseValue)} ({zone})
+              <span className="font-semibold">Montant base :</span> {formatKWhc(ceeResult.baseValue)}
+              <span className="text-xs text-gray-400 ml-1">({etasLabel}, {zone})</span>
             </div>
             <div className="bg-white p-3 rounded-lg border">
-              <span className="font-semibold">Bonus précarité :</span> ×{ceeResult.bonusPrecarite}
-              {ceeResult.bonusPrecarite > 1 && <span className="text-green-600 font-bold"> (précaire)</span>}
+              <span className="font-semibold">Bonification :</span>{' '}
+              <span className={`font-bold ${ceeResult.bonusPrecarite === 5 ? 'text-green-600' : 'text-blue-600'}`}>
+                ×{ceeResult.bonusPrecarite} {ceeResult.bonusPrecarite === 5 ? '(précaire)' : '(classique)'}
+              </span>
             </div>
             <div className="bg-white p-3 rounded-lg border">
               <span className="font-semibold">MPR {appareilLabel} :</span> {formatCurrency(mprGrantTheorique)}
@@ -144,7 +158,7 @@ export default function BarTh112Page() {
           {/* Résultat CEE */}
           <div className="mt-4 p-4 bg-indigo-100 rounded-lg border border-indigo-300 text-center">
             <ResultCard
-              label="Valeur CEE (Base 100%)"
+              label="Valeur CEE Coup de Pouce (Base 100%)"
               value={formatCurrency(ceeEurosBase)}
               sublabel={`${formatKWhc(volumeCEE)} — Prix : ${priceMWh} €/MWhc`}
               className="text-indigo-900"
@@ -214,18 +228,19 @@ export default function BarTh112Page() {
       {/* ─── Sauvegarde & PDF ─── */}
       <SimulationSaveBar
         type="BAR-TH-112"
-        title={`Bois ${appareilLabel} — ${zone} — ${mprCategory}`}
-        inputs={{ zone, appareilType, mprCategory, priceMWh, projectCost, ceePercent }}
+        title={`Bois ${appareilLabel} — ${etasLabel} — ${zone} — ${mprCategory}`}
+        inputs={{ zone, etas, appareilType, mprCategory, priceMWh, projectCost, ceePercent }}
         results={{ ceeEurosBase, volumeCEE, ...commercial }}
         pdfData={{
           ficheCode: 'BAR-TH-112',
           ficheTitle: 'Appareil indépendant de chauffage au bois',
           params: [
             { label: 'Type d\'appareil', value: appareilLabel },
+            { label: 'Efficacité (Etas)', value: etasLabel },
             { label: 'Zone climatique', value: zone },
             { label: 'Prix CEE', value: `${priceMWh} €/MWhc` },
             { label: 'Profil revenus', value: mprCategory },
-            { label: 'Bonus précarité', value: `×${ceeResult.bonusPrecarite}` },
+            { label: 'Bonification Coup de Pouce', value: `×${ceeResult.bonusPrecarite}` },
           ],
           results: [
             { label: 'Volume CEE', value: formatKWhc(volumeCEE) },
@@ -251,7 +266,7 @@ export default function BarTh112Page() {
 
       {/* Disclaimer */}
       <div className="pt-4 text-center text-sm text-gray-500 border-t border-gray-100">
-        <p>Simulation basée sur la fiche CEE BAR-TH-112 (v. A35.2). Maison individuelle existante {'>'} 2 ans. Montants indicatifs et non contractuels.</p>
+        <p>Simulation basée sur la fiche CEE BAR-TH-112 avec bonification Coup de Pouce Chauffage 2026. Maison individuelle existante {'>'} 2 ans. Montants indicatifs et non contractuels.</p>
       </div>
     </SimulatorLayout>
   )

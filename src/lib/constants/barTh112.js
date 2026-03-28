@@ -1,8 +1,12 @@
 /**
  * Constantes BAR-TH-112 — Appareil indépendant de chauffage au bois
- * Source : Fiche CEE BAR-TH-112 (v. A35.2)
+ * Source : Fiche CEE BAR-TH-112 à compter du 01/01/2026
  * Maisons individuelles existantes > 2 ans
  * Durée de vie conventionnelle : 15 ans
+ *
+ * Bonification Coup de Pouce Chauffage 2026 :
+ * - Revenus modestes / précaires (Bleu, Jaune) : ×5
+ * - Revenus classiques (Violet, Rose) : ×4
  */
 
 export const BAR_TH_112 = {
@@ -10,19 +14,38 @@ export const BAR_TH_112 = {
   title: 'Appareil indépendant de chauffage au bois',
   description: 'Poêle, insert, foyer fermé ou cuisinière au bois',
 
-  // Montants forfaitaires en kWh cumac par zone climatique
+  // Montants de base en kWh cumac par Etas et zone climatique
   BASE_VALUES: {
-    H1: 38200,
-    H2: 31300,
-    H3: 20900,
+    low: {    // 66% ≤ Etas < 72%
+      H1: 9400,
+      H2: 7700,
+      H3: 5100,
+    },
+    medium: { // 72% ≤ Etas < 80%
+      H1: 23500,
+      H2: 19300,
+      H3: 12800,
+    },
+    high: {   // Etas ≥ 80%
+      H1: 35300,
+      H2: 28900,
+      H3: 19200,
+    },
   },
 
-  // Bonification précarité énergétique (appliquée au volume CEE)
+  // Options Etas pour le select
+  ETAS_OPTIONS: [
+    { value: 'high', label: 'Etas ≥ 80%' },
+    { value: 'medium', label: '72% ≤ Etas < 80%' },
+    { value: 'low', label: '66% ≤ Etas < 72%' },
+  ],
+
+  // Bonification Coup de Pouce Chauffage 2026
   BONUS_PRECARITE: {
-    Bleu: 2,    // Très modestes → ×2
-    Jaune: 2,   // Modestes → ×2
-    Violet: 1,  // Intermédiaires → ×1
-    Rose: 1,    // Supérieurs → ×1
+    Bleu: 5,    // Très modestes → ×5
+    Jaune: 5,   // Modestes → ×5
+    Violet: 4,  // Intermédiaires → ×4
+    Rose: 4,    // Supérieurs → ×4
   },
 
   // Types d'appareils éligibles

@@ -1,21 +1,22 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Flame } from 'lucide-react'
+import { Flame, Calculator, AlertTriangle } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import CommercialStrategy from '../../components/simulator/CommercialStrategy'
 import FinancialSummary from '../../components/simulator/FinancialSummary'
 import SimulationSaveBar from '../../components/simulator/SimulationSaveBar'
 import SelectField from '../../components/ui/SelectField'
 import InputField from '../../components/ui/InputField'
-import ToggleGroup from '../../components/ui/ToggleGroup'
 import ResultCard from '../../components/ui/ResultCard'
+import AlertBox from '../../components/ui/AlertBox'
 import { BAR_TH_113 } from '../../lib/constants/barTh113'
-import { MPR_GRANTS } from '../../lib/constants/mpr'
+import { ZONE_OPTIONS } from '../../lib/constants/zones'
 import { calculateBarTh113 } from '../../lib/calculators/barTh113'
 import { useCommercialStrategy } from '../../hooks/useCommercialStrategy'
 import { useClientContext } from '../../hooks/useClientContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarTh113Page() {
+  const [zone, setZone] = useState('H1')
   const [mprCategory, setMprCategory] = useState('Bleu')
   const [fuelType, setFuelType] = useState('granules')
   const [replacedEnergy, setReplacedEnergy] = useState('fioul')
@@ -28,56 +29,63 @@ export default function BarTh113Page() {
   useEffect(() => {
     if (!prefill) return
     if (prefill.mprCategory) setMprCategory(prefill.mprCategory)
+    if (prefill.zone) setZone(prefill.zone)
   }, [])
 
-  const isPrecarite = mprCategory === 'Bleu' || mprCategory === 'Jaune'
-  const mprGrants = MPR_GRANTS['bar-th-113'] || {}
-  const mprGrantTheorique = mprGrants[mprCategory] || 0
-
   const result = useMemo(
-    () => calculateBarTh113({ isPrecarite, priceMWh }),
-    [isPrecarite, priceMWh]
+    () => calculateBarTh113({ zone, mprCategory, priceMWh }),
+    [zone, mprCategory, priceMWh]
   )
 
   const commercial = useCommercialStrategy({
     ceeEurosBase: result.ceeEuros,
     ceePercentApplied: ceePercent,
     mprCategory,
-    mprGrantTheorique,
+    mprGrantTheorique: 0, // Exclue de MPR depuis 01/01/2026
     projectCost,
-    maxEligibleCost: 18000,
+    maxEligibleCost: projectCost,
   })
 
   return (
     <SimulatorLayout
       code="BAR-TH-113"
       title="Chaudière biomasse individuelle"
-      description="Calcul CEE pour l'installation d'une chaudière biomasse"
+      description="Calcul CEE Coup de Pouce Chauffage 2026"
     >
+      <AlertBox type="warning" show={true} title="MaPrimeRénov' supprimée">
+        Depuis le 1er janvier 2026, la chaudière biomasse n'est plus financée par MaPrimeRénov'. Seul le financement via les CEE (Coup de Pouce ×5) est disponible.
+      </AlertBox>
+
       <section>
         <h2 className="text-xl font-bold text-gray-800 border-b pb-2 flex items-center gap-2 mb-4">
-          <Flame className="w-5 h-5 text-orange-600" />
-          Paramètres de l'installation
+          <Calculator className="w-5 h-5 text-indigo-600" />
+          Calcul de la Prime CEE — Coup de Pouce Chauffage 2026
         </h2>
 
         <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-          <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-            <ToggleGroup
-              label="Ménage en précarité énergétique ?"
-              options={[
-                { value: 'Oui', label: 'OUI' },
-                { value: 'Non', label: 'NON' },
-              ]}
-              value={isPrecarite ? 'Oui' : 'Non'}
-              onChange={(v) => setMprCategory(v === 'Oui' ? 'Bleu' : 'Violet')}
-              activeColor={isPrecarite ? 'green' : 'red'}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SelectField
+              label="Zone climatique"
+              id="zone"
+              value={zone}
+              onChange={setZone}
+              options={ZONE_OPTIONS}
             />
-            <p className="text-xs text-gray-500 mt-2">
-              {isPrecarite ? '727 300 kWhc (bonification précarité)' : '454 500 kWhc (ménage standard)'}
-            </p>
+            <SelectField
+              label="Profil de revenus"
+              id="mprCategory"
+              value={mprCategory}
+              onChange={setMprCategory}
+              options={[
+                { value: 'Bleu', label: 'Bleu — Très modestes (×5)' },
+                { value: 'Jaune', label: 'Jaune — Modestes (×5)' },
+                { value: 'Violet', label: 'Violet — Intermédiaires (×5)' },
+                { value: 'Rose', label: 'Rose — Supérieurs (×5)' },
+              ]}
+            />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <SelectField
               label="Type de combustible"
               id="fuelType"
@@ -92,23 +100,37 @@ export default function BarTh113Page() {
               onChange={setReplacedEnergy}
               options={BAR_TH_113.REPLACED_ENERGY}
             />
+            <InputField
+              label="Prix CEE (€/MWhc)"
+              type="number"
+              id="priceMWh"
+              value={priceMWh}
+              onChange={setPriceMWh}
+              step={0.5}
+              suffix="€/MWhc"
+            />
           </div>
 
-          <InputField
-            label="Prix CEE (€/MWhc)"
-            type="number"
-            id="priceMWh"
-            value={priceMWh}
-            onChange={setPriceMWh}
-            step={0.1}
-            suffix="€/MWhc"
-          />
+          {/* Détail calcul */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600">
+            <div className="bg-white p-3 rounded-lg border">
+              <span className="font-semibold">Montant base :</span> {formatKWhc(result.baseValue)} ({zone})
+            </div>
+            <div className="bg-white p-3 rounded-lg border">
+              <span className="font-semibold">Bonification :</span>{' '}
+              <span className="text-green-600 font-bold">×{result.bonusPrecarite} (Coup de Pouce)</span>
+            </div>
+            <div className="bg-white p-3 rounded-lg border">
+              <span className="font-semibold">MPR :</span>{' '}
+              <span className="text-red-500 font-semibold">Exclue 2026</span>
+            </div>
+          </div>
 
           <div className="mt-4 p-4 bg-indigo-100 rounded-lg border border-indigo-300 text-center">
             <ResultCard
-              label="Valeur CEE Négociée (Base 100%)"
+              label="Valeur CEE Coup de Pouce (Base 100%)"
               value={formatCurrency(result.ceeEuros)}
-              sublabel={formatKWhc(result.volumeCEE)}
+              sublabel={`${formatKWhc(result.volumeCEE)} — Prix : ${priceMWh} €/MWhc`}
               className="text-indigo-900"
             />
           </div>
@@ -122,13 +144,14 @@ export default function BarTh113Page() {
         onMprCategoryChange={setMprCategory}
         ceePercent={ceePercent}
         onCeePercentChange={setCeePercent}
-        mprGrantTheorique={mprGrantTheorique}
-        maxEligibleCost={18000}
+        mprGrantTheorique={0}
+        maxEligibleCost={projectCost}
+        showMpr={false}
       />
 
       <FinancialSummary
         ceeCommerciale={commercial.ceeCommerciale}
-        mprFinal={commercial.mprFinal}
+        mprFinal={0}
         totalAid={commercial.totalAid}
         resteACharge={commercial.resteACharge}
         ceeEurosBase={result.ceeEuros}
@@ -136,35 +159,36 @@ export default function BarTh113Page() {
         ceeMarginPercent={commercial.ceeMarginPercent}
         isCeilingExceeded={commercial.isCeilingExceeded}
         maxAidPercentage={commercial.maxAidPercentage}
+        showMpr={false}
       />
 
       <SimulationSaveBar
         type="BAR-TH-113"
-        title={`Biomasse ${fuelType} remplace ${replacedEnergy}`}
-        inputs={{ mprCategory, fuelType, replacedEnergy, priceMWh, projectCost, ceePercent }}
+        title={`Biomasse ${fuelType} — ${zone} — remplace ${replacedEnergy}`}
+        inputs={{ zone, mprCategory, fuelType, replacedEnergy, priceMWh, projectCost, ceePercent }}
         results={{ ...result, ...commercial }}
         pdfData={{
           ficheCode: 'BAR-TH-113',
           ficheTitle: 'Chaudière biomasse individuelle',
           params: [
-            { label: 'Précarité énergétique', value: isPrecarite ? 'Oui' : 'Non' },
+            { label: 'Zone climatique', value: zone },
             { label: 'Type de combustible', value: fuelType },
             { label: 'Énergie remplacée', value: replacedEnergy },
             { label: 'Prix CEE', value: `${priceMWh} €/MWhc` },
             { label: 'Profil revenus', value: mprCategory },
+            { label: 'Bonification Coup de Pouce', value: `×${result.bonusPrecarite}` },
           ],
           results: [
             { label: 'Volume CEE', value: formatKWhc(result.volumeCEE) },
             { label: 'Valeur CEE (Base 100%)', value: formatCurrency(result.ceeEuros) },
-            { label: 'MPR forfaitaire', value: formatCurrency(mprGrantTheorique) },
           ],
           summary: {
             projectCost,
             ceeCommerciale: commercial.ceeCommerciale,
-            mprFinal: commercial.mprFinal,
+            mprFinal: 0,
             totalAid: commercial.totalAid,
             resteACharge: commercial.resteACharge,
-            showMpr: true,
+            showMpr: false,
           },
           margin: {
             ceeBase: result.ceeEuros,
@@ -177,7 +201,7 @@ export default function BarTh113Page() {
       />
 
       <div className="pt-4 text-center text-sm text-gray-500 border-t border-gray-100">
-        <p>Simulation basée sur la fiche CEE BAR-TH-113. Montants indicatifs et non contractuels.</p>
+        <p>Simulation basée sur la fiche CEE BAR-TH-113 avec Coup de Pouce Chauffage 2026 (×5). MPR exclue depuis le 01/01/2026. Montants indicatifs et non contractuels.</p>
       </div>
     </SimulatorLayout>
   )
