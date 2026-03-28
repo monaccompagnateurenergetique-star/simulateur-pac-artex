@@ -64,6 +64,10 @@ export const WORK_CATEGORIES_MAISON = [
   { value: 'rampants', label: 'Isolation rampants de toiture — R ≥ 6' },
   { value: 'toiture_terrasse', label: 'Isolation toiture-terrasse — R ≥ 6.5' },
   { value: 'menuiseries', label: 'Remplacement des menuiseries' },
+  { value: 'pac_air_eau', label: 'PAC air/eau' },
+  { value: 'pac_air_air', label: 'PAC air/air' },
+  { value: 'vmc_hygro', label: 'VMC hygroréglable' },
+  { value: 'autres', label: 'Autres travaux' },
 ]
 
 export const WORK_CATEGORIES_APPART = [
@@ -72,6 +76,10 @@ export const WORK_CATEGORIES_APPART = [
   { value: 'plancher', label: 'Isolation du plancher bas — R ≥ 3' },
   { value: 'combles', label: 'Isolation des combles — R ≥ 7' },
   { value: 'menuiseries', label: 'Remplacement des menuiseries' },
+  { value: 'pac_air_eau', label: 'PAC air/eau' },
+  { value: 'pac_air_air', label: 'PAC air/air' },
+  { value: 'vmc_hygro', label: 'VMC hygroréglable' },
+  { value: 'autres', label: 'Autres travaux' },
 ]
 
 export const MIN_CLASS_JUMP = 2
