@@ -123,3 +123,90 @@ export const MPR_INCOME_OPTIONS = [
   { value: 'Violet', label: 'Violet — Intermédiaires' },
   { value: 'Rose', label: 'Rose — Supérieurs' },
 ]
+
+// ═══════════════════════════════════════════════════════════════════
+// Profil bénéficiaire & occupation (devis signés à compter du 17/01/2026)
+// Source : Guide CEE ENEMAT — BAR-TH-174/175 Coup de Pouce
+// ═══════════════════════════════════════════════════════════════════
+
+export const BENEFICIARY_TYPES = [
+  { value: 'pp_occupant', label: 'Personne physique — Propriétaire occupant' },
+  { value: 'pp_bailleur', label: 'Personne physique — Propriétaire bailleur' },
+  { value: 'bailleur_social', label: 'Bailleur social (HLM, OPH…)' },
+  { value: 'societe', label: 'SCI / SARL / SAS / SASU (bailleur)' },
+]
+
+export const OCCUPATION_TYPES = [
+  { value: 'principale', label: 'Résidence principale' },
+  { value: 'secondaire', label: 'Résidence secondaire' },
+]
+
+/**
+ * Détermine l'éligibilité CEE / MPR selon le profil bénéficiaire, l'occupation et le DPE
+ * @returns {{ eligible: boolean, mode: 'cee'|'anah'|null, reason: string }}
+ */
+export function getEligibility(beneficiaryType, occupation, classInitiale) {
+  const isDpeEFG = CLASSES_ANAH.includes(classInitiale)
+  const isPP = beneficiaryType === 'pp_occupant' || beneficiaryType === 'pp_bailleur'
+  const isMorale = beneficiaryType === 'bailleur_social' || beneficiaryType === 'societe'
+
+  // Résidence secondaire + Personne physique → Non éligible CEE (depuis 17/01/2026)
+  if (isPP && occupation === 'secondaire') {
+    return {
+      eligible: false,
+      mode: null,
+      reason: 'Depuis le 17/01/2026, les résidences secondaires détenues par des personnes physiques ne sont plus éligibles au dispositif CEE Coup de Pouce. MaPrimeRénov\' exige également une résidence principale.',
+      alert: 'error',
+    }
+  }
+
+  // Résidence secondaire + Personne morale → Non éligible (MPR = rés. principale seulement)
+  if (isMorale && occupation === 'secondaire') {
+    return {
+      eligible: false,
+      mode: null,
+      reason: 'Le logement doit être occupé en résidence principale pour être éligible au dispositif CEE Coup de Pouce rénovation d\'ampleur.',
+      alert: 'error',
+    }
+  }
+
+  // Personne morale (bailleur social, SCI…) → Toujours CEE (pas éligible MPR en tant que personne morale)
+  if (isMorale) {
+    return {
+      eligible: true,
+      mode: 'cee',
+      reason: isDpeEFG
+        ? `En tant que ${beneficiaryType === 'bailleur_social' ? 'bailleur social' : 'société'}, le financement se fait via les CEE BAR-TH-174/175 Coup de Pouce, même pour un DPE ${classInitiale}. Les personnes morales ne sont pas éligibles à MaPrimeRénov'.`
+        : `DPE ${classInitiale} : financement via les CEE BAR-TH-174/175 Coup de Pouce.`,
+      alert: 'success',
+    }
+  }
+
+  // PP occupant + DPE E/F/G → MPR Parcours Accompagné
+  if (beneficiaryType === 'pp_occupant' && isDpeEFG) {
+    return {
+      eligible: true,
+      mode: 'anah',
+      reason: `DPE ${classInitiale} + propriétaire occupant : le financement relève de MaPrimeRénov' Parcours Accompagné (ANAH). Les CEE ne s'appliquent pas.`,
+      alert: 'info',
+    }
+  }
+
+  // PP bailleur + DPE E/F/G → MPR Parcours Accompagné
+  if (beneficiaryType === 'pp_bailleur' && isDpeEFG) {
+    return {
+      eligible: true,
+      mode: 'anah',
+      reason: `DPE ${classInitiale} + propriétaire bailleur personne physique : le financement relève de MaPrimeRénov' Parcours Accompagné (ANAH). Les CEE ne s'appliquent pas.`,
+      alert: 'info',
+    }
+  }
+
+  // PP + DPE C/D → CEE
+  return {
+    eligible: true,
+    mode: 'cee',
+    reason: `DPE ${classInitiale} : financement via les CEE BAR-TH-174/175 Coup de Pouce. Éligible depuis le 17/01/2026 pour les propriétaires occupants/bailleurs.`,
+    alert: 'success',
+  }
+}

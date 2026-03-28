@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Building, Calculator, Euro, TrendingUp, Award } from 'lucide-react'
+import { Building, Calculator, Euro, TrendingUp, Award, Users } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import SimulationSaveBar from '../../components/simulator/SimulationSaveBar'
 import InputField from '../../components/ui/InputField'
@@ -10,12 +10,15 @@ import Slider from '../../components/ui/Slider'
 import {
   ENERGY_CLASSES, TARGET_CLASSES, WORK_CATEGORIES_APPART, MIN_CLASS_JUMP, CLASS_ORDER,
   CLASSES_ANAH, MPR_INCOME_OPTIONS, MPR_PARCOURS_TAUX, MPR_PARCOURS_PLAFOND, PRIX_CEE_DEFAUT,
+  BENEFICIARY_TYPES, OCCUPATION_TYPES, getEligibility,
 } from '../../lib/constants/renovationGlobale'
 import { calculateRenovationGlobale } from '../../lib/calculators/renovationGlobale'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 import { useClientContext } from '../../hooks/useClientContext'
 
 export default function BarTh175Page() {
+  const [beneficiaryType, setBeneficiaryType] = useState('pp_occupant')
+  const [occupation, setOccupation] = useState('principale')
   const [classInitiale, setClassInitiale] = useState('F')
   const [classCible, setClassCible] = useState('C')
   const [surface, setSurface] = useState(60)
@@ -35,11 +38,13 @@ export default function BarTh175Page() {
     if (prefill.mprCategory) setMprCategory(prefill.mprCategory)
   }, [])
 
+  const eligibility = getEligibility(beneficiaryType, occupation, classInitiale)
+
   const jumps = CLASS_ORDER.indexOf(classCible) - CLASS_ORDER.indexOf(classInitiale)
   const isValidJump = jumps >= MIN_CLASS_JUMP
   const isValidWorks = selectedWorks.length >= 2
-  const isEligible = isValidJump && isValidWorks
-  const isAnah = CLASSES_ANAH.includes(classInitiale)
+  const isEligible = isValidJump && isValidWorks && eligibility.eligible
+  const isAnah = eligibility.mode === 'anah'
 
   const result = useMemo(() => {
     if (!isEligible) return null
@@ -69,19 +74,59 @@ export default function BarTh175Page() {
     <SimulatorLayout
       code="BAR-TH-175"
       title="Rénovation globale — Appartement"
-      description={isAnah ? "MaPrimeRénov' Parcours Accompagné" : "Financement 100% CEE"}
+      description={eligibility.eligible ? (isAnah ? "MaPrimeRénov' Parcours Accompagné" : "Financement 100% CEE") : "Vérifiez l'éligibilité"}
     >
-      <div className={`p-4 rounded-xl border-2 text-center font-bold text-lg ${
-        isAnah ? 'bg-green-50 border-green-400 text-green-800' : 'bg-indigo-50 border-indigo-400 text-indigo-800'
-      }`}>
-        {isAnah ? `Mode MaPrimeRénov' Parcours Accompagné (DPE ${classInitiale})` : `Mode 100% CEE (DPE ${classInitiale})`}
-      </div>
+      {/* ─── PROFIL DU BÉNÉFICIAIRE ─── */}
+      <section>
+        <h2 className="text-xl font-bold text-gray-800 border-b pb-2 flex items-center gap-2 mb-4">
+          <Users className="w-5 h-5 text-violet-600" />
+          Profil du bénéficiaire
+        </h2>
+        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SelectField label="Type de bénéficiaire" id="beneficiaryType" value={beneficiaryType} onChange={setBeneficiaryType} options={BENEFICIARY_TYPES} />
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Occupation du logement</label>
+              <div className="flex gap-2">
+                {OCCUPATION_TYPES.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setOccupation(opt.value)}
+                    className={`flex-1 px-4 py-2.5 rounded-lg border-2 text-sm font-semibold transition ${
+                      occupation === opt.value
+                        ? 'bg-violet-100 border-violet-500 text-violet-800'
+                        : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <AlertBox type={isAnah ? 'info' : 'warning'} show={true}>
-        {isAnah
-          ? <span><strong>DPE {classInitiale}</strong> : financement uniquement via MaPrimeRénov' Parcours Accompagné. Pas de prime CEE.</span>
-          : <span><strong>DPE {classInitiale}</strong> : financement uniquement via les CEE BAR-TH-175. Pas d'aide ANAH.</span>
-        }
+      {/* ─── AIDE RECOMMANDÉE ─── */}
+      {eligibility.eligible ? (
+        <div className={`p-4 rounded-xl border-2 text-center font-bold text-lg ${
+          isAnah
+            ? 'bg-green-50 border-green-400 text-green-800'
+            : 'bg-indigo-50 border-indigo-400 text-indigo-800'
+        }`}>
+          {isAnah
+            ? `➜ MaPrimeRénov' Parcours Accompagné (DPE ${classInitiale})`
+            : `➜ Financement 100% CEE (DPE ${classInitiale})`
+          }
+        </div>
+      ) : (
+        <div className="p-4 rounded-xl border-2 bg-red-50 border-red-400 text-center font-bold text-lg text-red-800">
+          Non éligible
+        </div>
+      )}
+
+      <AlertBox type={eligibility.alert || 'info'} show={true}>
+        <span>{eligibility.reason}</span>
       </AlertBox>
 
       <section>
@@ -211,12 +256,14 @@ export default function BarTh175Page() {
 
           <SimulationSaveBar type="BAR-TH-175"
             title={`Réno appart ${classInitiale}→${classCible} (${isAnah ? 'MPR' : 'CEE'}) — ${surface}m²`}
-            inputs={{ classInitiale, classCible, surface, mprCategory, projectCostHT, projectCostTTC, priceMWhPrecaire, priceMWhClassique, ceePercent, selectedWorks }}
+            inputs={{ beneficiaryType, occupation, classInitiale, classCible, surface, mprCategory, projectCostHT, projectCostTTC, priceMWhPrecaire, priceMWhClassique, ceePercent, selectedWorks }}
             results={finalResult}
             pdfData={{
               ficheCode: 'BAR-TH-175',
               ficheTitle: 'Rénovation globale — Appartement',
               params: [
+                { label: 'Bénéficiaire', value: BENEFICIARY_TYPES.find(b => b.value === beneficiaryType)?.label || beneficiaryType },
+                { label: 'Occupation', value: occupation === 'principale' ? 'Résidence principale' : 'Résidence secondaire' },
                 { label: 'Classe DPE initiale', value: classInitiale },
                 { label: 'Classe DPE cible', value: classCible },
                 { label: 'Surface habitable', value: `${surface} m²` },
