@@ -8,6 +8,7 @@ import BarTh171Page from './pages/simulators/BarTh171Page'
 import BarEn101Page from './pages/simulators/BarEn101Page'
 import BarEn102Page from './pages/simulators/BarEn102Page'
 import BarEn103Page from './pages/simulators/BarEn103Page'
+import BarTh112Page from './pages/simulators/BarTh112Page'
 import BarTh113Page from './pages/simulators/BarTh113Page'
 import BarTh174Page from './pages/simulators/BarTh174Page'
 import BarTh175Page from './pages/simulators/BarTh175Page'
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/simulateur/bar-en-101" element={<BarEn101Page />} />
           <Route path="/simulateur/bar-en-102" element={<BarEn102Page />} />
           <Route path="/simulateur/bar-en-103" element={<BarEn103Page />} />
+          <Route path="/simulateur/bar-th-112" element={<BarTh112Page />} />
           <Route path="/simulateur/bar-th-113" element={<BarTh113Page />} />
           <Route path="/simulateur/bar-th-174" element={<BarTh174Page />} />
           <Route path="/simulateur/bar-th-175" element={<BarTh175Page />} />
