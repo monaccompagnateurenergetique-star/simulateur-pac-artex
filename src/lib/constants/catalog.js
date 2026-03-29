@@ -30,4 +30,11 @@ export const CATALOG = [
       { code: 'BAR-EN-105', title: 'Isolation toiture-terrasse', route: null, active: false },
     ],
   },
+  {
+    category: 'Adaptation & Autonomie',
+    emoji: '♿',
+    items: [
+      { code: 'MaPrimeAdapt\'', title: 'Adaptation du logement (perte d\'autonomie / handicap)', route: '/maprimeadapt', active: true },
+    ],
+  },
 ]
