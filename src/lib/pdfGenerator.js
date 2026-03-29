@@ -15,8 +15,33 @@ const COLORS = {
   white: [255, 255, 255],
 }
 
-function formatCurrency(amount) {
-  return Math.round(amount).toLocaleString('fr-FR') + ' €'
+/**
+ * Formate un montant en euros compatible jsPDF
+ * Utilise des espaces normaux (pas insécables) pour que jsPDF les affiche correctement
+ */
+function formatCurrencyPDF(amount) {
+  const rounded = Math.round(amount)
+  // Formatage manuel avec espace normal comme séparateur de milliers
+  const str = Math.abs(rounded).toString()
+  const parts = []
+  for (let i = str.length; i > 0; i -= 3) {
+    parts.unshift(str.slice(Math.max(0, i - 3), i))
+  }
+  const formatted = parts.join(' ')
+  return (rounded < 0 ? '-' : '') + formatted + ' \u20AC'
+}
+
+/**
+ * Formate un nombre avec séparateur de milliers compatible jsPDF
+ */
+function formatNumberPDF(value) {
+  const rounded = Math.round(value)
+  const str = Math.abs(rounded).toString()
+  const parts = []
+  for (let i = str.length; i > 0; i -= 3) {
+    parts.unshift(str.slice(Math.max(0, i - 3), i))
+  }
+  return (rounded < 0 ? '-' : '') + parts.join(' ')
 }
 
 /**
@@ -50,8 +75,18 @@ export function generateSimulationPDF({
   const contentWidth = pageWidth - marginX * 2
   let y = 15
 
+  // Reformater les valeurs pour le PDF (remplacer les espaces insécables)
+  const cleanParams = params.map(p => ({
+    label: p.label,
+    value: sanitizeValue(String(p.value ?? '')),
+  }))
+  const cleanResults = results.map(r => ({
+    label: r.label,
+    value: sanitizeValue(String(r.value ?? '')),
+    highlight: r.highlight,
+  }))
+
   // ─── EN-TÊTE SOCIÉTÉ ───
-  // Bande de couleur en haut
   doc.setFillColor(...COLORS.primary)
   doc.rect(0, 0, pageWidth, 40, 'F')
 
@@ -75,7 +110,7 @@ export function generateSimulationPDF({
   const companyLines = []
   if (company.address) companyLines.push(company.address)
   if (company.postalCode || company.city) companyLines.push(`${company.postalCode || ''} ${company.city || ''}`.trim())
-  if (company.phone) companyLines.push(`Tél : ${company.phone}`)
+  if (company.phone) companyLines.push(`Tel : ${company.phone}`)
   if (company.email) companyLines.push(company.email)
   companyLines.forEach((line, i) => {
     doc.text(line, headerX, 23 + i * 3.5)
@@ -107,7 +142,7 @@ export function generateSimulationPDF({
   doc.text(ficheTitle, marginX + 5, y + 13)
 
   if (mode) {
-    const modeLabel = mode === 'anah' ? "MaPrimeRénov' Parcours Accompagné" : '100% CEE'
+    const modeLabel = mode === 'anah' ? "MaPrimeRenov' Parcours Accompagne" : '100% CEE'
     doc.setFontSize(8)
     doc.setTextColor(...COLORS.primaryLight)
     doc.text(modeLabel, pageWidth - marginX - 5, y + 10, { align: 'right' })
@@ -130,66 +165,72 @@ export function generateSimulationPDF({
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...COLORS.text)
-  doc.text('Paramètres de la simulation', marginX, y)
+  doc.text('Parametres de la simulation', marginX, y)
   y += 2
 
   autoTable(doc, {
     startY: y,
     margin: { left: marginX, right: marginX },
-    head: [['Paramètre', 'Valeur']],
-    body: params.map(p => [p.label, String(p.value)]),
+    head: [['Parametre', 'Valeur']],
+    body: cleanParams.map(p => [p.label, p.value]),
     theme: 'striped',
     headStyles: {
       fillColor: COLORS.primary,
       textColor: COLORS.white,
       fontStyle: 'bold',
       fontSize: 9,
+      cellPadding: 3,
     },
     bodyStyles: {
       fontSize: 9,
       textColor: COLORS.text,
+      cellPadding: 3,
+      overflow: 'linebreak',
     },
     alternateRowStyles: {
       fillColor: [245, 247, 250],
     },
     columnStyles: {
-      0: { cellWidth: contentWidth * 0.55, fontStyle: 'bold' },
-      1: { cellWidth: contentWidth * 0.45, halign: 'right' },
+      0: { cellWidth: contentWidth * 0.50, fontStyle: 'bold' },
+      1: { cellWidth: contentWidth * 0.50, halign: 'right' },
     },
   })
 
   y = doc.lastAutoTable.finalY + 8
 
   // ─── RÉSULTATS CEE ───
-  if (results.length > 0) {
+  if (cleanResults.length > 0) {
     doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...COLORS.text)
-    doc.text('Résultats du calcul', marginX, y)
+    doc.text('Resultats du calcul', marginX, y)
     y += 2
 
     autoTable(doc, {
       startY: y,
       margin: { left: marginX, right: marginX },
       head: [['Indicateur', 'Valeur']],
-      body: results.map(r => [r.label, String(r.value)]),
+      body: cleanResults.map(r => [r.label, r.value]),
       theme: 'striped',
       headStyles: {
         fillColor: COLORS.primaryLight,
         textColor: COLORS.white,
         fontStyle: 'bold',
         fontSize: 9,
+        cellPadding: 3,
       },
       bodyStyles: {
         fontSize: 9,
         textColor: COLORS.text,
+        cellPadding: 3,
+        overflow: 'linebreak',
       },
       alternateRowStyles: {
         fillColor: [238, 242, 255],
       },
       columnStyles: {
-        0: { cellWidth: contentWidth * 0.55, fontStyle: 'bold' },
-        1: { cellWidth: contentWidth * 0.45, halign: 'right' },
+        0: { cellWidth: contentWidth * 0.50, fontStyle: 'bold' },
+        1: { cellWidth: contentWidth * 0.50, halign: 'right' },
       },
     })
 
@@ -197,70 +238,83 @@ export function generateSimulationPDF({
   }
 
   // ─── SYNTHÈSE FINANCIÈRE ───
+  // Calcul dynamique de la hauteur du bloc
+  let blockLines = 0
+  if (summary.projectCost) blockLines++
+  if (summary.ceeCommerciale !== undefined) blockLines++
+  if (summary.showMpr !== false && summary.mprFinal !== undefined && summary.mprFinal > 0) blockLines++
+  // +2 pour total aides + reste a charge + séparateur + padding
+  const synthBlockH = 18 + (blockLines * 7) + 22
+
   doc.setFillColor(...COLORS.primary)
-  doc.roundedRect(marginX, y, contentWidth, summary.showMpr !== false ? 52 : 38, 3, 3, 'F')
+  doc.roundedRect(marginX, y, contentWidth, synthBlockH, 3, 3, 'F')
+
+  const rightCol = pageWidth - marginX - 8
 
   doc.setTextColor(...COLORS.white)
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
-  doc.text('Synthèse Financière', marginX + 5, y + 8)
+  doc.text('Synthese Financiere', marginX + 8, y + 8)
 
-  let sy = y + 14
+  let sy = y + 16
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
 
   // Coût projet
   if (summary.projectCost) {
     doc.setTextColor(180, 190, 220)
-    doc.text('Coût du projet :', marginX + 5, sy)
+    doc.text('Cout du projet :', marginX + 8, sy)
     doc.setTextColor(...COLORS.white)
-    doc.text(formatCurrency(summary.projectCost), pageWidth - marginX - 5, sy, { align: 'right' })
-    sy += 6
+    doc.setFont('helvetica', 'bold')
+    doc.text(formatCurrencyPDF(summary.projectCost), rightCol, sy, { align: 'right' })
+    doc.setFont('helvetica', 'normal')
+    sy += 7
   }
 
   // CEE
   if (summary.ceeCommerciale !== undefined) {
     doc.setTextColor(180, 190, 220)
-    doc.text('Prime CEE déduite :', marginX + 5, sy)
+    doc.text('Prime CEE deduite :', marginX + 8, sy)
     doc.setTextColor(...COLORS.yellow)
     doc.setFont('helvetica', 'bold')
-    doc.text(formatCurrency(summary.ceeCommerciale), pageWidth - marginX - 5, sy, { align: 'right' })
-    sy += 6
+    doc.text(formatCurrencyPDF(summary.ceeCommerciale), rightCol, sy, { align: 'right' })
+    doc.setFont('helvetica', 'normal')
+    sy += 7
   }
 
   // MPR
   if (summary.showMpr !== false && summary.mprFinal !== undefined && summary.mprFinal > 0) {
-    doc.setFont('helvetica', 'normal')
     doc.setTextColor(180, 190, 220)
-    doc.text("MaPrimeRénov' :", marginX + 5, sy)
+    doc.text("MaPrimeRenov' :", marginX + 8, sy)
     doc.setTextColor(...COLORS.greenLight)
     doc.setFont('helvetica', 'bold')
-    doc.text(formatCurrency(summary.mprFinal), pageWidth - marginX - 5, sy, { align: 'right' })
-    sy += 6
+    doc.text(formatCurrencyPDF(summary.mprFinal), rightCol, sy, { align: 'right' })
+    doc.setFont('helvetica', 'normal')
+    sy += 7
   }
 
   // Ligne séparatrice
   doc.setDrawColor(80, 70, 140)
-  doc.line(marginX + 5, sy, pageWidth - marginX - 5, sy)
+  doc.line(marginX + 8, sy, pageWidth - marginX - 8, sy)
   sy += 6
 
   // Total Aides
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
   doc.setTextColor(...COLORS.white)
-  doc.text('TOTAL AIDES :', marginX + 5, sy)
+  doc.text('TOTAL AIDES :', marginX + 8, sy)
   doc.setTextColor(...COLORS.yellow)
-  doc.setFontSize(14)
-  doc.text(formatCurrency(summary.totalAid || 0), pageWidth - marginX - 5, sy, { align: 'right' })
+  doc.setFontSize(12)
+  doc.text(formatCurrencyPDF(summary.totalAid || 0), rightCol, sy, { align: 'right' })
   sy += 8
 
   // Reste à charge
   doc.setFontSize(10)
   doc.setTextColor(180, 190, 220)
-  doc.text('RESTE À CHARGE :', marginX + 5, sy)
+  doc.text('RESTE A CHARGE :', marginX + 8, sy)
   doc.setTextColor(...COLORS.white)
-  doc.setFontSize(12)
-  doc.text(formatCurrency(summary.resteACharge || 0), pageWidth - marginX - 5, sy, { align: 'right' })
+  doc.setFontSize(11)
+  doc.text(formatCurrencyPDF(summary.resteACharge || 0), rightCol, sy, { align: 'right' })
 
   y = sy + 12
 
@@ -279,7 +333,10 @@ export function generateSimulationPDF({
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...COLORS.text)
     doc.setFontSize(8)
-    doc.text(`Base 100% : ${formatCurrency(margin.ceeBase)}  |  Appliquée : ${formatCurrency(margin.ceeApplied)}  |  Marge : ${formatCurrency(margin.margin)} (${Math.round(margin.marginPercent)}%)`, marginX + 5, y + 14)
+    doc.text(
+      `Base 100% : ${formatCurrencyPDF(margin.ceeBase)}  |  Appliquee : ${formatCurrencyPDF(margin.ceeApplied)}  |  Marge : ${formatCurrencyPDF(margin.margin)} (${Math.round(margin.marginPercent)}%)`,
+      marginX + 5, y + 14
+    )
 
     y += 28
   }
@@ -293,15 +350,27 @@ export function generateSimulationPDF({
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...COLORS.textLight)
   doc.text(
-    `Simulation basée sur la fiche CEE ${ficheCode} et la réglementation en vigueur. Montants donnés à titre indicatif et non contractuels.`,
+    `Simulation basee sur la fiche CEE ${ficheCode} et la reglementation en vigueur. Montants donnes a titre indicatif et non contractuels.`,
     pageWidth / 2, disclaimerY + 1, { align: 'center', maxWidth: contentWidth }
   )
   doc.text(
-    `Document généré le ${dateStr} via Artex360 — Plateforme d'outils pour artisans en rénovation énergétique.`,
+    `Document genere le ${dateStr} via Artex360 - Plateforme d'outils pour artisans en renovation energetique.`,
     pageWidth / 2, disclaimerY + 6, { align: 'center', maxWidth: contentWidth }
   )
 
   // ─── ENREGISTRER ───
   const fileName = `simulation_${ficheCode}_${new Date().toISOString().slice(0, 10)}.pdf`
   doc.save(fileName)
+}
+
+/**
+ * Nettoie les valeurs pour le PDF :
+ * - Remplace les espaces insécables (U+00A0, U+202F) par des espaces normaux
+ * - Remplace le symbole € encodé par le texte
+ */
+function sanitizeValue(str) {
+  return str
+    .replace(/\u00A0/g, ' ')   // espace insécable → espace normal
+    .replace(/\u202F/g, ' ')   // espace fine insécable → espace normal
+    .replace(/\u2009/g, ' ')   // thin space → espace normal
 }
