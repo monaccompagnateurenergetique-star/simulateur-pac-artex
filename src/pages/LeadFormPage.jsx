@@ -1,47 +1,39 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { UserPlus, Save, ArrowLeft, MapPin, Check, AlertTriangle } from 'lucide-react'
 import InputField from '../components/ui/InputField'
 import SelectField from '../components/ui/SelectField'
 import CompletionGauge from '../components/ui/CompletionGauge'
-import { useProjects } from '../hooks/useProjects'
+import { useLeads } from '../hooks/useLeads'
 import { getRevenueCategory } from '../lib/revenueCategory'
 import { getLocationInfo } from '../utils/postalCode'
 import { getCompletion } from '../lib/completionGauge'
 
 const TYPE_LOGEMENT = [
-  { value: '', label: '\— Non renseigné \—' },
+  { value: '', label: '— Non renseigné —' },
   { value: 'maison', label: 'Maison individuelle' },
   { value: 'appartement', label: 'Appartement' },
 ]
 
-export default function ClientFormPage() {
+export default function LeadFormPage() {
   const { id } = useParams()
-  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { projects, addProject, updateProject } = useProjects()
-  const isEdit = id && id !== 'nouveau'
-  const existing = isEdit ? projects.find((c) => c.id === id) : null
+  const { leads, addLead, updateLead } = useLeads()
+  const isEdit = !!id
+  const existing = isEdit ? leads.find((l) => l.id === id) : null
 
-  const [form, setForm] = useState(() => {
-    const fromUrl = {
-      address: searchParams.get('address') || '',
-      postalCode: searchParams.get('postalCode') || '',
-      city: searchParams.get('city') || '',
-    }
-    return {
-      lastName: '',
-      firstName: '',
-      phone: '',
-      email: '',
-      address: fromUrl.address,
-      city: fromUrl.city,
-      postalCode: fromUrl.postalCode,
-      personnes: '',
-      rfr: '',
-      typeLogement: '',
-      surface: '',
-    }
+  const [form, setForm] = useState({
+    lastName: '',
+    firstName: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    personnes: '',
+    rfr: '',
+    typeLogement: '',
+    surface: '',
   })
 
   const [validationError, setValidationError] = useState('')
@@ -69,24 +61,28 @@ export default function ClientFormPage() {
     setValidationError('')
   }
 
+  // Auto-detect location
   const locationInfo = useMemo(
     () => (form.postalCode.length >= 5 ? getLocationInfo(form.postalCode) : null),
     [form.postalCode]
   )
 
+  // Auto-calculate revenue category
   const revenueInfo = useMemo(() => {
     if (!form.rfr || !form.personnes) return null
     const isIDF = locationInfo?.isIDF || false
     return getRevenueCategory(Number(form.rfr), Number(form.personnes), isIDF)
   }, [form.rfr, form.personnes, locationInfo])
 
+  // Completion gauge
   const completion = useMemo(() => getCompletion(form), [form])
 
   function handleSubmit(e) {
     e.preventDefault()
 
-    if (!form.phone && !form.email && !form.firstName && !form.lastName) {
-      setValidationError('Renseignez au moins un nom, un téléphone ou un email.')
+    // Validation : au moins phone, email ou firstName
+    if (!form.phone && !form.email && !form.firstName) {
+      setValidationError('Renseignez au moins un téléphone, un email ou un prénom.')
       return
     }
 
@@ -106,11 +102,11 @@ export default function ClientFormPage() {
     }
 
     if (isEdit) {
-      updateProject(id, data)
-      navigate(`/projets/${id}`)
+      updateLead(id, data)
+      navigate(`/leads/${id}`)
     } else {
-      const project = addProject(data)
-      navigate(`/projets/${project.id}`)
+      const lead = addLead(data)
+      navigate(`/leads/${lead.id}`)
     }
   }
 
@@ -125,7 +121,7 @@ export default function ClientFormPage() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1 text-sm text-gray-500 hover:text-indigo-600 transition mb-6"
+        className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-600 transition mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
         Retour
@@ -133,10 +129,15 @@ export default function ClientFormPage() {
 
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <UserPlus className="w-6 h-6 text-indigo-600" />
-          {isEdit ? 'Modifier le projet' : 'Nouveau projet'}
+          <UserPlus className="w-6 h-6 text-emerald-600" />
+          {isEdit ? 'Modifier le lead' : 'Nouveau lead'}
         </h1>
         <CompletionGauge percent={completion.percent} size="md" variant="circle" />
+      </div>
+
+      {/* Info : champ minimum */}
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-6 text-sm text-emerald-700">
+        <strong>Minimum requis :</strong> un téléphone, un email ou un prénom. Le reste peut être complété plus tard.
       </div>
 
       {validationError && (
@@ -151,14 +152,14 @@ export default function ClientFormPage() {
         <fieldset>
           <legend className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Identité</legend>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <InputField label="Nom" id="lastName" value={form.lastName} onChange={(v) => set('lastName', v)} placeholder="Dupont" />
             <InputField label="Prénom" id="firstName" value={form.firstName} onChange={(v) => set('firstName', v)} placeholder="Jean" />
+            <InputField label="Nom" id="lastName" value={form.lastName} onChange={(v) => set('lastName', v)} placeholder="Dupont" />
             <InputField label="Téléphone" id="phone" value={form.phone} onChange={(v) => set('phone', v)} placeholder="06 12 34 56 78" />
-            <InputField label="Email" id="email" value={form.email} onChange={(v) => set('email', v)} placeholder="jean.dupont@email.fr" />
+            <InputField label="Email" id="email" value={form.email} onChange={(v) => set('email', v)} placeholder="jean@email.fr" />
           </div>
         </fieldset>
 
-        {/* Adresse des travaux */}
+        {/* Adresse */}
         <fieldset>
           <legend className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Adresse des travaux</legend>
           <div className="space-y-4">
@@ -169,11 +170,10 @@ export default function ClientFormPage() {
             </div>
             {locationInfo && (
               <div className="flex flex-wrap gap-2 mt-1">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
                   <MapPin className="w-3 h-3" /> {locationInfo.region}
                 </span>
                 <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Zone {locationInfo.zoneClimatique}</span>
-                <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Dept. {locationInfo.departement}</span>
                 {locationInfo.isIDF && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
                     <Check className="w-3 h-3" /> Île-de-France
@@ -196,7 +196,7 @@ export default function ClientFormPage() {
               <div className={`flex items-center gap-3 p-4 rounded-xl border-2 ${CATEGORY_COLORS[revenueInfo.category]}`}>
                 <div className="text-3xl font-black">{revenueInfo.category}</div>
                 <div>
-                  <p className="font-bold text-sm">Profil {revenueInfo.category} \— {revenueInfo.label}</p>
+                  <p className="font-bold text-sm">Profil {revenueInfo.category} — {revenueInfo.label}</p>
                   <p className="text-xs opacity-75">
                     Calculé selon plafonds {locationInfo?.isIDF ? 'IDF' : 'hors IDF'} 2026
                   </p>
@@ -217,7 +217,7 @@ export default function ClientFormPage() {
 
         {/* Complétion */}
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-          <CompletionGauge percent={completion.percent} variant="bar" label={`Complétion du profil \— ${completion.filledCount}/${completion.totalCount} champs renseignés`} />
+          <CompletionGauge percent={completion.percent} variant="bar" label={`Complétion du profil — ${completion.filledCount}/${completion.totalCount} champs renseignés`} />
           {completion.missingFields.length > 0 && completion.percent < 100 && (
             <div className="mt-2 text-xs text-gray-400">
               Manquant : {completion.missingFields.map((f) => f.label).join(', ')}
@@ -229,10 +229,10 @@ export default function ClientFormPage() {
         <div className="flex gap-3 pt-4">
           <button
             type="submit"
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-base hover:bg-indigo-700 transition"
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-base hover:bg-emerald-700 transition"
           >
             <Save className="w-5 h-5" />
-            {isEdit ? 'Enregistrer' : 'Créer le projet'}
+            {isEdit ? 'Enregistrer' : 'Créer le lead'}
           </button>
           <button
             type="button"

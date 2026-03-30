@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Plus, Search, Phone, MapPin, Trash2, Filter, X } from 'lucide-react'
-import { useClients, STATUSES } from '../hooks/useClients'
+import { Users, Plus, Search, Phone, MapPin, Trash2, Filter, X, ArrowRightCircle } from 'lucide-react'
+import { useProjects, PROJECT_STATUSES } from '../hooks/useProjects'
 import { useSimulationHistory } from '../hooks/useSimulationHistory'
+import CompletionGauge from '../components/ui/CompletionGauge'
+import { getCompletion } from '../lib/completionGauge'
 
 const CATEGORY_BADGE = {
   Bleu: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -37,10 +39,11 @@ const SORT_OPTIONS = [
   { value: 'name_asc', label: 'Nom A-Z' },
   { value: 'name_desc', label: 'Nom Z-A' },
   { value: 'category', label: 'Précarité' },
+  { value: 'completion', label: 'Complétion' },
 ]
 
 export default function ClientsPage() {
-  const { clients, deleteClient, getStatusCounts } = useClients()
+  const { projects, deleteProject, getStatusCounts } = useProjects()
   const { history } = useSimulationHistory()
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
@@ -48,13 +51,12 @@ export default function ClientsPage() {
   const [filterWorkType, setFilterWorkType] = useState('all')
   const [sortBy, setSortBy] = useState('date_desc')
   const [showFilters, setShowFilters] = useState(false)
-  const [view, setView] = useState('list') // 'list' | 'pipeline'
+  const [view, setView] = useState('list')
   const counts = getStatusCounts()
 
-  // Build a map: clientId -> set of simulation types
   const clientSimTypes = useMemo(() => {
     const map = {}
-    clients.forEach(c => {
+    projects.forEach(c => {
       const simIds = c.simulations || []
       const types = new Set()
       simIds.forEach(simId => {
@@ -64,36 +66,28 @@ export default function ClientsPage() {
       map[c.id] = types
     })
     return map
-  }, [clients, history])
+  }, [projects, history])
 
-  // Count clients per category for badges
   const categoryCounts = useMemo(() => {
     const c = { Bleu: 0, Jaune: 0, Violet: 0, Rose: 0, none: 0 }
-    clients.forEach(cl => {
+    projects.forEach(cl => {
       if (cl.category && c[cl.category] !== undefined) c[cl.category]++
       else c.none++
     })
     return c
-  }, [clients])
+  }, [projects])
 
-  // Active filter count (excluding status which has its own UI)
   const activeFilterCount = [
     filterCategory !== 'all',
     filterWorkType !== 'all',
   ].filter(Boolean).length
 
-  // Filter + sort
   const filtered = useMemo(() => {
-    let result = clients.filter((c) => {
-      // Search
+    let result = projects.filter((c) => {
       const matchSearch =
         !search ||
         `${c.lastName} ${c.firstName} ${c.phone} ${c.address}`.toLowerCase().includes(search.toLowerCase())
-
-      // Status
       const matchStatus = filterStatus === 'all' || c.status === filterStatus
-
-      // Category (précarité)
       let matchCategory = true
       if (filterCategory !== 'all') {
         if (filterCategory === 'none') {
@@ -102,18 +96,14 @@ export default function ClientsPage() {
           matchCategory = c.category === filterCategory
         }
       }
-
-      // Work type
       let matchWork = true
       if (filterWorkType !== 'all') {
         const types = clientSimTypes[c.id] || new Set()
         matchWork = types.has(filterWorkType)
       }
-
       return matchSearch && matchStatus && matchCategory && matchWork
     })
 
-    // Sort
     const categoryOrder = { Bleu: 0, Jaune: 1, Violet: 2, Rose: 3 }
     result.sort((a, b) => {
       switch (sortBy) {
@@ -127,15 +117,20 @@ export default function ClientsPage() {
           return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
         case 'category':
           return (categoryOrder[a.category] ?? 99) - (categoryOrder[b.category] ?? 99)
+        case 'completion': {
+          const ca = getCompletion(a).percent
+          const cb = getCompletion(b).percent
+          return cb - ca
+        }
         default:
           return 0
       }
     })
 
     return result
-  }, [clients, search, filterStatus, filterCategory, filterWorkType, sortBy, clientSimTypes])
+  }, [projects, search, filterStatus, filterCategory, filterWorkType, sortBy, clientSimTypes])
 
-  const activeStatuses = STATUSES.filter((s) => s.value !== 'perdu')
+  const activeStatuses = PROJECT_STATUSES.filter((s) => s.value !== 'perdu')
 
   function clearAllFilters() {
     setFilterCategory('all')
@@ -149,19 +144,19 @@ export default function ClientsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <Users className="w-6 h-6 text-indigo-600" />
-          Bénéficiaires
-          <span className="text-base font-normal text-gray-400">({clients.length})</span>
+          Projets
+          <span className="text-base font-normal text-gray-400">({projects.length})</span>
         </h1>
         <Link
-          to="/clients/nouveau"
+          to="/projets/nouveau"
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-semibold text-sm hover:bg-indigo-700 transition"
         >
           <Plus className="w-4 h-4" />
-          Nouveau bénéficiaire
+          Nouveau projet
         </Link>
       </div>
 
-      {/* Pipeline summary — identique à l'original */}
+      {/* Pipeline summary */}
       <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-6">
         {activeStatuses.map((s) => (
           <button
@@ -186,14 +181,13 @@ export default function ClientsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Rechercher un bénéficiaire..."
+            placeholder="Rechercher un projet..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
         <div className="flex gap-2">
-          {/* Bouton Filtres */}
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
@@ -211,7 +205,6 @@ export default function ClientsPage() {
             )}
           </button>
 
-          {/* Tri */}
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
@@ -222,7 +215,6 @@ export default function ClientsPage() {
             ))}
           </select>
 
-          {/* Vue Liste / Pipeline */}
           <button
             onClick={() => setView('list')}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
@@ -245,7 +237,6 @@ export default function ClientsPage() {
       {/* Panneau de filtres dépliable */}
       {showFilters && (
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-4 mb-6 animate-fade-in">
-          {/* Filtre par précarité */}
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
               Précarité (profil revenus)
@@ -259,7 +250,7 @@ export default function ClientsPage() {
                     : 'bg-white text-gray-500 border-gray-300 hover:border-gray-400'
                 }`}
               >
-                Tous ({clients.length})
+                Tous ({projects.length})
               </button>
               {CATEGORY_FILTERS.map((cf) => (
                 <button
@@ -277,7 +268,6 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          {/* Filtre par type de travaux */}
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
               Type de travaux (simulations liées)
@@ -294,7 +284,7 @@ export default function ClientsPage() {
                 Tous
               </button>
               {WORK_TYPE_FILTERS.map((wf) => {
-                const count = clients.filter((c) => (clientSimTypes[c.id] || new Set()).has(wf.value)).length
+                const count = projects.filter((c) => (clientSimTypes[c.id] || new Set()).has(wf.value)).length
                 return (
                   <button
                     key={wf.value}
@@ -312,7 +302,6 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          {/* Effacer les filtres */}
           {activeFilterCount > 0 && (
             <button
               onClick={clearAllFilters}
@@ -328,7 +317,7 @@ export default function ClientsPage() {
       {/* Tags filtres actifs */}
       {(activeFilterCount > 0 || search) && (
         <div className="text-sm text-gray-500 mb-3">
-          <span className="font-semibold text-gray-700">{filtered.length}</span> bénéficiaire{filtered.length > 1 ? 's' : ''} sur {clients.length}
+          <span className="font-semibold text-gray-700">{filtered.length}</span> projet{filtered.length > 1 ? 's' : ''} sur {projects.length}
           {filterCategory !== 'all' && (
             <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${CATEGORY_BADGE[filterCategory] || 'bg-gray-100 text-gray-600'}`}>
               {filterCategory === 'none' ? 'Non renseigné' : filterCategory}
@@ -350,10 +339,10 @@ export default function ClientsPage() {
           {filtered.length === 0 && (
             <div className="text-center py-12 text-gray-400">
               <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
-              <p className="text-lg font-medium">Aucun bénéficiaire</p>
+              <p className="text-lg font-medium">Aucun projet</p>
               <p className="text-sm mt-1">
-                {clients.length === 0
-                  ? 'Ajoutez votre premier client pour commencer.'
+                {projects.length === 0
+                  ? 'Ajoutez votre premier projet pour commencer.'
                   : 'Aucun résultat pour cette recherche.'}
               </p>
               {activeFilterCount > 0 && (
@@ -366,33 +355,37 @@ export default function ClientsPage() {
               )}
             </div>
           )}
-          {filtered.map((client) => {
-            const status = STATUSES.find((s) => s.value === client.status)
-            const simTypes = clientSimTypes[client.id] || new Set()
+          {filtered.map((project) => {
+            const status = PROJECT_STATUSES.find((s) => s.value === project.status)
+            const simTypes = clientSimTypes[project.id] || new Set()
+            const completion = getCompletion(project)
+            const scenarioCount = (project.scenarios || []).length
+
             return (
               <Link
-                key={client.id}
-                to={`/clients/${client.id}`}
+                key={project.id}
+                to={`/projets/${project.id}`}
                 className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:shadow-md hover:border-indigo-200 transition group"
               >
-                {/* Avatar */}
-                <div className="w-11 h-11 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0">
-                  {(client.firstName?.[0] || '').toUpperCase()}
-                  {(client.lastName?.[0] || '').toUpperCase()}
-                </div>
+                {/* Jauge complétion */}
+                <CompletionGauge percent={completion.percent} size="sm" variant="circle" />
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <span className="font-bold text-gray-800 truncate">
-                      {client.firstName} {client.lastName}
+                      {project.firstName} {project.lastName}
                     </span>
-                    {client.category && (
-                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${CATEGORY_BADGE[client.category] || ''}`}>
-                        {client.category}
+                    {project.category && (
+                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${CATEGORY_BADGE[project.category] || ''}`}>
+                        {project.category}
                       </span>
                     )}
-                    {/* Badges type de travaux */}
+                    {scenarioCount > 0 && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">
+                        {scenarioCount} scénario{scenarioCount > 1 ? 's' : ''}
+                      </span>
+                    )}
                     {simTypes.size > 0 && (
                       [...simTypes].slice(0, 3).map((type) => {
                         const wf = WORK_TYPE_FILTERS.find((w) => w.value === type)
@@ -411,27 +404,35 @@ export default function ClientsPage() {
                         +{simTypes.size - 3}
                       </span>
                     )}
+                    {project.leadId && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 flex items-center gap-0.5">
+                        <ArrowRightCircle className="w-3 h-3" /> Lead
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 text-xs text-gray-500">
-                    {client.phone && (
+                    {project.phone && (
                       <span className="flex items-center gap-1">
                         <Phone className="w-3 h-3" />
-                        {client.phone}
+                        {project.phone}
                       </span>
                     )}
-                    {client.address && (
+                    {project.address && (
                       <span className="flex items-center gap-1 truncate">
                         <MapPin className="w-3 h-3" />
-                        {client.address}
+                        {project.address}
                       </span>
                     )}
+                    <span className="text-gray-400">
+                      {completion.filledCount}/{completion.totalCount} champs
+                    </span>
                   </div>
                 </div>
 
                 {/* Status */}
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${status?.color || ''}`}>
-                    {status?.label || client.status}
+                    {status?.label || project.status}
                   </span>
                 </div>
 
@@ -440,8 +441,8 @@ export default function ClientsPage() {
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
-                    if (confirm(`Supprimer ${client.firstName} ${client.lastName} ?`)) {
-                      deleteClient(client.id)
+                    if (confirm(`Supprimer ce projet ?`)) {
+                      deleteProject(project.id)
                     }
                   }}
                   className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition shrink-0"
@@ -454,39 +455,39 @@ export default function ClientsPage() {
         </div>
       )}
 
-      {/* View: Pipeline — identique à l'original (non filtré par catégorie/travaux) */}
+      {/* View: Pipeline */}
       {view === 'pipeline' && (
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-3 min-w-max">
             {activeStatuses.map((s) => {
-              const columnClients = clients.filter((c) => c.status === s.value)
+              const columnProjects = projects.filter((c) => c.status === s.value)
               return (
                 <div key={s.value} className="w-64 shrink-0">
                   <div className="flex items-center gap-2 mb-3 px-2">
                     <div className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
                     <span className="text-sm font-bold text-gray-700">{s.label}</span>
-                    <span className="text-xs text-gray-400">({columnClients.length})</span>
+                    <span className="text-xs text-gray-400">({columnProjects.length})</span>
                   </div>
                   <div className="space-y-2 min-h-[100px] bg-gray-50 rounded-xl p-2 border border-gray-200">
-                    {columnClients.length === 0 && (
+                    {columnProjects.length === 0 && (
                       <p className="text-xs text-gray-300 text-center py-6">Aucun</p>
                     )}
-                    {columnClients.map((client) => (
+                    {columnProjects.map((project) => (
                       <Link
-                        key={client.id}
-                        to={`/clients/${client.id}`}
+                        key={project.id}
+                        to={`/projets/${project.id}`}
                         className="block p-3 bg-white rounded-lg border border-gray-200 hover:shadow-md transition"
                       >
                         <p className="font-semibold text-sm text-gray-800 truncate">
-                          {client.firstName} {client.lastName}
+                          {project.firstName} {project.lastName}
                         </p>
-                        {client.category && (
-                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded mt-1 inline-block ${CATEGORY_BADGE[client.category]}`}>
-                            {client.category}
+                        {project.category && (
+                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded mt-1 inline-block ${CATEGORY_BADGE[project.category]}`}>
+                            {project.category}
                           </span>
                         )}
-                        {client.phone && (
-                          <p className="text-xs text-gray-400 mt-1">{client.phone}</p>
+                        {project.phone && (
+                          <p className="text-xs text-gray-400 mt-1">{project.phone}</p>
                         )}
                       </Link>
                     ))}

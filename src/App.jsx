@@ -1,7 +1,8 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
 import HomePage from './pages/HomePage'
+import DashboardPage from './pages/DashboardPage'
 import HistoryPage from './pages/HistoryPage'
 import NewsPage from './pages/NewsPage'
 import BarTh171Page from './pages/simulators/BarTh171Page'
@@ -17,8 +18,14 @@ import ToolboxPage from './pages/ToolboxPage'
 import ClientsPage from './pages/ClientsPage'
 import ClientFormPage from './pages/ClientFormPage'
 import ClientDetailPage from './pages/ClientDetailPage'
+import ScenarioDetailPage from './pages/ScenarioDetailPage'
 import DpeProspectionPage from './pages/DpeProspectionPage'
 import MaPrimeAdaptPage from './pages/MaPrimeAdaptPage'
+import LeadsPage from './pages/LeadsPage'
+import LeadFormPage from './pages/LeadFormPage'
+import LeadDetailPage from './pages/LeadDetailPage'
+import SimulationsPage from './pages/SimulationsPage'
+import PtzPage from './pages/simulators/PtzPage'
 
 export default function App() {
   return (
@@ -26,7 +33,8 @@ export default function App() {
       <Header />
       <main className="flex-1">
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<DashboardPage />} />
+          {/* Simulateurs */}
           <Route path="/simulateur/bar-th-171" element={<BarTh171Page />} />
           <Route path="/simulateur/bar-en-101" element={<BarEn101Page />} />
           <Route path="/simulateur/bar-en-102" element={<BarEn102Page />} />
@@ -35,16 +43,31 @@ export default function App() {
           <Route path="/simulateur/bar-th-113" element={<BarTh113Page />} />
           <Route path="/simulateur/bar-th-174" element={<BarTh174Page />} />
           <Route path="/simulateur/bar-th-175" element={<BarTh175Page />} />
+          <Route path="/maprimeadapt" element={<MaPrimeAdaptPage />} />
+          <Route path="/simulations" element={<SimulationsPage />} />
+          <Route path="/simulations/ptz" element={<PtzPage />} />
+          {/* Outils */}
           <Route path="/historique" element={<HistoryPage />} />
           <Route path="/actualites" element={<NewsPage />} />
           <Route path="/parametrage" element={<SettingsPage />} />
           <Route path="/boite-a-outils" element={<ToolboxPage />} />
-          <Route path="/clients" element={<ClientsPage />} />
-          <Route path="/clients/nouveau" element={<ClientFormPage />} />
+          <Route path="/prospection-dpe" element={<DpeProspectionPage />} />
+          {/* Projets (ex-clients) */}
+          <Route path="/projets" element={<ClientsPage />} />
+          <Route path="/projets/nouveau" element={<ClientFormPage />} />
+          <Route path="/projets/:id" element={<ClientDetailPage />} />
+          <Route path="/projets/:id/modifier" element={<ClientFormPage />} />
+          <Route path="/projets/:id/scenario/:sid" element={<ScenarioDetailPage />} />
+          {/* Redirections /clients → /projets */}
+          <Route path="/clients" element={<Navigate to="/projets" replace />} />
+          <Route path="/clients/nouveau" element={<Navigate to="/projets/nouveau" replace />} />
           <Route path="/clients/:id" element={<ClientDetailPage />} />
           <Route path="/clients/:id/modifier" element={<ClientFormPage />} />
-          <Route path="/prospection-dpe" element={<DpeProspectionPage />} />
-          <Route path="/maprimeadapt" element={<MaPrimeAdaptPage />} />
+          {/* Leads */}
+          <Route path="/leads" element={<LeadsPage />} />
+          <Route path="/leads/nouveau" element={<LeadFormPage />} />
+          <Route path="/leads/:id" element={<LeadDetailPage />} />
+          <Route path="/leads/:id/modifier" element={<LeadFormPage />} />
         </Routes>
       </main>
       <Footer />

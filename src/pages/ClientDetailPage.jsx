@@ -1,15 +1,18 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft, Edit, Phone, Mail, MapPin, Home,
   ChevronRight, MessageSquare, Send, Trash2, Calculator, FileText, Plus, ExternalLink,
-  Search, Loader2, Zap, Thermometer, ChevronDown, ChevronUp
+  Search, Loader2, Zap, Thermometer, ChevronDown, ChevronUp,
+  Bell, Check, Calendar, AlertTriangle, CheckCircle, Layers
 } from 'lucide-react'
-import { useClients, STATUSES } from '../hooks/useClients'
+import { useProjects, PROJECT_STATUSES } from '../hooks/useProjects'
 import { useSimulationHistory } from '../hooks/useSimulationHistory'
 import { CATALOG } from '../lib/constants/catalog'
 import { getLocationInfo } from '../utils/postalCode'
 import { searchDPE, getDpeColor } from '../utils/dpeApi'
+import CompletionGauge from '../components/ui/CompletionGauge'
+import { getCompletion } from '../lib/completionGauge'
 
 const CATEGORY_BADGE = {
   Bleu: 'bg-blue-100 text-blue-800 border-blue-300',
@@ -21,11 +24,21 @@ const CATEGORY_BADGE = {
 export default function ClientDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { clients, updateClient, updateStatus, addNote, deleteNote, linkSimulation } = useClients()
+  const {
+    projects, updateProject, updateProjectStatus, addNote, deleteNote, linkSimulation,
+    addScenario, deleteScenario, getScenarioTotals,
+    addReminder, toggleReminder, deleteReminder,
+  } = useProjects()
   const { history } = useSimulationHistory()
   const [noteText, setNoteText] = useState('')
   const [showLinkSim, setShowLinkSim] = useState(false)
   const [showNewSim, setShowNewSim] = useState(false)
+  const [newScenarioName, setNewScenarioName] = useState('')
+  const [showAddScenario, setShowAddScenario] = useState(false)
+
+  // Rappels
+  const [reminderText, setReminderText] = useState('')
+  const [reminderDate, setReminderDate] = useState('')
 
   // DPE state
   const [dpeResults, setDpeResults] = useState(null)
@@ -33,27 +46,28 @@ export default function ClientDetailPage() {
   const [dpeError, setDpeError] = useState(null)
   const [showDpeSection, setShowDpeSection] = useState(false)
 
-  const client = clients.find((c) => c.id === id)
+  const project = projects.find((c) => c.id === id)
 
-  if (!client) {
+  const completion = useMemo(() => getCompletion(project), [project])
+
+  if (!project) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <p className="text-gray-400 text-lg">Bénéficiaire introuvable</p>
-        <Link to="/clients" className="text-indigo-600 hover:underline mt-2 inline-block">
-          Retour à la liste
+        <p className="text-gray-400 text-lg">Projet introuvable</p>
+        <Link to="/projets" className="text-indigo-600 hover:underline mt-2 inline-block">
+          Retour aux projets
         </Link>
       </div>
     )
   }
 
-  const currentStatus = STATUSES.find((s) => s.value === client.status)
-  const linkedSims = (client.simulations || [])
+  const currentStatus = PROJECT_STATUSES.find((s) => s.value === project.status)
+  const linkedSims = (project.simulations || [])
     .map((simId) => history.find((h) => h.id === simId))
     .filter(Boolean)
-  const unlinkedSims = history.filter((h) => !(client.simulations || []).includes(h.id))
+  const unlinkedSims = history.filter((h) => !(project.simulations || []).includes(h.id))
 
-  // Location info from postal code
-  const locationInfo = client.postalCode ? getLocationInfo(client.postalCode) : null
+  const locationInfo = project.postalCode ? getLocationInfo(project.postalCode) : null
 
   function handleAddNote() {
     if (!noteText.trim()) return
@@ -66,17 +80,32 @@ export default function ClientDetailPage() {
     setShowLinkSim(false)
   }
 
+  function handleAddScenario(e) {
+    e.preventDefault()
+    addScenario(id, newScenarioName.trim() || undefined)
+    setNewScenarioName('')
+    setShowAddScenario(false)
+  }
+
+  function handleAddReminder(e) {
+    e.preventDefault()
+    if (!reminderText.trim() || !reminderDate) return
+    addReminder(id, { text: reminderText.trim(), dueAt: reminderDate })
+    setReminderText('')
+    setReminderDate('')
+  }
+
   async function handleSearchDPE() {
-    if (!client.postalCode && !client.address) return
+    if (!project.postalCode && !project.address) return
     setDpeLoading(true)
     setDpeError(null)
     setDpeResults(null)
     setShowDpeSection(true)
     try {
       const { results, geocoding, method } = await searchDPE(
-        client.address || '',
-        client.postalCode || '',
-        client.city || ''
+        project.address || '',
+        project.postalCode || '',
+        project.city || ''
       )
       setDpeResults({ items: results, geocoding, method })
     } catch (err) {
@@ -87,7 +116,7 @@ export default function ClientDetailPage() {
   }
 
   function handleSelectDPE(dpe) {
-    updateClient(id, {
+    updateProject(id, {
       dpe: {
         numeroDpe: dpe.numeroDpe,
         etiquetteDpe: dpe.etiquetteDpe,
@@ -110,7 +139,7 @@ export default function ClientDetailPage() {
     setShowDpeSection(false)
   }
 
-  const dpe = client.dpe
+  const dpe = project.dpe
   const dpeColor = dpe?.etiquetteDpe ? getDpeColor(dpe.etiquetteDpe) : null
   const gesColor = dpe?.etiquetteGes ? getDpeColor(dpe.etiquetteGes) : null
 
@@ -119,14 +148,14 @@ export default function ClientDetailPage() {
       {/* Back + Edit */}
       <div className="flex items-center justify-between mb-6">
         <button
-          onClick={() => navigate('/clients')}
+          onClick={() => navigate('/projets')}
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-indigo-600 transition"
         >
           <ArrowLeft className="w-4 h-4" />
-          Bénéficiaires
+          Projets
         </button>
         <Link
-          to={`/clients/${id}/modifier`}
+          to={`/projets/${id}/modifier`}
           className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition"
         >
           <Edit className="w-4 h-4" />
@@ -137,58 +166,76 @@ export default function ClientDetailPage() {
       {/* Header card */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xl shrink-0">
-            {(client.firstName?.[0] || '').toUpperCase()}
-            {(client.lastName?.[0] || '').toUpperCase()}
-          </div>
+          {/* Jauge */}
+          <CompletionGauge percent={completion.percent} size="lg" variant="circle" />
+
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-800">
-              {client.firstName} {client.lastName}
+              {project.firstName} {project.lastName}
             </h1>
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              {client.category && (
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${CATEGORY_BADGE[client.category]}`}>
-                  {client.category} — {client.categoryLabel}
+              {project.category && (
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${CATEGORY_BADGE[project.category]}`}>
+                  {project.category} — {project.categoryLabel}
                 </span>
               )}
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${currentStatus?.color}`}>
                 {currentStatus?.label}
               </span>
+              {project.leadId && (
+                <Link
+                  to={`/leads/${project.leadId}`}
+                  className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                >
+                  Voir le lead
+                </Link>
+              )}
             </div>
+
+            {/* Missing fields */}
+            {completion.percent < 100 && (
+              <div className="mt-3 flex items-center gap-2">
+                <CompletionGauge percent={completion.percent} variant="bar" label={`${completion.filledCount}/${completion.totalCount} champs`} />
+                <Link
+                  to={`/projets/${project.id}/modifier`}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold whitespace-nowrap"
+                >
+                  Compléter
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Contact info */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5 pt-5 border-t border-gray-100">
-          {client.phone && (
-            <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-indigo-600">
-              <Phone className="w-4 h-4 text-gray-400" />
-              {client.phone}
+          {project.phone && (
+            <a href={`tel:${project.phone}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-indigo-600">
+              <Phone className="w-4 h-4 text-gray-400" /> {project.phone}
             </a>
           )}
-          {client.email && (
-            <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-indigo-600">
-              <Mail className="w-4 h-4 text-gray-400" />
-              {client.email}
+          {project.email && (
+            <a href={`mailto:${project.email}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-indigo-600">
+              <Mail className="w-4 h-4 text-gray-400" /> {project.email}
             </a>
           )}
-          {(client.address || client.city) && (
+          {(project.address || project.city) && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-              {[client.address, client.postalCode, client.city].filter(Boolean).join(', ')}
+              {[project.address, project.postalCode, project.city].filter(Boolean).join(', ')}
             </div>
           )}
-          {client.typeLogement && (
+          {project.typeLogement && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Home className="w-4 h-4 text-gray-400" />
-              {client.typeLogement === 'maison' ? 'Maison' : 'Appartement'}
-              {client.surface ? ` — ${client.surface} m²` : ''}
+              {project.typeLogement === 'maison' ? 'Maison' : 'Appartement'}
+              {project.surface ? ` — ${project.surface} m²` : ''}
             </div>
           )}
-          {client.rfr && (
+          {project.rfr && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <FileText className="w-4 h-4 text-gray-400" />
-              RFR : {Number(client.rfr).toLocaleString('fr-FR')} € — {client.personnes} pers.
+              RFR : {Number(project.rfr).toLocaleString('fr-FR')} € — {project.personnes} pers.
             </div>
           )}
         </div>
@@ -197,13 +244,12 @@ export default function ClientDetailPage() {
         {locationInfo && (
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
-              <MapPin className="w-3 h-3" />
-              {locationInfo.region}
+              <MapPin className="w-3 h-3" /> {locationInfo.region}
             </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
               Zone {locationInfo.zoneClimatique}
             </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
               Dept. {locationInfo.departement}
             </span>
             {locationInfo.isIDF && (
@@ -224,7 +270,7 @@ export default function ClientDetailPage() {
           </h2>
           <button
             onClick={handleSearchDPE}
-            disabled={!client.postalCode || dpeLoading}
+            disabled={!project.postalCode || dpeLoading}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition disabled:opacity-40"
           >
             {dpeLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
@@ -236,14 +282,12 @@ export default function ClientDetailPage() {
         {dpe && (
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 mb-4">
             <div className="flex items-center gap-4">
-              {/* DPE badge */}
               <div
                 className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-black shrink-0"
                 style={{ backgroundColor: dpeColor?.bg, color: dpeColor?.text }}
               >
                 {dpe.etiquetteDpe}
               </div>
-              {/* GES badge */}
               {dpe.etiquetteGes && (
                 <div
                   className="w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0"
@@ -283,8 +327,7 @@ export default function ClientDetailPage() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:underline"
                     >
-                      <ExternalLink className="w-3 h-3" />
-                      Fiche ADEME
+                      <ExternalLink className="w-3 h-3" /> Fiche ADEME
                     </a>
                   )}
                 </div>
@@ -295,7 +338,7 @@ export default function ClientDetailPage() {
 
         {!dpe && !showDpeSection && (
           <p className="text-sm text-gray-400 text-center py-2">
-            Aucun DPE rattaché. Cliquez sur « Consulter les DPE » pour rechercher.
+            Aucun DPE rattaché. Cliquez sur \« Consulter les DPE \» pour rechercher.
           </p>
         )}
 
@@ -304,14 +347,12 @@ export default function ClientDetailPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-gray-600">
-                {dpeLoading && 'Recherche en cours…'}
+                {dpeLoading && 'Recherche en cours\…'}
                 {!dpeLoading && dpeResults && (
                   <>
                     {dpeResults.items.length} résultat{dpeResults.items.length > 1 ? 's' : ''} trouvé{dpeResults.items.length > 1 ? 's' : ''}
                     {dpeResults.geocoding && (
-                      <span className="text-gray-400 ml-1">
-                        — {dpeResults.geocoding.label}
-                      </span>
+                      <span className="text-gray-400 ml-1">— {dpeResults.geocoding.label}</span>
                     )}
                   </>
                 )}
@@ -373,29 +414,106 @@ export default function ClientDetailPage() {
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
         <h2 className="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">Avancement</h2>
         <div className="flex flex-wrap gap-2">
-          {STATUSES.map((s) => (
+          {PROJECT_STATUSES.map((s) => (
             <button
               key={s.value}
-              onClick={() => updateStatus(id, s.value)}
+              onClick={() => updateProjectStatus(id, s.value)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition border ${
-                client.status === s.value
+                project.status === s.value
                   ? `${s.color} border-current ring-2 ring-offset-1 ring-current/20`
                   : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'
               }`}
             >
-              <div className={`w-2 h-2 rounded-full ${client.status === s.value ? s.dot : 'bg-gray-300'}`} />
+              <div className={`w-2 h-2 rounded-full ${project.status === s.value ? s.dot : 'bg-gray-300'}`} />
               {s.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Simulations — Scénarios */}
+      {/* Scénarios */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+            <Layers className="w-4 h-4 text-indigo-600" />
+            Scénarios ({(project.scenarios || []).length})
+          </h2>
+          <button
+            onClick={() => setShowAddScenario(!showAddScenario)}
+            className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+          >
+            <Plus className="w-3.5 h-3.5" /> Nouveau scénario
+          </button>
+        </div>
+
+        {showAddScenario && (
+          <form onSubmit={handleAddScenario} className="flex gap-2 mb-4">
+            <input
+              type="text"
+              value={newScenarioName}
+              onChange={(e) => setNewScenarioName(e.target.value)}
+              placeholder="Nom du scénario (optionnel)"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+              Créer
+            </button>
+          </form>
+        )}
+
+        {(project.scenarios || []).length === 0 && !showAddScenario && (
+          <p className="text-sm text-gray-400 text-center py-4">
+            Aucun scénario. Créez un scénario pour simuler différentes options de travaux.
+          </p>
+        )}
+
+        <div className="space-y-3">
+          {(project.scenarios || []).map((scenario) => {
+            const totals = getScenarioTotals(scenario)
+            return (
+              <Link
+                key={scenario.id}
+                to={`/projets/${id}/scenario/${scenario.id}`}
+                className="block p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-sm transition group"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-800">{scenario.name}</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {scenario.simulations.length} simulation{scenario.simulations.length > 1 ? 's' : ''}
+                      {scenario.ptz && ' + PTZ'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {totals.totalAides > 0 && (
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-green-600">{totals.totalAides.toLocaleString('fr-FR')} €</p>
+                        <p className="text-[10px] text-gray-400">aides totales</p>
+                      </div>
+                    )}
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition" />
+                  </div>
+                </div>
+                {totals.totalCost > 0 && (
+                  <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                    <span>CEE : <strong className="text-gray-700">{totals.totalCee.toLocaleString('fr-FR')} €</strong></span>
+                    <span>MPR : <strong className="text-gray-700">{totals.totalMpr.toLocaleString('fr-FR')} €</strong></span>
+                    <span>Coût : <strong className="text-gray-700">{totals.totalCost.toLocaleString('fr-FR')} €</strong></span>
+                    <span>RAC : <strong className="text-orange-600">{totals.resteACharge.toLocaleString('fr-FR')} €</strong></span>
+                  </div>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Simulations (legacy / rattachement) */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
             <Calculator className="w-4 h-4" />
-            Simulations & Scénarios ({linkedSims.length})
+            Simulations rapides ({linkedSims.length})
           </h2>
           <div className="flex gap-2">
             <button
@@ -407,7 +525,6 @@ export default function ClientDetailPage() {
           </div>
         </div>
 
-        {/* Nouvelle simulation — choix de fiche */}
         <div className="mb-4">
           <button
             onClick={() => setShowNewSim(!showNewSim)}
@@ -446,7 +563,6 @@ export default function ClientDetailPage() {
           </div>
         )}
 
-        {/* Rattacher simulation existante */}
         {showLinkSim && unlinkedSims.length > 0 && (
           <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200 max-h-48 overflow-y-auto space-y-1">
             {unlinkedSims.map((sim) => (
@@ -457,9 +573,7 @@ export default function ClientDetailPage() {
               >
                 <span>
                   <span className="font-semibold text-gray-800">{sim.title}</span>
-                  <span className="text-gray-400 ml-2">
-                    {new Date(sim.date).toLocaleDateString('fr-FR')}
-                  </span>
+                  <span className="text-gray-400 ml-2">{new Date(sim.date).toLocaleDateString('fr-FR')}</span>
                 </span>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               </button>
@@ -470,9 +584,8 @@ export default function ClientDetailPage() {
           <p className="text-xs text-gray-400 mb-4">Aucune simulation non rattachée disponible.</p>
         )}
 
-        {/* Simulations list */}
         {linkedSims.length === 0 && !showNewSim && !showLinkSim && (
-          <p className="text-sm text-gray-400 text-center py-2">Aucune simulation. Créez un scénario pour ce bénéficiaire.</p>
+          <p className="text-sm text-gray-400 text-center py-2">Aucune simulation rattachée.</p>
         )}
         {linkedSims.length > 0 && (
           <div className="space-y-2">
@@ -489,11 +602,7 @@ export default function ClientDetailPage() {
                       <p className="font-semibold text-sm text-gray-800">{sim.title}</p>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(sim.date).toLocaleDateString('fr-FR', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
+                      {new Date(sim.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
                       {sim.results?.totalAid != null && (
                         <span className="ml-2 text-green-600 font-semibold">
                           Aides : {Number(sim.results.totalAid).toLocaleString('fr-FR')} €
@@ -515,10 +624,8 @@ export default function ClientDetailPage() {
                     <Link
                       to={`${ficheRoute}?clientId=${id}`}
                       className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition opacity-0 group-hover:opacity-100"
-                      title="Modifier / Nouveau scénario"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Simuler
+                      <ExternalLink className="w-3.5 h-3.5" /> Simuler
                     </Link>
                   )}
                 </div>
@@ -528,59 +635,111 @@ export default function ClientDetailPage() {
         )}
       </div>
 
-      {/* Notes */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <h2 className="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide flex items-center gap-2">
-          <MessageSquare className="w-4 h-4" />
-          Notes ({(client.notes || []).length})
-        </h2>
-
-        {/* Add note */}
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-            placeholder="Ajouter une note..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
-          <button
-            onClick={handleAddNote}
-            disabled={!noteText.trim()}
-            className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-40"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Notes */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h2 className="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Notes ({(project.notes || []).length})
+          </h2>
+          <div className="flex gap-2 mb-4">
+            <input
+              type="text"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+              placeholder="Ajouter une note..."
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <button
+              onClick={handleAddNote}
+              disabled={!noteText.trim()}
+              className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-40"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {(project.notes || []).length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">Aucune note.</p>
+            )}
+            {(project.notes || []).map((note) => (
+              <div key={note.id} className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg group">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-700">{note.text}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {new Date(note.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => deleteNote(id, note.id)}
+                  className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Notes list */}
-        {(client.notes || []).length === 0 && (
-          <p className="text-sm text-gray-400">Aucune note pour l'instant.</p>
-        )}
-        <div className="space-y-2">
-          {(client.notes || []).map((note) => (
-            <div key={note.id} className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg group">
-              <div className="flex-1">
-                <p className="text-sm text-gray-700">{note.text}</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {new Date(note.date).toLocaleDateString('fr-FR', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
+        {/* Rappels */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h2 className="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide flex items-center gap-2">
+            <Bell className="w-4 h-4 text-indigo-600" /> Rappels
+          </h2>
+          <form onSubmit={handleAddReminder} className="space-y-2 mb-4">
+            <input
+              type="text"
+              value={reminderText}
+              onChange={(e) => setReminderText(e.target.value)}
+              placeholder="Rappel..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <div className="flex gap-2">
+              <input
+                type="datetime-local"
+                value={reminderDate}
+                onChange={(e) => setReminderDate(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
               <button
-                onClick={() => deleteNote(id, note.id)}
-                className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
+                type="submit"
+                disabled={!reminderText.trim() || !reminderDate}
+                className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-40"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4" />
               </button>
             </div>
-          ))}
+          </form>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {(project.reminders || []).length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-4">Aucun rappel</p>
+            )}
+            {(project.reminders || []).map((reminder) => {
+              const isOverdue = !reminder.done && reminder.dueAt && new Date(reminder.dueAt) < new Date()
+              return (
+                <div key={reminder.id} className={`flex items-start gap-2 p-2 rounded-lg text-sm group ${isOverdue ? 'bg-red-50' : 'bg-gray-50'}`}>
+                  <button
+                    onClick={() => toggleReminder(id, reminder.id)}
+                    className={`mt-0.5 shrink-0 ${reminder.done ? 'text-green-500' : 'text-gray-300 hover:text-indigo-500'}`}
+                  >
+                    {reminder.done ? <CheckCircle className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                  </button>
+                  <div className="flex-1">
+                    <p className={`text-gray-700 ${reminder.done ? 'line-through opacity-50' : ''}`}>{reminder.text}</p>
+                    <p className={`text-xs mt-0.5 flex items-center gap-1 ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
+                      <Calendar className="w-3 h-3" />
+                      {new Date(reminder.dueAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      {isOverdue && <AlertTriangle className="w-3 h-3" />}
+                    </p>
+                  </div>
+                  <button onClick={() => deleteReminder(id, reminder.id)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
