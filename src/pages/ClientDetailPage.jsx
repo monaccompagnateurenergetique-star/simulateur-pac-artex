@@ -467,39 +467,80 @@ export default function ClientDetailPage() {
           </p>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {(project.scenarios || []).map((scenario) => {
             const totals = getScenarioTotals(scenario)
+            const fmt = (v) => v ? Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) : '0'
             return (
               <Link
                 key={scenario.id}
                 to={`/projets/${id}/scenario/${scenario.id}`}
-                className="block p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-sm transition group"
+                className="block bg-gray-50 rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md transition group overflow-hidden"
               >
-                <div className="flex items-center justify-between">
+                {/* En-tête scénario */}
+                <div className="flex items-center justify-between p-4 pb-2">
                   <div>
-                    <h3 className="font-semibold text-gray-800">{scenario.name}</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-indigo-500" />
+                      {scenario.name}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5 ml-6">
                       {scenario.simulations.length} simulation{scenario.simulations.length > 1 ? 's' : ''}
                       {scenario.ptz && ' + PTZ'}
+                      {' — '}
+                      {new Date(scenario.createdAt).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {totals.totalAides > 0 && (
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-green-600">{totals.totalAides.toLocaleString('fr-FR')} €</p>
-                        <p className="text-[10px] text-gray-400">aides totales</p>
-                      </div>
-                    )}
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition" />
-                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition" />
                 </div>
+
+                {/* Liste des simulations du scénario */}
+                {scenario.simulations.length > 0 && (
+                  <div className="px-4 pb-2">
+                    <div className="space-y-1">
+                      {scenario.simulations.map((sim) => {
+                        const r = sim.results || {}
+                        const inp = sim.inputs || {}
+                        const cee = r.ceeCommerciale || r.ceeFinal || r.ceeEuros || 0
+                        const mpr = r.mprFinal || r.mprAmount || r.primeAmount || 0
+                        const cost = r.projectCost || r.totalCost || inp.projectCost || inp.projectCostTTC || 0
+                        return (
+                          <div key={sim.id} className="flex items-center justify-between py-1.5 px-3 bg-white rounded-lg text-xs">
+                            <div className="flex items-center gap-2">
+                              {sim.type && <span className="font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded text-[10px]">{sim.type}</span>}
+                              <span className="font-medium text-gray-700">{sim.title || 'Simulation'}</span>
+                            </div>
+                            <div className="flex gap-3 text-[11px]">
+                              {cee > 0 && <span className="text-green-600 font-semibold">{cee.toLocaleString('fr-FR')} €</span>}
+                              {mpr > 0 && <span className="text-blue-600 font-semibold">{mpr.toLocaleString('fr-FR')} €</span>}
+                              {cost > 0 && <span className="text-gray-500">{cost.toLocaleString('fr-FR')} €</span>}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Résumé financier */}
                 {totals.totalCost > 0 && (
-                  <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                    <span>CEE : <strong className="text-gray-700">{totals.totalCee.toLocaleString('fr-FR')} €</strong></span>
-                    <span>MPR : <strong className="text-gray-700">{totals.totalMpr.toLocaleString('fr-FR')} €</strong></span>
-                    <span>Coût : <strong className="text-gray-700">{totals.totalCost.toLocaleString('fr-FR')} €</strong></span>
-                    <span>RAC : <strong className="text-orange-600">{totals.resteACharge.toLocaleString('fr-FR')} €</strong></span>
+                  <div className="grid grid-cols-4 gap-px bg-gray-200 mt-1">
+                    <div className="bg-white py-2.5 text-center">
+                      <p className="text-[10px] uppercase text-gray-400 font-semibold">Coût total</p>
+                      <p className="text-sm font-bold text-gray-800">{fmt(totals.totalCost)} €</p>
+                    </div>
+                    <div className="bg-white py-2.5 text-center">
+                      <p className="text-[10px] uppercase text-green-500 font-semibold">CEE</p>
+                      <p className="text-sm font-bold text-green-600">{fmt(totals.totalCee)} €</p>
+                    </div>
+                    <div className="bg-white py-2.5 text-center">
+                      <p className="text-[10px] uppercase text-blue-500 font-semibold">MPR</p>
+                      <p className="text-sm font-bold text-blue-600">{fmt(totals.totalMpr)} €</p>
+                    </div>
+                    <div className="bg-orange-50 py-2.5 text-center">
+                      <p className="text-[10px] uppercase text-orange-500 font-semibold">RAC</p>
+                      <p className="text-sm font-bold text-orange-600">{fmt(totals.resteACharge)} €</p>
+                    </div>
                   </div>
                 )}
               </Link>

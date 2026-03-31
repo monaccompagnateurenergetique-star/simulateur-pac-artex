@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Calculator, Info } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import CommercialStrategy from '../../components/simulator/CommercialStrategy'
@@ -13,24 +13,18 @@ import { ZONE_OPTIONS } from '../../lib/constants/zones'
 import { BAR_EN_102 } from '../../lib/constants/barEn102'
 import { calculateBarEn102 } from '../../lib/calculators/barEn102'
 import { useCommercialStrategy } from '../../hooks/useCommercialStrategy'
-import { useClientContext } from '../../hooks/useClientContext'
+import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarEn102Page() {
-  const [surface, setSurface] = useState(60)
-  const [zone, setZone] = useState('H1')
-  const [method, setMethod] = useState('interieur')
-  const [priceMWh, setPriceMWh] = useState(7.5)
-  const [projectCost, setProjectCost] = useState(8000)
-  const [ceePercent, setCeePercent] = useState(58)
+  const { getDefault } = useSimulatorContext()
 
-  const { prefill } = useClientContext()
-
-  useEffect(() => {
-    if (!prefill) return
-    if (prefill.surface) setSurface(prefill.surface)
-    if (prefill.zone) setZone(prefill.zone)
-  }, [])
+  const [surface, setSurface] = useState(() => getDefault('surface', 60))
+  const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
+  const [method, setMethod] = useState(() => getDefault('method', 'interieur'))
+  const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
+  const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 8000))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 58))
 
   const result = useMemo(
     () => calculateBarEn102({ surface, zone, priceMWh }),
@@ -142,7 +136,7 @@ export default function BarEn102Page() {
         type="BAR-EN-102"
         title={`Isolation murs ${method === 'interieur' ? 'ITI' : 'ITE'} — ${surface}m² ${zone}`}
         inputs={{ surface, zone, method, priceMWh, projectCost, ceePercent }}
-        results={{ ...result, ...commercial }}
+        results={{ ...result, ...commercial, projectCost }}
         pdfData={{
           ficheCode: 'BAR-EN-102',
           ficheTitle: 'Isolation des murs',

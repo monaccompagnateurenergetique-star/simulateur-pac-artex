@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Flame, Calculator, AlertTriangle } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import CommercialStrategy from '../../components/simulator/CommercialStrategy'
@@ -12,25 +12,19 @@ import { BAR_TH_113 } from '../../lib/constants/barTh113'
 import { ZONE_OPTIONS } from '../../lib/constants/zones'
 import { calculateBarTh113 } from '../../lib/calculators/barTh113'
 import { useCommercialStrategy } from '../../hooks/useCommercialStrategy'
-import { useClientContext } from '../../hooks/useClientContext'
+import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarTh113Page() {
-  const [zone, setZone] = useState('H1')
-  const [mprCategory, setMprCategory] = useState('Bleu')
-  const [fuelType, setFuelType] = useState('granules')
-  const [replacedEnergy, setReplacedEnergy] = useState('fioul')
-  const [priceMWh, setPriceMWh] = useState(7.5)
-  const [projectCost, setProjectCost] = useState(15000)
-  const [ceePercent, setCeePercent] = useState(58)
+  const { getDefault } = useSimulatorContext()
 
-  const { prefill } = useClientContext()
-
-  useEffect(() => {
-    if (!prefill) return
-    if (prefill.mprCategory) setMprCategory(prefill.mprCategory)
-    if (prefill.zone) setZone(prefill.zone)
-  }, [])
+  const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
+  const [mprCategory, setMprCategory] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [fuelType, setFuelType] = useState(() => getDefault('fuelType', 'granules'))
+  const [replacedEnergy, setReplacedEnergy] = useState(() => getDefault('replacedEnergy', 'fioul'))
+  const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
+  const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 15000))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 58))
 
   const result = useMemo(
     () => calculateBarTh113({ zone, mprCategory, priceMWh }),
@@ -166,7 +160,7 @@ export default function BarTh113Page() {
         type="BAR-TH-113"
         title={`Biomasse ${fuelType} — ${zone} — remplace ${replacedEnergy}`}
         inputs={{ zone, mprCategory, fuelType, replacedEnergy, priceMWh, projectCost, ceePercent }}
-        results={{ ...result, ...commercial }}
+        results={{ ...result, ...commercial, projectCost }}
         pdfData={{
           ficheCode: 'BAR-TH-113',
           ficheTitle: 'Chaudière biomasse individuelle',

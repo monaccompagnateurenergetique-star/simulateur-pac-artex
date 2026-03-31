@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Calculator, Info } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import CommercialStrategy from '../../components/simulator/CommercialStrategy'
@@ -13,26 +13,19 @@ import { ZONE_OPTIONS } from '../../lib/constants/zones'
 import { BAR_EN_101 } from '../../lib/constants/barEn101'
 import { calculateBarEn101 } from '../../lib/calculators/barEn101'
 import { useCommercialStrategy } from '../../hooks/useCommercialStrategy'
-import { useClientContext } from '../../hooks/useClientContext'
+import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarEn101Page() {
-  const [surface, setSurface] = useState(80)
-  const [zone, setZone] = useState('H1')
-  const [insulationType, setInsulationType] = useState('combles')
-  const [priceMWh, setPriceMWh] = useState(7.5)
-  const [projectCost, setProjectCost] = useState(5000)
-  const [mprCategory, setMprCategory] = useState('Bleu')
-  const [ceePercent, setCeePercent] = useState(58)
+  const { getDefault } = useSimulatorContext()
 
-  const { prefill } = useClientContext()
-
-  useEffect(() => {
-    if (!prefill) return
-    if (prefill.surface) setSurface(prefill.surface)
-    if (prefill.zone) setZone(prefill.zone)
-    if (prefill.mprCategory) setMprCategory(prefill.mprCategory)
-  }, [])
+  const [surface, setSurface] = useState(() => getDefault('surface', 80))
+  const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
+  const [insulationType, setInsulationType] = useState(() => getDefault('insulationType', 'combles'))
+  const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
+  const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 5000))
+  const [mprCategory, setMprCategory] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 58))
 
   // Rampants = éligible MPR au m², Combles perdus = pas de MPR
   const isRampants = insulationType === 'rampants'
@@ -165,7 +158,7 @@ export default function BarEn101Page() {
         type="BAR-EN-101"
         title={`Isolation ${insulationType} — ${surface}m² ${zone}`}
         inputs={{ surface, zone, insulationType, priceMWh, projectCost, mprCategory, ceePercent }}
-        results={{ ...result, ...commercial }}
+        results={{ ...result, ...commercial, projectCost }}
         pdfData={{
           ficheCode: 'BAR-EN-101',
           ficheTitle: 'Isolation combles / toitures',

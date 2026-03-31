@@ -262,6 +262,27 @@ export function useProjects() {
     )
   }
 
+  function updateSimInScenario(projectId, scenarioId, simulationId, updatedSim) {
+    setProjects((prev) =>
+      prev.map((p) => {
+        if (p.id !== projectId) return p
+        return {
+          ...p,
+          scenarios: (p.scenarios || []).map((s) => {
+            if (s.id !== scenarioId) return s
+            return {
+              ...s,
+              simulations: s.simulations.map((sim) =>
+                sim.id === simulationId ? { ...sim, ...updatedSim, id: simulationId } : sim
+              ),
+            }
+          }),
+          updatedAt: new Date().toISOString(),
+        }
+      })
+    )
+  }
+
   function removeSimFromScenario(projectId, scenarioId, simulationId) {
     setProjects((prev) =>
       prev.map((p) => {
@@ -294,9 +315,10 @@ export function useProjects() {
 
     for (const sim of scenario.simulations || []) {
       const r = sim.results || {}
-      totalCee += r.ceeCommerciale || r.ceeEuros || 0
-      totalMpr += r.mprFinal || r.primeAmount || 0
-      totalCost += r.projectCost || r.totalCost || 0
+      const inp = sim.inputs || {}
+      totalCee += r.ceeCommerciale || r.ceeFinal || r.ceeEuros || 0
+      totalMpr += r.mprFinal || r.mprAmount || r.primeAmount || 0
+      totalCost += r.projectCost || r.totalCost || inp.projectCost || inp.projectCostTTC || 0
     }
 
     const ptzMontant = scenario.ptz?.montantPTZ || 0
@@ -378,6 +400,7 @@ export function useProjects() {
     updateScenario,
     deleteScenario,
     addSimToScenario,
+    updateSimInScenario,
     removeSimFromScenario,
     setPtzForScenario,
     getScenarioTotals,

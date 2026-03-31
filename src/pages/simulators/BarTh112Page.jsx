@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Calculator, Flame, Info, CheckCircle } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import CommercialStrategy from '../../components/simulator/CommercialStrategy'
@@ -12,25 +12,19 @@ import { BAR_TH_112, MPR_BAR_TH_112 } from '../../lib/constants/barTh112'
 import { ZONE_OPTIONS } from '../../lib/constants/zones'
 import { calculateBarTh112 } from '../../lib/calculators/barTh112'
 import { useCommercialStrategy } from '../../hooks/useCommercialStrategy'
-import { useClientContext } from '../../hooks/useClientContext'
+import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarTh112Page() {
-  const [zone, setZone] = useState('H1')
-  const [etas, setEtas] = useState('high')
-  const [appareilType, setAppareilType] = useState('poele_granules')
-  const [mprCategory, setMprCategory] = useState('Bleu')
-  const [priceMWh, setPriceMWh] = useState(7.5)
-  const [projectCost, setProjectCost] = useState(5000)
-  const [ceePercent, setCeePercent] = useState(100)
+  const { getDefault } = useSimulatorContext()
 
-  const { prefill } = useClientContext()
-
-  useEffect(() => {
-    if (!prefill) return
-    if (prefill.zone) setZone(prefill.zone)
-    if (prefill.mprCategory) setMprCategory(prefill.mprCategory)
-  }, [])
+  const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
+  const [etas, setEtas] = useState(() => getDefault('etas', 'high'))
+  const [appareilType, setAppareilType] = useState(() => getDefault('appareilType', 'poele_granules'))
+  const [mprCategory, setMprCategory] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
+  const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 5000))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
 
   // CEE Calculation
   const ceeResult = useMemo(
@@ -230,7 +224,7 @@ export default function BarTh112Page() {
         type="BAR-TH-112"
         title={`Bois ${appareilLabel} — ${etasLabel} — ${zone} — ${mprCategory}`}
         inputs={{ zone, etas, appareilType, mprCategory, priceMWh, projectCost, ceePercent }}
-        results={{ ceeEurosBase, volumeCEE, ...commercial }}
+        results={{ ceeEurosBase, volumeCEE, projectCost, ...commercial }}
         pdfData={{
           ficheCode: 'BAR-TH-112',
           ficheTitle: 'Appareil indépendant de chauffage au bois',

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Calculator, Info } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import CommercialStrategy from '../../components/simulator/CommercialStrategy'
@@ -12,23 +12,17 @@ import { ZONE_OPTIONS } from '../../lib/constants/zones'
 import { BAR_EN_103 } from '../../lib/constants/barEn103'
 import { calculateBarEn103 } from '../../lib/calculators/barEn103'
 import { useCommercialStrategy } from '../../hooks/useCommercialStrategy'
-import { useClientContext } from '../../hooks/useClientContext'
+import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarEn103Page() {
-  const [surface, setSurface] = useState(70)
-  const [zone, setZone] = useState('H1')
-  const [priceMWh, setPriceMWh] = useState(7.5)
-  const [projectCost, setProjectCost] = useState(4000)
-  const [ceePercent, setCeePercent] = useState(58)
+  const { getDefault } = useSimulatorContext()
 
-  const { prefill } = useClientContext()
-
-  useEffect(() => {
-    if (!prefill) return
-    if (prefill.surface) setSurface(prefill.surface)
-    if (prefill.zone) setZone(prefill.zone)
-  }, [])
+  const [surface, setSurface] = useState(() => getDefault('surface', 70))
+  const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
+  const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
+  const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 4000))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 58))
 
   const result = useMemo(
     () => calculateBarEn103({ surface, zone, priceMWh }),
@@ -131,7 +125,7 @@ export default function BarEn103Page() {
         type="BAR-EN-103"
         title={`Isolation plancher — ${surface}m² ${zone}`}
         inputs={{ surface, zone, priceMWh, projectCost, ceePercent }}
-        results={{ ...result, ...commercial }}
+        results={{ ...result, ...commercial, projectCost }}
         pdfData={{
           ficheCode: 'BAR-EN-103',
           ficheTitle: 'Isolation plancher bas',

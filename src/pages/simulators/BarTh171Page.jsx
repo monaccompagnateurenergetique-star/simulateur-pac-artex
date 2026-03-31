@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Calculator } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import CommercialStrategy from '../../components/simulator/CommercialStrategy'
@@ -14,30 +14,22 @@ import { ZONE_OPTIONS } from '../../lib/constants/zones'
 import { MPR_GRANTS } from '../../lib/constants/mpr'
 import { calculateBarTh171 } from '../../lib/calculators/barTh171'
 import { useCommercialStrategy } from '../../hooks/useCommercialStrategy'
-import { useClientContext } from '../../hooks/useClientContext'
+import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarTh171Page() {
-  // Inputs
+  const { getDefault } = useSimulatorContext()
+
+  // Inputs — pré-remplis depuis le projet ou la simulation en édition
   const [isPrimaryResidence, setIsPrimaryResidence] = useState('Oui')
-  const [housingType, setHousingType] = useState('Maison')
-  const [surface, setSurface] = useState(100)
-  const [zone, setZone] = useState('H1')
-  const [etas, setEtas] = useState('high')
-  const [priceMWh, setPriceMWh] = useState(7.5)
-  const [projectCost, setProjectCost] = useState(12000)
-  const [mprCategory, setMprCategory] = useState('Bleu')
-  const [ceePercent, setCeePercent] = useState(58)
-
-  const { prefill } = useClientContext()
-
-  useEffect(() => {
-    if (!prefill) return
-    if (prefill.housingType) setHousingType(prefill.housingType)
-    if (prefill.surface) setSurface(prefill.surface)
-    if (prefill.zone) setZone(prefill.zone)
-    if (prefill.mprCategory) setMprCategory(prefill.mprCategory)
-  }, [])
+  const [housingType, setHousingType] = useState(() => getDefault('housingType', 'Maison'))
+  const [surface, setSurface] = useState(() => getDefault('surface', 100))
+  const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
+  const [etas, setEtas] = useState(() => getDefault('etas', 'high'))
+  const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
+  const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 12000))
+  const [mprCategory, setMprCategory] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 58))
 
   // CEE Calculation
   const ceeResult = useMemo(
@@ -200,7 +192,7 @@ export default function BarTh171Page() {
           type="BAR-TH-171"
           title={`PAC Air/Eau — ${housingType} ${surface}m² ${zone}`}
           inputs={{ housingType, surface, zone, etas, priceMWh, projectCost, mprCategory, ceePercent }}
-          results={{ ceeEurosBase, volumeCEE, ...commercial }}
+          results={{ ceeEurosBase, volumeCEE, projectCost, ...commercial }}
           pdfData={{
             ficheCode: 'BAR-TH-171',
             ficheTitle: 'Simulateur Aides PAC Air/Eau',

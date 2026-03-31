@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
-  ArrowLeft, Edit3, Trash2, Plus, ChevronRight, Layers, Calculator
+  ArrowLeft, Edit3, Trash2, Plus, ChevronRight, Layers, Calculator,
+  RefreshCw, TrendingDown, TrendingUp, Wallet, Euro, FileDown
 } from 'lucide-react'
 import { useProjects } from '../hooks/useProjects'
+import { useSettings } from '../hooks/useSettings'
 import { CATALOG } from '../lib/constants/catalog'
 import FinancialRecap from '../components/project/FinancialRecap'
+import { generateProposalPDF } from '../lib/proposalPdfGenerator'
 
 export default function ScenarioDetailPage() {
   const { id: projectId, sid: scenarioId } = useParams()
@@ -14,6 +17,7 @@ export default function ScenarioDetailPage() {
     projects, getScenarioTotals,
     updateScenario, deleteScenario, removeSimFromScenario,
   } = useProjects()
+  const { settings } = useSettings()
 
   const [editName, setEditName] = useState(false)
   const [nameValue, setNameValue] = useState('')
@@ -50,13 +54,29 @@ export default function ScenarioDetailPage() {
     }
   }
 
+  function handleExportPDF() {
+    generateProposalPDF({
+      company: settings.company,
+      project,
+      scenario,
+      totals,
+    })
+  }
+
   function handleRemoveSim(simId) {
     if (confirm('Retirer cette simulation du scénario ?')) {
       removeSimFromScenario(projectId, scenarioId, simId)
     }
   }
 
+  function getSimEditUrl(sim) {
+    const catalogItem = CATALOG.flatMap((c) => c.items).find((i) => i.code === sim.type)
+    if (!catalogItem) return null
+    return `${catalogItem.route}?projectId=${projectId}&scenarioId=${scenarioId}&editSimId=${sim.id}`
+  }
+
   const projectName = `${project.firstName || ''} ${project.lastName || ''}`.trim() || 'Projet'
+  const fmt = (v) => v ? Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) : '0'
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
@@ -97,22 +117,68 @@ export default function ScenarioDetailPage() {
               </div>
             )}
           </div>
-          <button
-            onClick={handleDeleteScenario}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition"
-          >
-            <Trash2 className="w-4 h-4" /> Supprimer
-          </button>
+          <div className="flex items-center gap-2">
+            {scenario.simulations.length > 0 && (
+              <button
+                onClick={handleExportPDF}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition font-medium"
+              >
+                <FileDown className="w-4 h-4" /> Proposition PDF
+              </button>
+            )}
+            <button
+              onClick={handleDeleteScenario}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition"
+            >
+              <Trash2 className="w-4 h-4" /> Supprimer
+            </button>
+          </div>
         </div>
         <p className="text-sm text-gray-500 mt-2">
           {scenario.simulations.length} simulation{scenario.simulations.length > 1 ? 's' : ''}
           {scenario.ptz && ' + PTZ'}
-          {' \— '}
+          {' — '}
           Créé le {new Date(scenario.createdAt).toLocaleDateString('fr-FR')}
         </p>
       </div>
 
-      {/* Récap financier */}
+      {/* KPI résumé financier */}
+      {scenario.simulations.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+            <div className="flex items-center justify-center mb-1">
+              <Euro className="w-4 h-4 text-gray-400" />
+            </div>
+            <p className="text-xl font-bold text-gray-800">{fmt(totals.totalCost)} €</p>
+            <p className="text-xs text-gray-500">Coût total travaux</p>
+          </div>
+          <div className="bg-white rounded-xl border border-green-200 p-4 text-center">
+            <div className="flex items-center justify-center mb-1">
+              <TrendingDown className="w-4 h-4 text-green-500" />
+            </div>
+            <p className="text-xl font-bold text-green-600">{fmt(totals.totalAides)} €</p>
+            <p className="text-xs text-gray-500">Total aides</p>
+          </div>
+          {totals.ptzMontant > 0 && (
+            <div className="bg-white rounded-xl border border-indigo-200 p-4 text-center">
+              <div className="flex items-center justify-center mb-1">
+                <Wallet className="w-4 h-4 text-indigo-500" />
+              </div>
+              <p className="text-xl font-bold text-indigo-600">{fmt(totals.ptzMontant)} €</p>
+              <p className="text-xs text-gray-500">PTZ</p>
+            </div>
+          )}
+          <div className="bg-orange-50 rounded-xl border border-orange-200 p-4 text-center">
+            <div className="flex items-center justify-center mb-1">
+              <TrendingUp className="w-4 h-4 text-orange-500" />
+            </div>
+            <p className="text-xl font-bold text-orange-600">{fmt(totals.resteACharge)} €</p>
+            <p className="text-xs text-gray-500">Reste à charge</p>
+          </div>
+        </div>
+      )}
+
+      {/* Récap financier détaillé */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
         <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
           <Calculator className="w-4 h-4 text-indigo-600" />
@@ -172,33 +238,68 @@ export default function ScenarioDetailPage() {
         <div className="space-y-2">
           {scenario.simulations.map((sim) => {
             const r = sim.results || {}
-            const cee = r.ceeCommerciale || r.ceeEuros || 0
-            const mpr = r.mprFinal || r.primeAmount || 0
-            const cost = r.projectCost || r.totalCost || 0
+            const inp = sim.inputs || {}
+            const cee = r.ceeCommerciale || r.ceeFinal || r.ceeEuros || 0
+            const mpr = r.mprFinal || r.mprAmount || r.primeAmount || 0
+            const cost = r.projectCost || r.totalCost || inp.projectCost || inp.projectCostTTC || 0
+            const rac = cost - cee - mpr
+            const editUrl = getSimEditUrl(sim)
 
             return (
               <div
                 key={sim.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 group"
+                className="p-4 bg-gray-50 rounded-xl border border-gray-200 group"
               >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    {sim.type && <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded">{sim.type}</span>}
-                    <p className="font-semibold text-sm text-gray-800">{sim.title || 'Simulation'}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      {sim.type && <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded">{sim.type}</span>}
+                      <p className="font-semibold text-sm text-gray-800">{sim.title || 'Simulation'}</p>
+                    </div>
                   </div>
-                  <div className="flex gap-3 mt-1 text-xs text-gray-500">
-                    {cee > 0 && <span>CEE : <strong className="text-green-700">{cee.toLocaleString('fr-FR')} €</strong></span>}
-                    {mpr > 0 && <span>MPR : <strong className="text-blue-700">{mpr.toLocaleString('fr-FR')} €</strong></span>}
-                    {cost > 0 && <span>Coût : <strong className="text-gray-700">{cost.toLocaleString('fr-FR')} €</strong></span>}
-                    <span className="text-gray-400">{new Date(sim.date).toLocaleDateString('fr-FR')}</span>
+                  <div className="flex items-center gap-1">
+                    {editUrl && (
+                      <Link
+                        to={editUrl}
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 transition opacity-0 group-hover:opacity-100"
+                        title="Modifier cette simulation"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" /> Modifier
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => handleRemoveSim(sim.id)}
+                      className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
+                      title="Retirer du scénario"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleRemoveSim(sim.id)}
-                  className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+
+                {/* Détail financier de la simulation */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 pt-3 border-t border-gray-200">
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-400 font-semibold">CEE</p>
+                    <p className="text-sm font-bold text-green-600">{cee > 0 ? `${cee.toLocaleString('fr-FR')} €` : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-400 font-semibold">MPR</p>
+                    <p className="text-sm font-bold text-blue-600">{mpr > 0 ? `${mpr.toLocaleString('fr-FR')} €` : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-400 font-semibold">Coût TTC</p>
+                    <p className="text-sm font-bold text-gray-700">{cost > 0 ? `${cost.toLocaleString('fr-FR')} €` : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-400 font-semibold">RAC</p>
+                    <p className={`text-sm font-bold ${rac > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                      {cost > 0 ? `${Math.max(0, rac).toLocaleString('fr-FR')} €` : '—'}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-gray-400 mt-2">{new Date(sim.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
               </div>
             )
           })}
@@ -229,6 +330,14 @@ export default function ScenarioDetailPage() {
                 <p className="text-xl font-bold text-gray-800">{scenario.ptz.dureeTotale} ans</p>
                 <p className="text-xs text-gray-500">Durée totale</p>
               </div>
+            </div>
+            <div className="flex justify-center mt-3">
+              <Link
+                to={`/simulations/ptz?projectId=${projectId}&scenarioId=${scenarioId}`}
+                className="text-xs text-indigo-600 hover:underline font-medium"
+              >
+                Recalculer le PTZ
+              </Link>
             </div>
           </div>
         ) : (

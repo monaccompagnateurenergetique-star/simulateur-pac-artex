@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Building, Calculator, Euro, TrendingUp, Award, Users } from 'lucide-react'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import SimulationSaveBar from '../../components/simulator/SimulationSaveBar'
@@ -14,29 +14,23 @@ import {
 } from '../../lib/constants/renovationGlobale'
 import { calculateRenovationGlobale } from '../../lib/calculators/renovationGlobale'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
-import { useClientContext } from '../../hooks/useClientContext'
+import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 
 export default function BarTh175Page() {
-  const [beneficiaryType, setBeneficiaryType] = useState('pp_occupant')
-  const [occupation, setOccupation] = useState('principale')
-  const [classInitiale, setClassInitiale] = useState('F')
-  const [classCible, setClassCible] = useState('C')
-  const [surface, setSurface] = useState(60)
-  const [selectedWorks, setSelectedWorks] = useState([])
-  const [mprCategory, setMprCategory] = useState('Bleu')
-  const [projectCostHT, setProjectCostHT] = useState(25000)
-  const [projectCostTTC, setProjectCostTTC] = useState(27500)
-  const [priceMWhPrecaire, setPriceMWhPrecaire] = useState(PRIX_CEE_DEFAUT.precaire)
-  const [priceMWhClassique, setPriceMWhClassique] = useState(PRIX_CEE_DEFAUT.classique)
-  const [ceePercent, setCeePercent] = useState(100)
+  const { getDefault } = useSimulatorContext()
 
-  const { prefill } = useClientContext()
-
-  useEffect(() => {
-    if (!prefill) return
-    if (prefill.surface) setSurface(prefill.surface)
-    if (prefill.mprCategory) setMprCategory(prefill.mprCategory)
-  }, [])
+  const [beneficiaryType, setBeneficiaryType] = useState(() => getDefault('beneficiaryType', 'pp_occupant'))
+  const [occupation, setOccupation] = useState(() => getDefault('occupation', 'principale'))
+  const [classInitiale, setClassInitiale] = useState(() => getDefault('classInitiale', 'F'))
+  const [classCible, setClassCible] = useState(() => getDefault('classCible', 'C'))
+  const [surface, setSurface] = useState(() => getDefault('surface', 60))
+  const [selectedWorks, setSelectedWorks] = useState(() => getDefault('selectedWorks', []))
+  const [mprCategory, setMprCategory] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [projectCostHT, setProjectCostHT] = useState(() => getDefault('projectCostHT', 25000))
+  const [projectCostTTC, setProjectCostTTC] = useState(() => getDefault('projectCostTTC', 27500))
+  const [priceMWhPrecaire, setPriceMWhPrecaire] = useState(() => getDefault('priceMWhPrecaire', PRIX_CEE_DEFAUT.precaire))
+  const [priceMWhClassique, setPriceMWhClassique] = useState(() => getDefault('priceMWhClassique', PRIX_CEE_DEFAUT.classique))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
 
   const eligibility = getEligibility(beneficiaryType, occupation, classInitiale)
 
@@ -57,13 +51,27 @@ export default function BarTh175Page() {
 
   const finalResult = useMemo(() => {
     if (!result) return null
-    if (result.mode === 'anah') return result
+    if (result.mode === 'anah') {
+      return {
+        ...result,
+        mprFinal: result.mprAmount || 0,
+        ceeCommerciale: 0,
+        projectCost: projectCostTTC,
+        resteACharge: Math.max(0, projectCostTTC - (result.mprAmount || 0)),
+      }
+    }
     const ceeAppliquee = Math.round(result.ceeEuros * ceePercent / 100)
     const marge = Math.round(result.ceeEuros - ceeAppliquee)
     return {
-      ...result, ceeFinal: ceeAppliquee, totalAides: ceeAppliquee,
+      ...result,
+      ceeFinal: ceeAppliquee,
+      ceeCommerciale: ceeAppliquee,
+      mprFinal: 0,
+      totalAides: ceeAppliquee,
+      projectCost: projectCostTTC,
       resteACharge: Math.max(0, projectCostTTC - ceeAppliquee),
-      ceeMargin: marge, ceeMarginPercent: result.ceeEuros > 0 ? (marge / result.ceeEuros) * 100 : 0,
+      ceeMargin: marge,
+      ceeMarginPercent: result.ceeEuros > 0 ? (marge / result.ceeEuros) * 100 : 0,
     }
   }, [result, ceePercent, projectCostTTC])
 
@@ -258,7 +266,7 @@ export default function BarTh175Page() {
           <SimulationSaveBar type="BAR-TH-175"
             title={`Réno appart ${classInitiale}→${classCible} (${isAnah ? 'MPR' : 'CEE'}) — ${surface}m²`}
             inputs={{ beneficiaryType, occupation, classInitiale, classCible, surface, mprCategory, projectCostHT, projectCostTTC, priceMWhPrecaire, priceMWhClassique, ceePercent, selectedWorks }}
-            results={finalResult}
+            results={{ ...finalResult, projectCost: projectCostTTC }}
             pdfData={{
               ficheCode: 'BAR-TH-175',
               ficheTitle: 'Rénovation globale — Appartement',
