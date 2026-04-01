@@ -37,4 +37,11 @@ export const CATALOG = [
       { code: 'MaPrimeAdapt\'', title: 'Adaptation du logement (perte d\'autonomie / handicap)', route: '/maprimeadapt', active: true },
     ],
   },
+  {
+    category: 'Logement Locatif Intermédiaire',
+    emoji: '🏘️',
+    items: [
+      { code: 'LOC-AVANTAGE', title: 'Loc\'Avantages — Aides ANAH', route: '/simulateur/loc-avantage', active: true },
+    ],
+  },
 ]

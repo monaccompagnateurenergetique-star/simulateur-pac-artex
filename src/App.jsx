@@ -26,6 +26,7 @@ import LeadFormPage from './pages/LeadFormPage'
 import LeadDetailPage from './pages/LeadDetailPage'
 import SimulationsPage from './pages/SimulationsPage'
 import PtzPage from './pages/simulators/PtzPage'
+import LocAvantagePage from './pages/simulators/LocAvantagePage'
 
 export default function App() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/maprimeadapt" element={<MaPrimeAdaptPage />} />
           <Route path="/simulations" element={<SimulationsPage />} />
           <Route path="/simulations/ptz" element={<PtzPage />} />
+          <Route path="/simulateur/loc-avantage" element={<LocAvantagePage />} />
           {/* Outils */}
           <Route path="/historique" element={<HistoryPage />} />
           <Route path="/actualites" element={<NewsPage />} />
