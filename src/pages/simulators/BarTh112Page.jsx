@@ -25,11 +25,12 @@ export default function BarTh112Page() {
   const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
   const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 5000))
   const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
+  const [remplaceCharbon, setRemplaceCharbon] = useState(() => getDefault('remplaceCharbon', false))
 
   // CEE Calculation
   const ceeResult = useMemo(
-    () => calculateBarTh112({ etas, zone, mprCategory, priceMWh }),
-    [etas, zone, mprCategory, priceMWh]
+    () => calculateBarTh112({ etas, zone, mprCategory, priceMWh, remplaceCharbon }),
+    [etas, zone, mprCategory, priceMWh, remplaceCharbon]
   )
 
   const ceeEurosBase = ceeResult.ceeEuros
@@ -89,6 +90,24 @@ export default function BarTh112Page() {
             </div>
           </div>
 
+          {/* Remplacement chauffage au charbon - CONDITION POUR LA BONIFICATION */}
+          <div className="bg-white p-3 rounded-lg border-2 border-amber-200">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={remplaceCharbon}
+                onChange={(e) => setRemplaceCharbon(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-amber-600 cursor-pointer"
+              />
+              <span className="text-sm font-semibold text-gray-700">
+                Remplacement d'un équipement indépendant de chauffage au charbon
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1 ml-8">
+              ⚠️ <strong>Obligatoire</strong> pour appliquer la bonification Coup de Pouce (×5 ou ×4)
+            </p>
+          </div>
+
           {/* Etas + Zone */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <SelectField
@@ -138,11 +157,15 @@ export default function BarTh112Page() {
               <span className="font-semibold">Montant base :</span> {formatKWhc(ceeResult.baseValue)}
               <span className="text-xs text-gray-400 ml-1">({etasLabel}, {zone})</span>
             </div>
-            <div className="bg-white p-3 rounded-lg border">
+            <div className={`p-3 rounded-lg border ${remplaceCharbon ? 'bg-green-50 border-green-300' : 'bg-gray-100 border-gray-300'}`}>
               <span className="font-semibold">Bonification :</span>{' '}
-              <span className={`font-bold ${ceeResult.bonusPrecarite === 5 ? 'text-green-600' : 'text-blue-600'}`}>
-                ×{ceeResult.bonusPrecarite} {ceeResult.bonusPrecarite === 5 ? '(précaire)' : '(classique)'}
-              </span>
+              {remplaceCharbon ? (
+                <span className={`font-bold ${ceeResult.bonusPrecarite === 5 ? 'text-green-600' : 'text-blue-600'}`}>
+                  ×{ceeResult.bonusPrecarite} {ceeResult.bonusPrecarite === 5 ? '(précaire)' : '(classique)'}
+                </span>
+              ) : (
+                <span className="font-bold text-red-600">×1 (aucune - pas de remplacement charbon)</span>
+              )}
             </div>
             <div className="bg-white p-3 rounded-lg border">
               <span className="font-semibold">MPR {appareilLabel} :</span> {formatCurrency(mprGrantTheorique)}
@@ -223,7 +246,7 @@ export default function BarTh112Page() {
       <SimulationSaveBar
         type="BAR-TH-112"
         title={`Bois ${appareilLabel} — ${etasLabel} — ${zone} — ${mprCategory}`}
-        inputs={{ zone, etas, appareilType, mprCategory, priceMWh, projectCost, ceePercent }}
+        inputs={{ zone, etas, appareilType, mprCategory, priceMWh, projectCost, ceePercent, remplaceCharbon }}
         results={{ ceeEurosBase, volumeCEE, projectCost, ...commercial }}
         pdfData={{
           ficheCode: 'BAR-TH-112',
@@ -234,6 +257,7 @@ export default function BarTh112Page() {
             { label: 'Zone climatique', value: zone },
             { label: 'Prix CEE', value: `${priceMWh} €/MWhc` },
             { label: 'Profil revenus', value: mprCategory },
+            { label: 'Remplacement chauffage charbon', value: remplaceCharbon ? 'Oui' : 'Non' },
             { label: 'Bonification Coup de Pouce', value: `×${ceeResult.bonusPrecarite}` },
           ],
           results: [
