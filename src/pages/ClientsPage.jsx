@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Plus, Search, Phone, MapPin, Trash2, Filter, X, ArrowRightCircle } from 'lucide-react'
+import { Users, Plus, Search, Phone, MapPin, Trash2, Filter, X, ArrowRightCircle, Thermometer } from 'lucide-react'
 import { useProjects, PROJECT_STATUSES } from '../hooks/useProjects'
 import { useSimulationHistory } from '../hooks/useSimulationHistory'
 import CompletionGauge from '../components/ui/CompletionGauge'
 import { getCompletion } from '../lib/completionGauge'
+import { getDpeColor } from '../utils/dpeApi'
 
 const CATEGORY_BADGE = {
   Bleu: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -365,29 +366,79 @@ export default function ClientsPage() {
               <Link
                 key={project.id}
                 to={`/projets/${project.id}`}
-                className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:shadow-md hover:border-indigo-200 transition group"
+                className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:shadow-md hover:border-indigo-200 transition group"
               >
-                {/* Jauge complétion */}
-                <CompletionGauge percent={completion.percent} size="sm" variant="circle" />
+                {/* Top section: Jauge + Nom + Status */}
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <CompletionGauge percent={completion.percent} size="sm" variant="circle" />
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                    <span className="font-bold text-gray-800 truncate">
-                      {project.firstName} {project.lastName}
-                    </span>
-                    {project.category && (
-                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${CATEGORY_BADGE[project.category] || ''}`}>
-                        {project.category}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-bold text-gray-800 truncate text-sm sm:text-base">
+                        {project.firstName} {project.lastName}
                       </span>
-                    )}
+                      {project.category && (
+                        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${CATEGORY_BADGE[project.category] || ''}`}>
+                          {project.category}
+                        </span>
+                      )}
+                    </div>
+                    {/* Contact info mobile-optimized */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-gray-500">
+                      {project.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          {project.phone}
+                        </span>
+                      )}
+                      {project.address && (
+                        <span className="flex items-center gap-1 truncate">
+                          <MapPin className="w-3 h-3" />
+                          {project.address}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status badge - visible on desktop */}
+                  <div className="hidden sm:block shrink-0">
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${status?.color || ''}`}>
+                      {status?.label || project.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bottom section: DPE + Scenarios + Tags */}
+                <div className="flex flex-col gap-2 sm:gap-1 w-full sm:w-auto">
+                  {/* DPE badge */}
+                  {project.dpe?.etiquetteDpe && (() => {
+                    const dpeColor = getDpeColor(project.dpe.etiquetteDpe)
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center text-base font-black shrink-0 flex-col"
+                          style={{ backgroundColor: dpeColor?.bg, color: dpeColor?.text }}
+                        >
+                          <span className="leading-tight">{project.dpe.etiquetteDpe}</span>
+                          <span className="text-[7px] leading-none">DPE</span>
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          <span className="font-semibold block">{project.dpe.consoM2 ? `${project.dpe.consoM2} kWh/m²` : 'Enregistré'}</span>
+                          {project.dpe.surface && <span className="text-gray-400">{project.dpe.surface} m²</span>}
+                        </div>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Scenarios + Work types */}
+                  <div className="flex items-center flex-wrap gap-1">
                     {scenarioCount > 0 && (
                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">
                         {scenarioCount} scénario{scenarioCount > 1 ? 's' : ''}
                       </span>
                     )}
                     {simTypes.size > 0 && (
-                      [...simTypes].slice(0, 3).map((type) => {
+                      [...simTypes].slice(0, 2).map((type) => {
                         const wf = WORK_TYPE_FILTERS.find((w) => w.value === type)
                         return (
                           <span
@@ -399,41 +450,24 @@ export default function ClientsPage() {
                         )
                       })
                     )}
-                    {simTypes.size > 3 && (
+                    {simTypes.size > 2 && (
                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
-                        +{simTypes.size - 3}
+                        +{simTypes.size - 2}
                       </span>
                     )}
                     {project.leadId && (
                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 flex items-center gap-0.5">
-                        <ArrowRightCircle className="w-3 h-3" /> Lead
+                        <ArrowRightCircle className="w-2.5 h-2.5" /> Lead
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    {project.phone && (
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-3 h-3" />
-                        {project.phone}
-                      </span>
-                    )}
-                    {project.address && (
-                      <span className="flex items-center gap-1 truncate">
-                        <MapPin className="w-3 h-3" />
-                        {project.address}
-                      </span>
-                    )}
-                    <span className="text-gray-400">
-                      {completion.filledCount}/{completion.totalCount} champs
+
+                  {/* Status badge - mobile only */}
+                  <div className="sm:hidden">
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full inline-block ${status?.color || ''}`}>
+                      {status?.label || project.status}
                     </span>
                   </div>
-                </div>
-
-                {/* Status */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${status?.color || ''}`}>
-                    {status?.label || project.status}
-                  </span>
                 </div>
 
                 {/* Delete */}
