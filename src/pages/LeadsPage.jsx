@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { UserPlus, Plus, Search, Phone, Mail, Trash2, Filter, X, ArrowRightCircle } from 'lucide-react'
+import { UserPlus, Plus, Search, Phone, Mail, Trash2, Filter, X, ArrowRightCircle, MapPin, Thermometer } from 'lucide-react'
 import { useLeads, LEAD_STATUSES } from '../hooks/useLeads'
 import CompletionGauge from '../components/ui/CompletionGauge'
 import { getCompletion } from '../lib/completionGauge'
+import { getDpeColor } from '../utils/dpeApi'
 
 const SORT_OPTIONS = [
   { value: 'date_desc', label: 'Plus récent' },
@@ -152,44 +153,83 @@ export default function LeadsPage() {
             <Link
               key={lead.id}
               to={lead.status === 'converti' ? `/projets/${lead.convertedToProjectId}` : `/leads/${lead.id}`}
-              className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:shadow-md hover:border-emerald-200 transition group"
+              className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:shadow-md hover:border-emerald-200 transition group"
             >
-              {/* Jauge complétion */}
-              <CompletionGauge percent={completion.percent} size="sm" variant="circle" />
+              {/* Top section: Jauge + Nom + Status */}
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <CompletionGauge percent={completion.percent} size="sm" variant="circle" />
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                  <span className="font-bold text-gray-800 truncate">{displayName}</span>
-                  {lead.status === 'converti' && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 flex items-center gap-0.5">
-                      <ArrowRightCircle className="w-3 h-3" /> Projet
-                    </span>
-                  )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="font-bold text-gray-800 truncate text-sm sm:text-base">{displayName}</span>
+                    {lead.status === 'converti' && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 flex items-center gap-0.5">
+                        <ArrowRightCircle className="w-3 h-3" /> Projet
+                      </span>
+                    )}
+                  </div>
+                  {/* Contact info mobile-optimized */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-gray-500">
+                    {lead.phone && (
+                      <span className="flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        {lead.phone}
+                      </span>
+                    )}
+                    {lead.email && (
+                      <span className="flex items-center gap-1">
+                        <Mail className="w-3 h-3" />
+                        {lead.email}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-gray-500">
-                  {lead.phone && (
-                    <span className="flex items-center gap-1">
-                      <Phone className="w-3 h-3" />
-                      {lead.phone}
-                    </span>
-                  )}
-                  {lead.email && (
-                    <span className="flex items-center gap-1">
-                      <Mail className="w-3 h-3" />
-                      {lead.email}
-                    </span>
-                  )}
-                  <span className="text-gray-400">
-                    {completion.filledCount}/{completion.totalCount} champs
+
+                {/* Status badge - visible on desktop */}
+                <div className="hidden sm:block shrink-0">
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${status?.color || ''}`}>
+                    {status?.label || lead.status}
                   </span>
                 </div>
               </div>
 
-              {/* Status */}
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${status?.color || ''}`}>
-                {status?.label || lead.status}
-              </span>
+              {/* Bottom section: DPE + Address */}
+              <div className="flex flex-col gap-2 sm:gap-1 w-full sm:w-auto">
+                {/* DPE badge */}
+                {lead.dpe?.etiquetteDpe && (() => {
+                  const dpeColor = getDpeColor(lead.dpe.etiquetteDpe)
+                  return (
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-base font-black shrink-0 flex-col"
+                        style={{ backgroundColor: dpeColor?.bg, color: dpeColor?.text }}
+                      >
+                        <span className="leading-tight">{lead.dpe.etiquetteDpe}</span>
+                        <span className="text-[7px] leading-none">DPE</span>
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        <span className="font-semibold block">{lead.dpe.consoM2 ? `${lead.dpe.consoM2} kWh/m²` : 'Enregistré'}</span>
+                        {lead.dpe.surface && <span className="text-gray-400">{lead.dpe.surface} m²</span>}
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Address */}
+                {lead.address && (
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                    <span className="truncate">{lead.address}</span>
+                  </div>
+                )}
+
+                {/* Status badge - mobile only */}
+                <div className="sm:hidden">
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full inline-block ${status?.color || ''}`}>
+                    {status?.label || lead.status}
+                  </span>
+                </div>
+              </div>
 
               {/* Delete */}
               {lead.status !== 'converti' && (
