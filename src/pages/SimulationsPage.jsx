@@ -17,7 +17,7 @@ export default function SimulationsPage() {
         <Calculator className="w-7 h-7 text-indigo-600" />
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Simulations rapides</h1>
-          <p className="text-sm text-gray-500">Estimez les aides CEE, MPR et PTZ pour chaque type de travaux</p>
+          <p className="text-sm text-gray-500">Estimez les aides CEE, MPR, ANAH et PTZ pour chaque type de travaux</p>
         </div>
       </div>
 
@@ -48,36 +48,17 @@ export default function SimulationsPage() {
                     to={`${item.route}${queryString}`}
                     className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md transition group"
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-bold text-gray-800 group-hover:text-indigo-700 transition">{item.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{item.code}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{item.description || item.code}</p>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition" />
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition shrink-0 ml-2" />
                   </Link>
                 ))}
               </div>
             </div>
           )
         })}
-
-        {/* PTZ */}
-        <div>
-          <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <span className="text-lg">💰</span> Financement
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Link
-              to={`/simulations/ptz${queryString}`}
-              className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md transition group"
-            >
-              <div>
-                <p className="font-bold text-gray-800 group-hover:text-indigo-700 transition">Prêt à Taux Zéro (PTZ)</p>
-                <p className="text-xs text-gray-400 mt-0.5">Simulez l'éligibilité et le montant du PTZ 2026</p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition" />
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   )
