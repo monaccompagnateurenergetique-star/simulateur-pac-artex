@@ -75,6 +75,16 @@ export default function ClientFormPage() {
     }
   }, [existing])
 
+  // Auto-recherche DPE quand adresse + code postal sont remplis
+  useEffect(() => {
+    if (form.address && form.postalCode && form.postalCode.length === 5 && !selectedDpe && !dpeLoading) {
+      const timer = setTimeout(() => {
+        handleSearchDPEAuto()
+      }, 800) // Délai pour éviter trop de requêtes
+      return () => clearTimeout(timer)
+    }
+  }, [form.address, form.postalCode])
+
   function set(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }))
     setValidationError('')
@@ -92,6 +102,29 @@ export default function ClientFormPage() {
   }, [form.rfr, form.personnes, locationInfo])
 
   const completion = useMemo(() => getCompletion(form), [form])
+
+  async function handleSearchDPEAuto() {
+    if (!form.postalCode || !form.address) return
+    setDpeLoading(true)
+    setDpeError(null)
+    try {
+      const { results } = await searchDPE(form.address, form.postalCode, form.city)
+      if (results && results.length > 0) {
+        setDpeResults(results)
+        // Auto-sélectionner le premier résultat si un seul trouvé
+        if (results.length === 1) {
+          handleSelectDPE(results[0])
+        } else {
+          setShowDpeResults(true)
+        }
+      }
+    } catch (err) {
+      // Silencieusement échouer pour la recherche auto
+      // setDpeError(err.message)
+    } finally {
+      setDpeLoading(false)
+    }
+  }
 
   async function handleSearchDPE() {
     if (!form.postalCode || !form.address) {
@@ -280,23 +313,27 @@ export default function ClientFormPage() {
           </legend>
 
           <div className="space-y-3">
+            {dpeLoading && (
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 flex items-center gap-2 text-sm text-blue-700">
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                <span>Recherche du DPE en cours...</span>
+              </div>
+            )}
+
+            {!selectedDpe && !dpeLoading && form.address && form.postalCode && (
+              <div className="p-2 rounded-lg bg-indigo-50 text-xs text-indigo-600 text-center">
+                ℹ️ Recherche automatique du DPE
+              </div>
+            )}
+
             <button
               type="button"
               onClick={handleSearchDPE}
-              disabled={!form.postalCode || !form.address || dpeLoading}
+              disabled={!form.postalCode || !form.address}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-300 rounded-lg font-semibold text-sm hover:bg-indigo-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {dpeLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Recherche en cours...
-                </>
-              ) : (
-                <>
-                  <Search className="w-4 h-4" />
-                  {selectedDpe ? 'Actualiser le DPE' : 'Consulter les DPE'}
-                </>
-              )}
+              <Search className="w-4 h-4" />
+              {selectedDpe ? 'Actualiser le DPE' : 'Rechercher manuellement'}
             </button>
 
             {/* DPE sélectionné */}
