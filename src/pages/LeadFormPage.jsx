@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { UserPlus, Save, ArrowLeft, MapPin, Check, AlertTriangle } from 'lucide-react'
+import { UserPlus, Save, ArrowLeft, MapPin, Check, AlertTriangle, Thermometer, Search, Loader2, X } from 'lucide-react'
 import InputField from '../components/ui/InputField'
 import SelectField from '../components/ui/SelectField'
 import CompletionGauge from '../components/ui/CompletionGauge'
@@ -8,6 +8,7 @@ import { useLeads } from '../hooks/useLeads'
 import { getRevenueCategory } from '../lib/revenueCategory'
 import { getLocationInfo } from '../utils/postalCode'
 import { getCompletion } from '../lib/completionGauge'
+import { searchDPE, getDpeColor } from '../utils/dpeApi'
 
 const TYPE_LOGEMENT = [
   { value: '', label: '— Non renseigné —' },
@@ -38,6 +39,13 @@ export default function LeadFormPage() {
 
   const [validationError, setValidationError] = useState('')
 
+  // DPE states
+  const [dpeResults, setDpeResults] = useState(null)
+  const [dpeLoading, setDpeLoading] = useState(false)
+  const [dpeError, setDpeError] = useState(null)
+  const [showDpeResults, setShowDpeResults] = useState(false)
+  const [selectedDpe, setSelectedDpe] = useState(null)
+
   useEffect(() => {
     if (existing) {
       setForm({
@@ -53,8 +61,21 @@ export default function LeadFormPage() {
         typeLogement: existing.typeLogement || '',
         surface: existing.surface || '',
       })
+      if (existing.dpe) {
+        setSelectedDpe(existing.dpe)
+      }
     }
   }, [existing])
+
+  // Auto-recherche DPE quand adresse + code postal sont remplis
+  useEffect(() => {
+    if (form.address && form.postalCode && form.postalCode.length === 5 && !selectedDpe && !dpeLoading) {
+      const timer = setTimeout(() => {
+        handleSearchDPEAuto()
+      }, 800) // Délai pour éviter trop de requêtes
+      return () => clearTimeout(timer)
+    }
+  }, [form.address, form.postalCode])
 
   function set(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -76,6 +97,73 @@ export default function LeadFormPage() {
 
   // Completion gauge
   const completion = useMemo(() => getCompletion(form), [form])
+
+  async function handleSearchDPEAuto() {
+    if (!form.postalCode || !form.address) return
+    setDpeLoading(true)
+    setDpeError(null)
+    try {
+      const { results } = await searchDPE(form.address, form.postalCode, form.city)
+      if (results && results.length > 0) {
+        setDpeResults(results)
+        // Auto-sélectionner le premier résultat si un seul trouvé
+        if (results.length === 1) {
+          handleSelectDPE(results[0])
+        } else {
+          setShowDpeResults(true)
+        }
+      }
+    } catch (err) {
+      // Silencieusement échouer pour la recherche auto
+    } finally {
+      setDpeLoading(false)
+    }
+  }
+
+  async function handleSearchDPE() {
+    if (!form.postalCode || !form.address) {
+      setDpeError('Veuillez remplir l\'adresse et le code postal.')
+      return
+    }
+    setDpeLoading(true)
+    setDpeError(null)
+    setDpeResults(null)
+    try {
+      const { results } = await searchDPE(form.address, form.postalCode, form.city)
+      setDpeResults(results)
+      setShowDpeResults(true)
+    } catch (err) {
+      setDpeError(err.message || 'Erreur lors de la recherche DPE.')
+    } finally {
+      setDpeLoading(false)
+    }
+  }
+
+  function handleSelectDPE(dpe) {
+    setSelectedDpe({
+      numeroDpe: dpe.numeroDpe,
+      etiquetteDpe: dpe.etiquetteDpe,
+      etiquetteGes: dpe.etiquetteGes,
+      periodeConstruction: dpe.periodeConstruction,
+      anneeConstruction: dpe.anneeConstruction,
+      surface: dpe.surface,
+      consoM2: dpe.consoM2,
+      emissionGes: dpe.emissionGes,
+      energieChauffage: dpe.energieChauffage,
+      isolationEnveloppe: dpe.isolationEnveloppe,
+      isolationMurs: dpe.isolationMurs,
+      isolationMenuiseries: dpe.isolationMenuiseries,
+      dateEtablissement: dpe.dateEtablissement,
+      dateFinValidite: dpe.dateFinValidite,
+      adresse: dpe.adresse,
+      observatoireUrl: dpe.observatoireUrl,
+    })
+    setShowDpeResults(false)
+  }
+
+  function handleRemoveDPE() {
+    setSelectedDpe(null)
+  }
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -99,6 +187,7 @@ export default function LeadFormPage() {
       isIDF: locationInfo?.isIDF || false,
       category: revenueInfo?.category || null,
       categoryLabel: revenueInfo?.label || null,
+      dpe: selectedDpe || null,
     }
 
     if (isEdit) {
@@ -212,6 +301,118 @@ export default function LeadFormPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <SelectField label="Type de logement" id="typeLogement" value={form.typeLogement} onChange={(v) => set('typeLogement', v)} options={TYPE_LOGEMENT} />
             <InputField label="Surface habitable" id="surface" type="number" value={form.surface} onChange={(v) => set('surface', v)} suffix="m²" placeholder="100" />
+          </div>
+        </fieldset>
+
+        {/* Diagnostic DPE */}
+        <fieldset>
+          <legend className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide flex items-center gap-2">
+            <Thermometer className="w-4 h-4" />
+            Diagnostic énergétique (DPE)
+          </legend>
+
+          <div className="space-y-3">
+            {dpeLoading && (
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 flex items-center gap-2 text-sm text-blue-700">
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                <span>Recherche du DPE en cours...</span>
+              </div>
+            )}
+
+            {!selectedDpe && !dpeLoading && form.address && form.postalCode && (
+              <div className="p-2 rounded-lg bg-emerald-50 text-xs text-emerald-600 text-center">
+                ℹ️ Recherche automatique du DPE
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSearchDPE}
+              disabled={!form.postalCode || !form.address}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-600 border border-emerald-300 rounded-lg font-semibold text-sm hover:bg-emerald-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Search className="w-4 h-4" />
+              {selectedDpe ? 'Actualiser le DPE' : 'Rechercher manuellement'}
+            </button>
+
+            {/* DPE sélectionné */}
+            {selectedDpe && (
+              <div className="p-4 rounded-xl border-2 border-gray-200 bg-gray-50">
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-14 h-14 rounded-lg flex items-center justify-center text-2xl font-black shrink-0 flex-col"
+                    style={{ backgroundColor: getDpeColor(selectedDpe.etiquetteDpe)?.bg, color: getDpeColor(selectedDpe.etiquetteDpe)?.text }}
+                  >
+                    <span className="leading-tight">{selectedDpe.etiquetteDpe}</span>
+                    <span className="text-[8px] leading-none">DPE</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-gray-800">
+                      DPE {selectedDpe.etiquetteDpe}
+                      {selectedDpe.consoM2 ? ` — ${selectedDpe.consoM2} kWh/m²/an` : ''}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {selectedDpe.periodeConstruction || selectedDpe.anneeConstruction ? `Construction : ${selectedDpe.periodeConstruction || selectedDpe.anneeConstruction}` : ''}
+                      {selectedDpe.surface ? ` — ${selectedDpe.surface} m²` : ''}
+                      {selectedDpe.energieChauffage ? ` — ${selectedDpe.energieChauffage}` : ''}
+                    </p>
+                    {selectedDpe.dateEtablissement && (
+                      <p className="text-xs text-gray-400 mt-0.5">Diagnostic : {new Date(selectedDpe.dateEtablissement).toLocaleDateString('fr-FR')}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveDPE}
+                    className="text-gray-400 hover:text-red-600 transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Résultats de recherche */}
+            {showDpeResults && dpeResults && dpeResults.length > 0 && (
+              <div className="border border-emerald-200 rounded-lg overflow-hidden">
+                <div className="bg-emerald-50 px-4 py-2 border-b border-emerald-200">
+                  <p className="text-xs font-semibold text-emerald-700">{dpeResults.length} diagnostic{dpeResults.length > 1 ? 's' : ''} trouvé{dpeResults.length > 1 ? 's' : ''}</p>
+                </div>
+                <div className="divide-y divide-gray-200">
+                  {dpeResults.slice(0, 5).map((dpe, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelectDPE(dpe)}
+                      className="w-full text-left p-3 hover:bg-emerald-50 transition flex items-center gap-3"
+                    >
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold shrink-0 flex-col"
+                        style={{ backgroundColor: getDpeColor(dpe.etiquetteDpe)?.bg, color: getDpeColor(dpe.etiquetteDpe)?.text }}
+                      >
+                        <span className="leading-tight">{dpe.etiquetteDpe}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800">DPE {dpe.etiquetteDpe} — {dpe.consoM2 || '?'} kWh/m²</p>
+                        <p className="text-xs text-gray-500 truncate">{dpe.adresse || 'Adresse non disponible'}</p>
+                        {dpe.dateEtablissement && <p className="text-xs text-gray-400">{new Date(dpe.dateEtablissement).toLocaleDateString('fr-FR')}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Messages d'erreur/info */}
+            {dpeError && (
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-700">
+                {dpeError}
+              </div>
+            )}
+            {showDpeResults && dpeResults && dpeResults.length === 0 && (
+              <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-sm text-gray-600">
+                Aucun DPE trouvé pour cette adresse.
+              </div>
+            )}
           </div>
         </fieldset>
 
