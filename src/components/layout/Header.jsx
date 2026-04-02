@@ -1,16 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Menu, X, Home, Calculator, History, Newspaper, Settings, BookOpen,
-  Users, Thermometer, UserPlus, ChevronDown, Wrench
+  Users, Thermometer, UserPlus, ChevronDown, Wrench, LogIn, LogOut, Cloud, CloudOff
 } from 'lucide-react'
 import NotificationBell from './NotificationBell'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [toolsOpen, setToolsOpen] = useState(false)
   const toolsRef = useRef(null)
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, signOut } = useAuth()
 
   const mainLinks = [
     { to: '/', label: 'Dashboard', icon: Home },
@@ -107,6 +110,26 @@ export default function Header() {
             </div>
 
             <NotificationBell />
+
+            {/* Sync indicator */}
+            {user ? (
+              <button
+                onClick={() => { signOut(); navigate('/') }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-400 hover:bg-white/10 transition"
+                title={"Connecté : " + user.email}
+              >
+                <Cloud className="w-4 h-4" />
+                <span className="hidden lg:inline">Sync</span>
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-white/10 transition"
+              >
+                <CloudOff className="w-4 h-4" />
+                <span className="hidden lg:inline">Hors-ligne</span>
+              </Link>
+            )}
           </nav>
 
           {/* Mobile: bell + burger */}
@@ -156,6 +179,26 @@ export default function Header() {
                   {label}
                 </Link>
               ))}
+            </div>
+            <div className="border-t border-gray-700 mt-2 pt-2">
+              {user ? (
+                <button
+                  onClick={() => { signOut(); setMobileOpen(false) }}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-emerald-400 hover:bg-white/10 transition"
+                >
+                  <Cloud className="w-5 h-5" />
+                  Sync actif — Déconnexion
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 transition"
+                >
+                  <LogIn className="w-5 h-5" />
+                  Connexion (sync cloud)
+                </Link>
+              )}
             </div>
           </nav>
         )}
