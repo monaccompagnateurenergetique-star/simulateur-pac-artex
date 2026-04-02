@@ -28,6 +28,7 @@ import SimulationsPage from './pages/SimulationsPage'
 import PtzPage from './pages/simulators/PtzPage'
 import LocAvantagePage from './pages/simulators/LocAvantagePage'
 import LoginPage from './pages/LoginPage'
+import ProfilPage from './pages/ProfilPage'
 
 export default function App() {
   return (
@@ -71,8 +72,9 @@ export default function App() {
           <Route path="/leads/nouveau" element={<LeadFormPage />} />
           <Route path="/leads/:id" element={<LeadDetailPage />} />
           <Route path="/leads/:id/modifier" element={<LeadFormPage />} />
-          {/* Auth */}
+          {/* Auth & Profil */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/profil" element={<ProfilPage />} />
         </Routes>
       </main>
       <Footer />

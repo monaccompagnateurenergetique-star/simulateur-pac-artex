@@ -13,7 +13,16 @@ export default function Header() {
   const toolsRef = useRef(null)
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
+  const { user, userProfile, signOut } = useAuth()
+
+  const userInitials = userProfile
+    ? [userProfile.firstName, userProfile.lastName]
+        .map((n) => n?.charAt(0)?.toUpperCase() || '')
+        .join('')
+    : ''
+  const userDisplayName = userProfile
+    ? [userProfile.firstName, userProfile.lastName].filter(Boolean).join(' ')
+    : ''
 
   const mainLinks = [
     { to: '/', label: 'Dashboard', icon: Home },
@@ -111,16 +120,22 @@ export default function Header() {
 
             <NotificationBell />
 
-            {/* Sync indicator */}
+            {/* User indicator */}
             {user ? (
-              <button
-                onClick={() => { signOut(); navigate('/') }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-400 hover:bg-white/10 transition"
+              <Link
+                to="/profil"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-400 hover:bg-white/10 transition"
                 title={"Connecté : " + user.email}
               >
-                <Cloud className="w-4 h-4" />
-                <span className="hidden lg:inline">Sync</span>
-              </button>
+                {userInitials ? (
+                  <span className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-[10px] font-bold text-emerald-400">
+                    {userInitials}
+                  </span>
+                ) : (
+                  <Cloud className="w-4 h-4" />
+                )}
+                <span className="hidden lg:inline">{userDisplayName || 'Sync'}</span>
+              </Link>
             ) : (
               <Link
                 to="/login"
@@ -182,13 +197,29 @@ export default function Header() {
             </div>
             <div className="border-t border-gray-700 mt-2 pt-2">
               {user ? (
-                <button
-                  onClick={() => { signOut(); setMobileOpen(false) }}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-emerald-400 hover:bg-white/10 transition"
-                >
-                  <Cloud className="w-5 h-5" />
-                  Sync actif — Déconnexion
-                </button>
+                <>
+                  <Link
+                    to="/profil"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-emerald-400 hover:bg-white/10 transition"
+                  >
+                    {userInitials ? (
+                      <span className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs font-bold">
+                        {userInitials}
+                      </span>
+                    ) : (
+                      <Cloud className="w-5 h-5" />
+                    )}
+                    {userDisplayName || user.email} — Mon profil
+                  </Link>
+                  <button
+                    onClick={() => { signOut(); setMobileOpen(false); navigate('/') }}
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-white/10 transition"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    Déconnexion
+                  </button>
+                </>
               ) : (
                 <Link
                   to="/login"

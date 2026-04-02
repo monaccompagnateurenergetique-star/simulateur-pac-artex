@@ -7,6 +7,7 @@ import {
 import { useLeads, LEAD_STATUSES } from '../hooks/useLeads'
 import { useProjects, PROJECT_STATUSES } from '../hooks/useProjects'
 import { useNotifications } from '../hooks/useNotifications'
+import { useAuth } from '../contexts/AuthContext'
 import KpiCard from '../components/dashboard/KpiCard'
 import PipelineChart from '../components/dashboard/PipelineChart'
 
@@ -14,6 +15,7 @@ export default function DashboardPage() {
   const { leads, getLeadStatusCounts } = useLeads()
   const { projects, getStatusCounts } = useProjects()
   const { notifications, scanReminders } = useNotifications()
+  const { userProfile } = useAuth()
 
   // Scan les rappels au montage
   useMemo(() => {
@@ -85,8 +87,16 @@ export default function DashboardPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-800">Tableau de bord</h1>
-        <p className="text-sm text-gray-500">Artex360 — Pilotage & Simulation CEE</p>
+        <h1 className="text-2xl font-bold text-gray-800">
+          {userProfile?.firstName
+            ? `Bonjour ${userProfile.firstName} !`
+            : 'Tableau de bord'}
+        </h1>
+        <p className="text-sm text-gray-500">
+          {userProfile?.company
+            ? `${userProfile.company} — Pilotage & Simulation CEE`
+            : 'Artex360 — Pilotage & Simulation CEE'}
+        </p>
       </div>
 
       {/* KPIs */}
