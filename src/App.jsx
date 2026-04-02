@@ -29,6 +29,7 @@ import PtzPage from './pages/simulators/PtzPage'
 import LocAvantagePage from './pages/simulators/LocAvantagePage'
 import LoginPage from './pages/LoginPage'
 import ProfilPage from './pages/ProfilPage'
+import AdminPage from './pages/AdminPage'
 
 export default function App() {
   return (
@@ -75,6 +76,7 @@ export default function App() {
           {/* Auth & Profil */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/profil" element={<ProfilPage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </main>
       <Footer />

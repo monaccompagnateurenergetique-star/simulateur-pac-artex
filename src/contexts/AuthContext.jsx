@@ -3,7 +3,7 @@ import { auth, db, isFirebaseConfigured } from '../lib/firebase'
 import { FirebaseUserContext } from '../hooks/useLocalStorage'
 
 let onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, firebaseSignOut, updateFirebaseProfile
-let firestoreDoc, firestoreGetDoc, firestoreSetDoc, firestoreOnSnapshot
+let firestoreDoc, firestoreGetDoc, firestoreSetDoc, firestoreOnSnapshot, firestoreCollection, firestoreAddDoc, firestoreServerTimestamp, firestoreQuery, firestoreOrderBy, firestoreLimit, firestoreGetDocs, firestoreDeleteDoc
 
 // Import dynamique conditionnel - évite le crash si Firebase n'est pas configuré
 if (isFirebaseConfigured) {
@@ -19,6 +19,30 @@ if (isFirebaseConfigured) {
   firestoreGetDoc = fsModule.getDoc
   firestoreSetDoc = fsModule.setDoc
   firestoreOnSnapshot = fsModule.onSnapshot
+  firestoreCollection = fsModule.collection
+  firestoreAddDoc = fsModule.addDoc
+  firestoreServerTimestamp = fsModule.serverTimestamp
+  firestoreQuery = fsModule.query
+  firestoreOrderBy = fsModule.orderBy
+  firestoreLimit = fsModule.limit
+  firestoreGetDocs = fsModule.getDocs
+  firestoreDeleteDoc = fsModule.deleteDoc
+}
+
+// ── Helpers pour détecter l'appareil ──
+function getDeviceInfo() {
+  const ua = navigator.userAgent || ''
+  let device = 'Desktop'
+  if (/Mobile|Android|iPhone/i.test(ua)) device = 'Mobile'
+  else if (/Tablet|iPad/i.test(ua)) device = 'Tablette'
+
+  let browser = 'Inconnu'
+  if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Chrome'
+  else if (ua.includes('Firefox')) browser = 'Firefox'
+  else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari'
+  else if (ua.includes('Edg')) browser = 'Edge'
+
+  return { device, browser }
 }
 
 const AuthContext = createContext(null)
@@ -72,6 +96,78 @@ export function AuthProvider({ children }) {
     })
 
     return unsubscribe
+  }, [user])
+
+  // ── Tracking de présence et sessions ──
+  useEffect(() => {
+    if (!user || !isFirebaseConfigured || !db) return
+
+    const { device, browser } = getDeviceInfo()
+    const sessionStart = new Date().toISOString()
+
+    // 1. Enregistrer la session de connexion
+    const sessionsRef = firestoreCollection(db, 'users', user.uid, 'sessions')
+    firestoreAddDoc(sessionsRef, {
+      loginAt: sessionStart,
+      logoutAt: null,
+      device,
+      browser,
+      userAgent: navigator.userAgent?.substring(0, 150) || '',
+    }).catch(console.warn)
+
+    // 2. Mettre à jour le statut "en ligne"
+    const presenceRef = firestoreDoc(db, 'presence', user.uid)
+    const updatePresence = () => {
+      firestoreSetDoc(presenceRef, {
+        online: true,
+        lastSeen: new Date().toISOString(),
+        email: user.email || '',
+        displayName: user.displayName || '',
+        device,
+        browser,
+      }, { merge: true }).catch(console.warn)
+    }
+
+    updatePresence()
+
+    // Heartbeat toutes les 60 secondes pour garder le statut "en ligne"
+    const heartbeat = setInterval(updatePresence, 60000)
+
+    // 3. Marquer "hors ligne" quand l'utilisateur quitte
+    const markOffline = () => {
+      const data = JSON.stringify({
+        online: false,
+        lastSeen: new Date().toISOString(),
+        email: user.email || '',
+        displayName: user.displayName || '',
+        device,
+        browser,
+      })
+      // Utiliser sendBeacon pour garantir l'envoi même en fermant l'onglet
+      // Fallback: on met à jour via setDoc
+      firestoreSetDoc(presenceRef, {
+        online: false,
+        lastSeen: new Date().toISOString(),
+      }, { merge: true }).catch(() => {})
+    }
+
+    window.addEventListener('beforeunload', markOffline)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        firestoreSetDoc(presenceRef, {
+          online: false,
+          lastSeen: new Date().toISOString(),
+        }, { merge: true }).catch(() => {})
+      } else {
+        updatePresence()
+      }
+    })
+
+    return () => {
+      clearInterval(heartbeat)
+      window.removeEventListener('beforeunload', markOffline)
+      markOffline()
+    }
   }, [user])
 
   const signIn = (email, password) => {

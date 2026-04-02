@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Menu, X, Home, Calculator, History, Newspaper, Settings, BookOpen,
-  Users, Thermometer, UserPlus, ChevronDown, Wrench, LogIn, LogOut, Cloud, CloudOff
+  Users, Thermometer, UserPlus, ChevronDown, Wrench, LogIn, LogOut, Cloud, CloudOff, Activity
 } from 'lucide-react'
 import NotificationBell from './NotificationBell'
 import { useAuth } from '../../contexts/AuthContext'
@@ -37,6 +37,7 @@ export default function Header() {
     { to: '/actualites', label: 'Actualités', icon: Newspaper },
     { to: '/historique', label: 'Historique', icon: History },
     { to: '/parametrage', label: 'Paramétrage', icon: Settings },
+    { to: '/admin', label: 'Suivi utilisateurs', icon: Activity },
   ]
 
   const isActive = (path) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)
