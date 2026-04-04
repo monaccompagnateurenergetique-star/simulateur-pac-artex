@@ -42,6 +42,8 @@ import SharedScenarioPage from './pages/beneficiary/SharedScenarioPage'
 import DocumentRequestsPage from './pages/beneficiary/DocumentRequestsPage'
 import ChangePasswordPage from './pages/auth/ChangePasswordPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import ProCtaPopup from './components/ui/ProCtaPopup'
+import ProCtaBanner from './components/ui/ProCtaBanner'
 import PublicOnlyRoute from './components/auth/PublicOnlyRoute'
 import PendingApprovalPage from './pages/auth/PendingApprovalPage'
 import AccountDisabledPage from './pages/auth/AccountDisabledPage'
@@ -63,25 +65,25 @@ export default function App() {
           {/* Dashboard */}
           <Route path="/" element={<ProtectedRoute requiredPermission="access_simulations"><DashboardPage /></ProtectedRoute>} />
 
-          {/* Simulateurs */}
-          <Route path="/simulateur/bar-th-171" element={<ProtectedRoute requiredPermission="access_simulations"><BarTh171Page /></ProtectedRoute>} />
-          <Route path="/simulateur/bar-en-101" element={<ProtectedRoute requiredPermission="access_simulations"><BarEn101Page /></ProtectedRoute>} />
-          <Route path="/simulateur/bar-en-102" element={<ProtectedRoute requiredPermission="access_simulations"><BarEn102Page /></ProtectedRoute>} />
-          <Route path="/simulateur/bar-en-103" element={<ProtectedRoute requiredPermission="access_simulations"><BarEn103Page /></ProtectedRoute>} />
-          <Route path="/simulateur/bar-th-112" element={<ProtectedRoute requiredPermission="access_simulations"><BarTh112Page /></ProtectedRoute>} />
-          <Route path="/simulateur/bar-th-113" element={<ProtectedRoute requiredPermission="access_simulations"><BarTh113Page /></ProtectedRoute>} />
-          <Route path="/simulateur/bar-th-174" element={<ProtectedRoute requiredPermission="access_simulations"><BarTh174Page /></ProtectedRoute>} />
-          <Route path="/simulateur/bar-th-175" element={<ProtectedRoute requiredPermission="access_simulations"><BarTh175Page /></ProtectedRoute>} />
-          <Route path="/maprimeadapt" element={<ProtectedRoute requiredPermission="access_simulations"><MaPrimeAdaptPage /></ProtectedRoute>} />
-          <Route path="/simulations" element={<ProtectedRoute requiredPermission="access_simulations"><SimulationsPage /></ProtectedRoute>} />
-          <Route path="/simulations/ptz" element={<ProtectedRoute requiredPermission="access_simulations"><PtzPage /></ProtectedRoute>} />
-          <Route path="/simulateur/loc-avantage" element={<ProtectedRoute requiredPermission="access_simulations"><LocAvantagePage /></ProtectedRoute>} />
+          {/* Simulateurs (accès public — vitrine) */}
+          <Route path="/simulateur/bar-th-171" element={<BarTh171Page />} />
+          <Route path="/simulateur/bar-en-101" element={<BarEn101Page />} />
+          <Route path="/simulateur/bar-en-102" element={<BarEn102Page />} />
+          <Route path="/simulateur/bar-en-103" element={<BarEn103Page />} />
+          <Route path="/simulateur/bar-th-112" element={<BarTh112Page />} />
+          <Route path="/simulateur/bar-th-113" element={<BarTh113Page />} />
+          <Route path="/simulateur/bar-th-174" element={<BarTh174Page />} />
+          <Route path="/simulateur/bar-th-175" element={<BarTh175Page />} />
+          <Route path="/maprimeadapt" element={<MaPrimeAdaptPage />} />
+          <Route path="/simulations" element={<SimulationsPage />} />
+          <Route path="/simulations/ptz" element={<PtzPage />} />
+          <Route path="/simulateur/loc-avantage" element={<LocAvantagePage />} />
 
-          {/* Outils */}
+          {/* Outils (boîte à outils + actualités = public, le reste = protégé) */}
           <Route path="/historique" element={<ProtectedRoute requiredPermission="access_simulations"><HistoryPage /></ProtectedRoute>} />
-          <Route path="/actualites" element={<ProtectedRoute requiredPermission="access_simulations"><NewsPage /></ProtectedRoute>} />
+          <Route path="/actualites" element={<NewsPage />} />
           <Route path="/parametrage" element={<ProtectedRoute requiredPermission="access_simulations"><SettingsPage /></ProtectedRoute>} />
-          <Route path="/boite-a-outils" element={<ProtectedRoute requiredPermission="access_simulations"><ToolboxPage /></ProtectedRoute>} />
+          <Route path="/boite-a-outils" element={<ToolboxPage />} />
           <Route path="/prospection-dpe" element={<ProtectedRoute requiredPermission="access_simulations"><DpeProspectionPage /></ProtectedRoute>} />
 
           {/* Projets */}
@@ -137,6 +139,8 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+      <ProCtaBanner />
+      <ProCtaPopup />
     </div>
   )
 }

@@ -30,20 +30,29 @@ export default function Header() {
 
   const isBeneficiaryRole = role === 'beneficiary'
 
+  const isLoggedIn = !!user
+
   const mainLinks = isBeneficiaryRole
     ? [
         { to: '/beneficiaire', label: 'Mon dossier', icon: Home, permission: 'access_beneficiary_view' },
         { to: '/beneficiaire/documents', label: 'Documents', icon: FileText, permission: 'access_beneficiary_view' },
         { to: '/tickets', label: 'Support', icon: MessageSquare, permission: 'access_beneficiary_view' },
       ].filter(l => canAccess(l.permission))
-    : [
-        { to: '/', label: 'Dashboard', icon: Home, permission: 'access_simulations' },
-        { to: '/leads', label: 'Leads', icon: UserPlus, permission: 'access_leads' },
-        { to: '/projets', label: 'Projets', icon: Users, permission: 'access_projects' },
-        { to: '/simulations', label: 'Simulations', icon: Calculator, permission: 'access_simulations' },
-      ].filter(l => canAccess(l.permission))
+    : isLoggedIn
+      ? [
+          { to: '/', label: 'Dashboard', icon: Home, permission: 'access_simulations' },
+          { to: '/leads', label: 'Leads', icon: UserPlus, permission: 'access_leads' },
+          { to: '/projets', label: 'Projets', icon: Users, permission: 'access_projects' },
+          { to: '/simulations', label: 'Simulations', icon: Calculator, permission: 'access_simulations' },
+        ].filter(l => canAccess(l.permission))
+      : [
+          // Visiteur non connecté — accès vitrine
+          { to: '/simulations', label: 'Simulations', icon: Calculator },
+          { to: '/boite-a-outils', label: 'Boîte à outils', icon: BookOpen },
+          { to: '/actualites', label: 'Actualités', icon: Newspaper },
+        ]
 
-  const toolLinks = [
+  const toolLinks = isLoggedIn ? [
     { to: '/boite-a-outils', label: 'Boîte à outils', icon: BookOpen, permission: 'access_simulations' },
     { to: '/prospection-dpe', label: 'Prospection DPE', icon: Thermometer, permission: 'access_simulations' },
     { to: '/actualites', label: 'Actualités', icon: Newspaper, permission: 'access_simulations' },
@@ -53,7 +62,7 @@ export default function Header() {
     { to: '/tickets', label: 'Tickets', icon: MessageSquare, permission: 'create_tickets' },
     { to: '/equipe', label: 'Mon équipe', icon: Users, permission: 'manage_org_members' },
     { to: '/admin', label: 'Administration', icon: Shield, permission: 'access_admin_panel' },
-  ].filter(l => canAccess(l.permission))
+  ].filter(l => canAccess(l.permission)) : []
 
   const isActive = (path) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)
   const isToolActive = toolLinks.some((l) => isActive(l.to))
