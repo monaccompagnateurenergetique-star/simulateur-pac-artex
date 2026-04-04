@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { UserPlus, Save, ArrowLeft, MapPin, Check, AlertTriangle, Thermometer, Search, Loader2, X } from 'lucide-react'
 import InputField from '../components/ui/InputField'
 import SelectField from '../components/ui/SelectField'
+import AddressAutocomplete from '../components/ui/AddressAutocomplete'
 import CompletionGauge from '../components/ui/CompletionGauge'
 import { useLeads } from '../hooks/useLeads'
 import { getRevenueCategory } from '../lib/revenueCategory'
@@ -252,7 +253,23 @@ export default function LeadFormPage() {
         <fieldset>
           <legend className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Adresse des travaux</legend>
           <div className="space-y-4">
-            <InputField label="Adresse" id="address" value={form.address} onChange={(v) => set('address', v)} placeholder="123 rue des Travaux" />
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Adresse</label>
+              <AddressAutocomplete
+                value={form.address ? `${form.address}${form.postalCode ? ', ' + form.postalCode : ''}${form.city ? ' ' + form.city : ''}` : ''}
+                onChange={({ address, postalCode, city }) => {
+                  setForm((p) => ({
+                    ...p,
+                    address: address || p.address,
+                    postalCode: postalCode || p.postalCode,
+                    city: city || p.city,
+                  }))
+                  setSelectedDpe(null)
+                  setDpeResults(null)
+                }}
+                placeholder="Saisissez l'adresse complète..."
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <InputField label="Code postal" id="postalCode" value={form.postalCode} onChange={(v) => set('postalCode', v)} placeholder="38000" />
               <InputField label="Ville" id="city" value={form.city} onChange={(v) => set('city', v)} placeholder="Grenoble" />
