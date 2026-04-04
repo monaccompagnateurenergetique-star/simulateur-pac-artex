@@ -7,6 +7,8 @@ import {
 } from 'lucide-react'
 import { useLeads, LEAD_STATUSES } from '../hooks/useLeads'
 import { useProjects } from '../hooks/useProjects'
+import { useRole } from '../contexts/RoleContext'
+import { useAllOrgData } from '../hooks/useAllOrgData'
 import CompletionGauge from '../components/ui/CompletionGauge'
 import { getCompletion } from '../lib/completionGauge'
 
@@ -21,11 +23,14 @@ export default function LeadDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const {
-    leads, updateLeadStatus, addLeadNote, deleteLeadNote,
+    leads: ownLeads, updateLeadStatus, addLeadNote, deleteLeadNote,
     addLeadReminder, toggleLeadReminder, deleteLeadReminder,
     convertToProject,
   } = useLeads()
   const { addProject } = useProjects()
+  const { isSuperAdmin } = useRole()
+  const { allData: allOrgLeads } = useAllOrgData('leads')
+  const leads = isSuperAdmin() && allOrgLeads.length > 0 ? [...ownLeads, ...allOrgLeads] : ownLeads
 
   const lead = leads.find((l) => l.id === id)
 

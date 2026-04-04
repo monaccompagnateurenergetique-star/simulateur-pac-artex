@@ -26,6 +26,9 @@ export function useAllOrgData(collectionName) {
 
     const unsubscribe = onSnapshot(collection(db, 'organizations'), (snap) => {
       setOrgs(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    }, (err) => {
+      console.warn('[useAllOrgData] Erreur lecture orgs:', err.message)
+      setLoading(false)
     })
     return unsubscribe
   }, [user])
@@ -43,6 +46,7 @@ export function useAllOrgData(collectionName) {
     orgs.forEach((org) => {
       const colRef = collection(db, 'organizations', org.id, collectionName)
       const unsub = onSnapshot(colRef, (snap) => {
+        console.log(`[useAllOrgData] ${org.name}: ${snap.docs.length} ${collectionName}`)
         orgDataMap[org.id] = snap.docs.map((d) => ({
           id: d.id,
           ...d.data(),

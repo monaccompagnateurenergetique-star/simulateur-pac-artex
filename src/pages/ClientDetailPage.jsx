@@ -7,6 +7,8 @@ import {
   Bell, Check, Calendar, AlertTriangle, CheckCircle, Layers, User, Zap
 } from 'lucide-react'
 import { useProjects, PROJECT_STATUSES } from '../hooks/useProjects'
+import { useRole } from '../contexts/RoleContext'
+import { useAllOrgData } from '../hooks/useAllOrgData'
 import { useDocumentRequests, DOC_TYPES, DOC_REQUEST_STATUSES } from '../hooks/useDocumentRequests'
 import { useProjectBeneficiary } from '../hooks/useProjectBeneficiary'
 import { useSimulationHistory } from '../hooks/useSimulationHistory'
@@ -23,7 +25,10 @@ const CAT = {
 export default function ClientDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { projects, updateProject, updateProjectStatus, addNote, deleteNote, addScenario, getScenarioTotals, addReminder, toggleReminder, deleteReminder } = useProjects()
+  const { projects: ownProjects, updateProject, updateProjectStatus, addNote, deleteNote, addScenario, getScenarioTotals, addReminder, toggleReminder, deleteReminder } = useProjects()
+  const { isSuperAdmin } = useRole()
+  const { allData: allOrgProjects } = useAllOrgData('projects')
+  const projects = isSuperAdmin() && allOrgProjects.length > 0 ? [...ownProjects, ...allOrgProjects] : ownProjects
   const { history } = useSimulationHistory()
   const [noteText, setNoteText] = useState('')
   const [showNewSim, setShowNewSim] = useState(false)
