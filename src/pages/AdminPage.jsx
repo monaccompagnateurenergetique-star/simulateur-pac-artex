@@ -474,6 +474,68 @@ export default function AdminPage() {
     finally { setLoadingSessions(false) }
   }
 
+  const approveUser = async (uid, role, orgId = null) => {
+    setSaving(true)
+    try {
+      await firestoreSetDoc(firestoreDoc(db, 'roles', uid), {
+        role, orgId, status: 'active',
+        updatedBy: user.uid, updatedAt: new Date().toISOString(),
+      }, { merge: true })
+      if (orgId && (role === ROLES.INSTALLER_ADMIN || role === ROLES.INSTALLER_MEMBER)) {
+        const profile = userProfiles[uid]
+        await firestoreSetDoc(firestoreDoc(db, 'organizations', orgId, 'members', uid), {
+          role: role === ROLES.INSTALLER_ADMIN ? 'admin' : 'member',
+          firstName: profile?.firstName || '', lastName: profile?.lastName || '',
+          email: profile?.email || '',
+          joinedAt: new Date().toISOString(), invitedBy: user.uid,
+        })
+      }
+    } catch (err) { console.error('Erreur approbation:', err) }
+    finally { setSaving(false) }
+  }
+
+  // Approuver + créer l'entreprise automatiquement depuis le champ company du profil
+  const approveAndCreateOrg = async (uid) => {
+    const profile = userProfiles[uid]
+    if (!profile?.company) return
+    setSaving(true)
+    try {
+      const orgId = 'org_' + Date.now()
+      const companyName = profile.company.trim()
+      const slug = companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+
+      // Créer l'organisation
+      await firestoreSetDoc(firestoreDoc(db, 'organizations', orgId), {
+        name: companyName, slug, createdAt: new Date().toISOString(), createdBy: user.uid,
+      })
+      await firestoreSetDoc(firestoreDoc(db, 'organizations', orgId, 'profile', 'info'), {
+        name: companyName, slug, createdAt: new Date().toISOString(), createdBy: user.uid,
+      })
+      // Réserver le slug
+      await firestoreSetDoc(firestoreDoc(db, 'slugs', slug), { orgId }).catch(() => {})
+
+      // Activer comme admin de l'org
+      await firestoreSetDoc(firestoreDoc(db, 'roles', uid), {
+        role: ROLES.INSTALLER_ADMIN, orgId, status: 'active',
+        updatedBy: user.uid, updatedAt: new Date().toISOString(),
+      }, { merge: true })
+
+      // Ajouter comme membre
+      await firestoreSetDoc(firestoreDoc(db, 'organizations', orgId, 'members', uid), {
+        role: 'admin', firstName: profile.firstName || '', lastName: profile.lastName || '',
+        email: profile.email || '',
+        joinedAt: new Date().toISOString(), invitedBy: user.uid,
+      })
+
+      // Index email
+      if (profile.email) {
+        const emailHash = await hashEmail(profile.email)
+        await firestoreSetDoc(firestoreDoc(db, 'email_to_uid', emailHash), { uid, email: profile.email.toLowerCase() }).catch(() => {})
+      }
+    } catch (err) { console.error('Erreur création org:', err) }
+    finally { setSaving(false) }
+  }
+
   const toggleUserStatus = async (uid, currentStatus) => {
     setSaving(true)
     try {
@@ -756,15 +818,18 @@ export default function AdminPage() {
                 const profile = userProfiles[uid]
                 const fullName = profile ? [profile.firstName, profile.lastName].filter(Boolean).join(' ') : ''
                 const email = profile?.email || ''
+                const phone = profile?.phone || ''
+                const company = profile?.company || ''
                 const initials = fullName ? fullName.split(' ').map((n) => n.charAt(0).toUpperCase()).join('').substring(0, 2) : (email?.charAt(0) || '?').toUpperCase()
                 const isDisabled = roleData.status === 'disabled'
+                const isPending = roleData.status === 'pending_approval'
                 const isSelf = uid === user.uid
                 const orgName = orgs.find((o) => o.id === roleData.orgId)?.name
 
                 return (
-                  <div key={uid} className={`px-5 py-4 ${isDisabled ? 'bg-gray-50 opacity-60' : ''}`}>
+                  <div key={uid} className={`px-5 py-4 ${isDisabled ? 'bg-gray-50 opacity-60' : isPending ? 'bg-amber-50/30' : ''}`}>
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isDisabled ? 'bg-gray-100 text-gray-400' : 'bg-indigo-100 text-indigo-700'}`}>{initials}</div>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isPending ? 'bg-amber-100 text-amber-700' : isDisabled ? 'bg-gray-100 text-gray-400' : 'bg-indigo-100 text-indigo-700'}`}>{initials}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-sm text-gray-800">{fullName || 'Sans nom'}</span>
@@ -777,9 +842,45 @@ export default function AdminPage() {
                             {STATUS_LABELS[roleData.status] || roleData.status}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{email}</p>
+                        <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400 flex-wrap">
+                          {email && <span>{email}</span>}
+                          {phone && <span>📞 {phone}</span>}
+                          {company && <span>🏢 {company}</span>}
+                        </div>
                         {orgName && <p className="text-xs text-indigo-400 mt-0.5">{orgName}</p>}
+                        {isPending && profile?.createdAt && (
+                          <p className="text-[10px] text-amber-500 mt-0.5">
+                            Inscrit le {new Date(profile.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
                       </div>
+                      {!isSelf && isPending && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Bouton création rapide entreprise */}
+                          {company && (
+                            <button onClick={() => approveAndCreateOrg(uid)} disabled={saving}
+                              className="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition flex items-center gap-1">
+                              <Plus className="w-3 h-3" /> {company}
+                            </button>
+                          )}
+                          {/* Dropdown assignation manuelle */}
+                          <select className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white" defaultValue=""
+                            onChange={(e) => {
+                              const [role, orgId] = e.target.value.split('|')
+                              if (role) approveUser(uid, role, orgId || null)
+                            }}>
+                            <option value="" disabled>Assigner à...</option>
+                            <option value={ROLES.SUPER_ADMIN}>Super Admin</option>
+                            {orgs.map((org) => (
+                              <optgroup key={org.id} label={`🏢 ${org.name || org.id}`}>
+                                <option value={`${ROLES.INSTALLER_ADMIN}|${org.id}`}>Admin — {org.name}</option>
+                                <option value={`${ROLES.INSTALLER_MEMBER}|${org.id}`}>Membre — {org.name}</option>
+                              </optgroup>
+                            ))}
+                            <option value={ROLES.BENEFICIARY}>Bénéficiaire</option>
+                          </select>
+                        </div>
+                      )}
                       {!isSelf && roleData.status !== 'pending_approval' && (
                         <button onClick={() => toggleUserStatus(uid, roleData.status)} disabled={saving}
                           className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${isDisabled ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
