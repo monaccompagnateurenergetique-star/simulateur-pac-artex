@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useLocalStorage } from './useLocalStorage'
+import { useOrgCollection } from './useOrgCollection'
 import { getCompletion } from '../lib/completionGauge'
 
 export const PROJECT_STATUSES = [
@@ -72,7 +72,27 @@ function migrateProject(project) {
 }
 
 export function useProjects() {
-  const [rawProjects, setProjects] = useLocalStorage('artex-clients', [])
+  // useOrgCollection gere deja le fallback localStorage quand pas d'orgId
+  const orgStore = useOrgCollection('projects', 'artex-clients', [])
+
+  const rawProjects = orgStore.data
+  const setProjects = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(orgStore.data) : updater
+    if (Array.isArray(newVal) && orgStore.isOnline) {
+      newVal.forEach((item) => {
+        const existing = orgStore.data.find((d) => d.id === item.id)
+        if (!existing || JSON.stringify(existing) !== JSON.stringify(item)) {
+          orgStore.setItem(item)
+        }
+      })
+      orgStore.data.forEach((item) => {
+        if (!newVal.find((d) => d.id === item.id)) {
+          orgStore.removeItem(item.id)
+        }
+      })
+    }
+    orgStore.setData(newVal)
+  }
 
   // Migration transparente au chargement
   const projects = useMemo(() => {
@@ -96,10 +116,12 @@ export function useProjects() {
   function addProject(data) {
     const project = {
       id: crypto.randomUUID(),
+      civilite: '',
       firstName: '',
       lastName: '',
       phone: '',
       email: '',
+      occupation: '',
       address: '',
       postalCode: '',
       city: '',
@@ -107,6 +129,8 @@ export function useProjects() {
       rfr: null,
       typeLogement: null,
       surface: null,
+      ageBatiment: null,
+      chauffageActuel: null,
       region: null,
       departement: null,
       zoneClimatique: null,

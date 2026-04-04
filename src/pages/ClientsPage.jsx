@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Plus, Search, Phone, MapPin, Trash2, Filter, X, ArrowRightCircle, Thermometer } from 'lucide-react'
+import { Users, Plus, Search, Phone, MapPin, Trash2, Filter, X, ArrowRightCircle, Thermometer, Building2 } from 'lucide-react'
 import { useProjects, PROJECT_STATUSES } from '../hooks/useProjects'
 import { useSimulationHistory } from '../hooks/useSimulationHistory'
+import { useRole } from '../contexts/RoleContext'
+import { useAllOrgData } from '../hooks/useAllOrgData'
 import CompletionGauge from '../components/ui/CompletionGauge'
 import { getCompletion } from '../lib/completionGauge'
 import { getDpeColor } from '../utils/dpeApi'
@@ -44,15 +46,21 @@ const SORT_OPTIONS = [
 ]
 
 export default function ClientsPage() {
-  const { projects, deleteProject, getStatusCounts } = useProjects()
+  const { projects: ownProjects, deleteProject, getStatusCounts } = useProjects()
+  const { isSuperAdmin } = useRole()
+  const { allData: allOrgProjects, orgs } = useAllOrgData('projects')
   const { history } = useSimulationHistory()
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterWorkType, setFilterWorkType] = useState('all')
+  const [filterOrg, setFilterOrg] = useState('all')
   const [sortBy, setSortBy] = useState('date_desc')
   const [showFilters, setShowFilters] = useState(false)
   const [view, setView] = useState('list')
+
+  // Super admin voit les projets de toutes les orgs, sinon ses propres projets
+  const projects = isSuperAdmin() && allOrgProjects.length > 0 ? allOrgProjects : ownProjects
   const counts = getStatusCounts()
 
   const clientSimTypes = useMemo(() => {
@@ -102,7 +110,8 @@ export default function ClientsPage() {
         const types = clientSimTypes[c.id] || new Set()
         matchWork = types.has(filterWorkType)
       }
-      return matchSearch && matchStatus && matchCategory && matchWork
+      const matchOrg = filterOrg === 'all' || c._orgId === filterOrg
+      return matchSearch && matchStatus && matchCategory && matchWork && matchOrg
     })
 
     const categoryOrder = { Bleu: 0, Jaune: 1, Violet: 2, Rose: 3 }
@@ -129,13 +138,14 @@ export default function ClientsPage() {
     })
 
     return result
-  }, [projects, search, filterStatus, filterCategory, filterWorkType, sortBy, clientSimTypes])
+  }, [projects, search, filterStatus, filterCategory, filterWorkType, filterOrg, sortBy, clientSimTypes])
 
   const activeStatuses = PROJECT_STATUSES.filter((s) => s.value !== 'perdu')
 
   function clearAllFilters() {
     setFilterCategory('all')
     setFilterWorkType('all')
+    setFilterOrg('all')
     setSearch('')
   }
 
@@ -175,6 +185,27 @@ export default function ClientsPage() {
           </button>
         ))}
       </div>
+
+      {/* Filtre entreprise (super admin) */}
+      {isSuperAdmin() && orgs.length > 0 && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Building2 className="w-4 h-4 text-indigo-500" />
+          <span className="text-xs font-bold text-gray-500 uppercase">Entreprise :</span>
+          <button onClick={() => setFilterOrg('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${filterOrg === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            Toutes ({projects.length})
+          </button>
+          {orgs.map((org) => {
+            const count = projects.filter((p) => p._orgId === org.id).length
+            return (
+              <button key={org.id} onClick={() => setFilterOrg(org.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${filterOrg === org.id ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {org.name || org.id} ({count})
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Search + filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -382,6 +413,12 @@ export default function ClientsPage() {
                           {project.category}
                         </span>
                       )}
+                      {project._orgName && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center gap-1">
+                          <Building2 className="w-3 h-3" />
+                          {project._orgName}
+                        </span>
+                      )}
                     </div>
                     {/* Contact info mobile-optimized */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-gray-500">
@@ -515,11 +552,18 @@ export default function ClientsPage() {
                         <p className="font-semibold text-sm text-gray-800 truncate">
                           {project.firstName} {project.lastName}
                         </p>
-                        {project.category && (
-                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded mt-1 inline-block ${CATEGORY_BADGE[project.category]}`}>
-                            {project.category}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
+                          {project.category && (
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${CATEGORY_BADGE[project.category]}`}>
+                              {project.category}
+                            </span>
+                          )}
+                          {project._orgName && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-bold">
+                              {project._orgName}
+                            </span>
+                          )}
+                        </div>
                         {project.phone && (
                           <p className="text-xs text-gray-400 mt-1">{project.phone}</p>
                         )}

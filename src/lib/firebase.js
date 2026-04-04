@@ -1,6 +1,6 @@
-import { initializeApp } from 'firebase/app'
+import { initializeApp, deleteApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
-import { getAuth } from 'firebase/auth'
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
 
 /**
  * Configuration Firebase — Artex360
@@ -31,5 +31,22 @@ if (isFirebaseConfigured) {
   }
 }
 
-export { db, auth }
+/**
+ * Cree un compte Firebase Auth pour un autre utilisateur
+ * sans deconnecter l'admin courant (utilise une app temporaire)
+ */
+export async function createAccountForUser(email, password) {
+  const tempApp = initializeApp(firebaseConfig, 'temp_' + Date.now())
+  try {
+    const tempAuth = getAuth(tempApp)
+    const cred = await createUserWithEmailAndPassword(tempAuth, email, password)
+    const uid = cred.user.uid
+    await signOut(tempAuth)
+    return uid
+  } finally {
+    await deleteApp(tempApp)
+  }
+}
+
+export { db, auth, firebaseConfig }
 export default app

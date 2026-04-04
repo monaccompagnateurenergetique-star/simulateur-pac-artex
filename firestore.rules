@@ -1,0 +1,147 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    function getRole() {
+      return get(/databases/$(database)/documents/roles/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return isAuth() && getRole().role == 'super_admin' && getRole().status == 'active';
+    }
+
+    function isOrgMember(orgId) {
+      return isAuth() && getRole().orgId == orgId && getRole().status == 'active';
+    }
+
+    function isOrgAdmin(orgId) {
+      return isAuth() && getRole().orgId == orgId && getRole().role == 'installer_admin' && getRole().status == 'active';
+    }
+
+    // ── Roles ──
+    match /roles/{uid} {
+      allow read: if isOwner(uid) || isSuperAdmin();
+      allow write: if isSuperAdmin();
+      // Signup classique → pending_approval
+      allow create: if isOwner(uid) && request.resource.data.status == 'pending_approval';
+      // Signup beneficiaire depuis lien partage → auto-active
+      allow create: if isOwner(uid)
+        && request.resource.data.role == 'beneficiary'
+        && request.resource.data.status == 'active';
+      // Admin org → ecrire les roles de ses membres
+      allow write: if isAuth()
+        && getRole().role == 'installer_admin'
+        && getRole().status == 'active'
+        && request.resource.data.orgId == getRole().orgId;
+    }
+
+    // ── User profiles ──
+    match /users/{uid}/{document=**} {
+      allow read, write: if isOwner(uid) || isSuperAdmin();
+      // L'admin org peut lire et creer les profils des membres de son org
+      allow read: if isAuth() && getRole().role == 'installer_admin' && getRole().status == 'active';
+      allow create, update: if isAuth() && getRole().role == 'installer_admin' && getRole().status == 'active';
+    }
+
+    // ── Presence ──
+    match /presence/{uid} {
+      allow read: if isAuth();
+      allow write: if isOwner(uid);
+    }
+
+    // ── Email to UID lookup ──
+    match /email_to_uid/{hash} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow write: if isSuperAdmin();
+    }
+
+    // ── Organizations (document racine) ──
+    match /organizations/{orgId} {
+      allow read: if isOrgMember(orgId) || isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    // ── Organizations (sous-collections) ──
+    match /organizations/{orgId}/{document=**} {
+      allow read: if isOrgMember(orgId) || isSuperAdmin();
+      allow write: if isOrgAdmin(orgId) || isSuperAdmin();
+    }
+
+    // Organization profile (public read for minisite)
+    match /organizations/{orgId}/profile/{doc} {
+      allow read: if true;
+    }
+
+    // Organization minisite (public read)
+    match /organizations/{orgId}/minisite/{doc} {
+      allow read: if true;
+    }
+
+    // Organization members
+    match /organizations/{orgId}/members/{uid} {
+      allow read: if isOrgMember(orgId) || isSuperAdmin();
+      allow write: if isOrgAdmin(orgId) || isSuperAdmin();
+    }
+
+    // ── Slugs (public read for minisite resolution) ──
+    match /slugs/{slug} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // ── Tickets ──
+    match /tickets/{ticketId} {
+      allow read: if isAuth() && (
+        resource.data.createdBy == request.auth.uid ||
+        isOrgMember(resource.data.orgId) ||
+        isSuperAdmin()
+      );
+      allow create: if isAuth();
+      allow update: if isAuth() && (
+        resource.data.createdBy == request.auth.uid ||
+        isSuperAdmin()
+      );
+    }
+
+    match /tickets/{ticketId}/messages/{msgId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+    }
+
+    // ── Shared scenarios (public read — token acts as auth) ──
+    match /shared_scenarios/{tokenId} {
+      allow read: if true;
+      allow create: if isAuth();
+      allow update: if isAuth();
+    }
+
+    // ── Beneficiary projects ──
+    match /beneficiary_projects/{uid} {
+      allow read, write: if isOwner(uid) || isSuperAdmin();
+    }
+
+    // ── Document requests ──
+    match /document_requests/{reqId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+    }
+
+    // ── Public leads (unauthenticated write for lead capture) ──
+    match /public_leads/{leadId} {
+      allow read: if isAuth();
+      allow create: if true;
+    }
+  }
+}

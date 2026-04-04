@@ -2,10 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Menu, X, Home, Calculator, History, Newspaper, Settings, BookOpen,
-  Users, Thermometer, UserPlus, ChevronDown, Wrench, LogIn, LogOut, Cloud, CloudOff, Activity
+  Users, Thermometer, UserPlus, ChevronDown, Wrench, LogIn, LogOut, Cloud, CloudOff, Activity, Shield,
+  Handshake, MessageSquare, FileText, Layers
 } from 'lucide-react'
 import NotificationBell from './NotificationBell'
 import { useAuth } from '../../contexts/AuthContext'
+import { useRole } from '../../contexts/RoleContext'
+import { ROLE_LABELS } from '../../lib/permissions'
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -14,6 +17,7 @@ export default function Header() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, userProfile, signOut } = useAuth()
+  const { role, canAccess, isSuperAdmin } = useRole()
 
   const userInitials = userProfile
     ? [userProfile.firstName, userProfile.lastName]
@@ -24,21 +28,32 @@ export default function Header() {
     ? [userProfile.firstName, userProfile.lastName].filter(Boolean).join(' ')
     : ''
 
-  const mainLinks = [
-    { to: '/', label: 'Dashboard', icon: Home },
-    { to: '/leads', label: 'Leads', icon: UserPlus },
-    { to: '/projets', label: 'Projets', icon: Users },
-    { to: '/simulations', label: 'Simulations', icon: Calculator },
-  ]
+  const isBeneficiaryRole = role === 'beneficiary'
+
+  const mainLinks = isBeneficiaryRole
+    ? [
+        { to: '/beneficiaire', label: 'Mon dossier', icon: Home, permission: 'access_beneficiary_view' },
+        { to: '/beneficiaire/documents', label: 'Documents', icon: FileText, permission: 'access_beneficiary_view' },
+        { to: '/tickets', label: 'Support', icon: MessageSquare, permission: 'access_beneficiary_view' },
+      ].filter(l => canAccess(l.permission))
+    : [
+        { to: '/', label: 'Dashboard', icon: Home, permission: 'access_simulations' },
+        { to: '/leads', label: 'Leads', icon: UserPlus, permission: 'access_leads' },
+        { to: '/projets', label: 'Projets', icon: Users, permission: 'access_projects' },
+        { to: '/simulations', label: 'Simulations', icon: Calculator, permission: 'access_simulations' },
+      ].filter(l => canAccess(l.permission))
 
   const toolLinks = [
-    { to: '/boite-a-outils', label: 'Boîte à outils', icon: BookOpen },
-    { to: '/prospection-dpe', label: 'Prospection DPE', icon: Thermometer },
-    { to: '/actualites', label: 'Actualités', icon: Newspaper },
-    { to: '/historique', label: 'Historique', icon: History },
-    { to: '/parametrage', label: 'Paramétrage', icon: Settings },
-    { to: '/admin', label: 'Suivi utilisateurs', icon: Activity },
-  ]
+    { to: '/boite-a-outils', label: 'Boîte à outils', icon: BookOpen, permission: 'access_simulations' },
+    { to: '/prospection-dpe', label: 'Prospection DPE', icon: Thermometer, permission: 'access_simulations' },
+    { to: '/actualites', label: 'Actualités', icon: Newspaper, permission: 'access_simulations' },
+    { to: '/historique', label: 'Historique', icon: History, permission: 'access_simulations' },
+    { to: '/parametrage', label: 'Paramétrage', icon: Settings, permission: 'access_simulations' },
+    { to: '/deals-cee', label: 'Deals CEE', icon: Handshake, permission: 'manage_cee_deals' },
+    { to: '/tickets', label: 'Tickets', icon: MessageSquare, permission: 'create_tickets' },
+    { to: '/equipe', label: 'Mon équipe', icon: Users, permission: 'manage_org_members' },
+    { to: '/admin', label: 'Administration', icon: Shield, permission: 'access_admin_panel' },
+  ].filter(l => canAccess(l.permission))
 
   const isActive = (path) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)
   const isToolActive = toolLinks.some((l) => isActive(l.to))
@@ -136,6 +151,11 @@ export default function Header() {
                   <Cloud className="w-4 h-4" />
                 )}
                 <span className="hidden lg:inline">{userDisplayName || 'Sync'}</span>
+                {role && (
+                  <span className="hidden xl:inline text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold uppercase">
+                    {ROLE_LABELS[role] || role}
+                  </span>
+                )}
               </Link>
             ) : (
               <Link

@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import { auth, db, isFirebaseConfigured } from '../lib/firebase'
 import { FirebaseUserContext } from '../hooks/useLocalStorage'
 
-let onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, firebaseSignOut, updateFirebaseProfile
+let onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, firebaseSignOut, updateFirebaseProfile, firebaseUpdatePassword
 let firestoreDoc, firestoreGetDoc, firestoreSetDoc, firestoreOnSnapshot, firestoreCollection, firestoreAddDoc, firestoreServerTimestamp, firestoreQuery, firestoreOrderBy, firestoreLimit, firestoreGetDocs, firestoreDeleteDoc
 
 // Import dynamique conditionnel - évite le crash si Firebase n'est pas configuré
@@ -13,6 +13,7 @@ if (isFirebaseConfigured) {
   createUserWithEmailAndPassword = authModule.createUserWithEmailAndPassword
   firebaseSignOut = authModule.signOut
   updateFirebaseProfile = authModule.updateProfile
+  firebaseUpdatePassword = authModule.updatePassword
 
   const fsModule = await import('firebase/firestore')
   firestoreDoc = fsModule.doc
@@ -27,6 +28,13 @@ if (isFirebaseConfigured) {
   firestoreLimit = fsModule.limit
   firestoreGetDocs = fsModule.getDocs
   firestoreDeleteDoc = fsModule.deleteDoc
+}
+
+// ── Helper : hash email pour lookup ──
+async function hashEmail(email) {
+  const data = new TextEncoder().encode(email.toLowerCase().trim())
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 // ── Helpers pour détecter l'appareil ──
@@ -175,17 +183,20 @@ export function AuthProvider({ children }) {
     return signInWithEmailAndPassword(auth, email, password)
   }
 
-  const signUp = async (email, password, profile = {}) => {
+  /**
+   * signUp — Inscription d'un utilisateur
+   * options.role + options.orgId = auto-activation (beneficiaire depuis lien partage)
+   * Sans options = pending_approval (inscription classique)
+   */
+  const signUp = async (email, password, profile = {}, options = {}) => {
     if (!isFirebaseConfigured) throw new Error('Firebase non configuré')
     const cred = await createUserWithEmailAndPassword(auth, email, password)
 
-    // Mettre à jour le displayName dans Firebase Auth
     const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(' ')
     if (displayName) {
       await updateFirebaseProfile(cred.user, { displayName })
     }
 
-    // Sauvegarder le profil complet dans Firestore
     const profileRef = firestoreDoc(db, 'users', cred.user.uid, 'profile', 'info')
     await firestoreSetDoc(profileRef, {
       email,
@@ -195,6 +206,31 @@ export function AuthProvider({ children }) {
       company: profile.company || '',
       createdAt: new Date().toISOString(),
     })
+
+    // Role : auto-active si role+orgId fournis (beneficiaire), sinon pending
+    const roleRef = firestoreDoc(db, 'roles', cred.user.uid)
+    if (options.role && options.orgId) {
+      await firestoreSetDoc(roleRef, {
+        role: options.role,
+        orgId: options.orgId,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      }).catch(console.warn)
+    } else {
+      await firestoreSetDoc(roleRef, {
+        role: null,
+        orgId: null,
+        status: 'pending_approval',
+        createdAt: new Date().toISOString(),
+      }).catch(console.warn)
+    }
+
+    // Index email → uid
+    const emailHash = await hashEmail(email)
+    await firestoreSetDoc(firestoreDoc(db, 'email_to_uid', emailHash), {
+      uid: cred.user.uid,
+      email: email.toLowerCase(),
+    }).catch(console.warn)
 
     return cred
   }
@@ -218,6 +254,18 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Changer le mot de passe + retirer le flag mustChangePassword
+  const changePassword = async (newPassword) => {
+    if (!auth.currentUser) throw new Error('Non connecté')
+    await firebaseUpdatePassword(auth.currentUser, newPassword)
+    // Retirer le flag mustChangePassword
+    if (user && isFirebaseConfigured) {
+      const profileRef = firestoreDoc(db, 'users', user.uid, 'profile', 'info')
+      await firestoreSetDoc(profileRef, { mustChangePassword: false }, { merge: true })
+      setUserProfile((prev) => prev ? { ...prev, mustChangePassword: false } : prev)
+    }
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -226,6 +274,7 @@ export function AuthProvider({ children }) {
       signIn,
       signUp,
       signOut,
+      changePassword,
       updateUserProfile,
       isFirebaseConfigured,
     }}>

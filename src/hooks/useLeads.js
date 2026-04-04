@@ -1,4 +1,4 @@
-import { useLocalStorage } from './useLocalStorage'
+import { useOrgCollection } from './useOrgCollection'
 import { getCompletion } from '../lib/completionGauge'
 
 export const LEAD_STATUSES = [
@@ -11,7 +11,29 @@ export const LEAD_STATUSES = [
 ]
 
 export function useLeads() {
-  const [leads, setLeads] = useLocalStorage('artex360-leads', [])
+  // useOrgCollection gere deja le fallback localStorage quand pas d'orgId
+  const orgStore = useOrgCollection('leads', 'artex360-leads', [])
+
+  const leads = orgStore.data
+  const setLeads = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(orgStore.data) : updater
+    if (Array.isArray(newVal) && orgStore.isOnline) {
+      // Sync chaque item individuellement vers Firestore
+      newVal.forEach((item) => {
+        const existing = orgStore.data.find((d) => d.id === item.id)
+        if (!existing || JSON.stringify(existing) !== JSON.stringify(item)) {
+          orgStore.setItem(item)
+        }
+      })
+      // Trouver les items supprimes
+      orgStore.data.forEach((item) => {
+        if (!newVal.find((d) => d.id === item.id)) {
+          orgStore.removeItem(item.id)
+        }
+      })
+    }
+    orgStore.setData(newVal)
+  }
 
   function addLead(data) {
     const lead = {

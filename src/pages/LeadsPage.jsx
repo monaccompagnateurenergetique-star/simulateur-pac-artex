@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { UserPlus, Plus, Search, Phone, Mail, Trash2, Filter, X, ArrowRightCircle, MapPin, Thermometer } from 'lucide-react'
+import { UserPlus, Plus, Search, Phone, Mail, Trash2, Filter, X, ArrowRightCircle, MapPin, Thermometer, Building2 } from 'lucide-react'
 import { useLeads, LEAD_STATUSES } from '../hooks/useLeads'
+import { useRole } from '../contexts/RoleContext'
+import { useAllOrgData } from '../hooks/useAllOrgData'
 import CompletionGauge from '../components/ui/CompletionGauge'
 import { getCompletion } from '../lib/completionGauge'
 import { getDpeColor } from '../utils/dpeApi'
@@ -14,10 +16,16 @@ const SORT_OPTIONS = [
 ]
 
 export default function LeadsPage() {
-  const { leads, deleteLead, getLeadStatusCounts } = useLeads()
+  const { leads: ownLeads, deleteLead, getLeadStatusCounts } = useLeads()
+  const { isSuperAdmin } = useRole()
+  const { allData: allOrgLeads, orgs } = useAllOrgData('leads')
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [filterOrg, setFilterOrg] = useState('all')
   const [sortBy, setSortBy] = useState('date_desc')
+
+  // Super admin voit les leads de toutes les orgs
+  const leads = isSuperAdmin() && allOrgLeads.length > 0 ? allOrgLeads : ownLeads
   const counts = getLeadStatusCounts()
 
   const activeStatuses = LEAD_STATUSES.filter((s) => s.value !== 'perdu' && s.value !== 'converti')
@@ -27,7 +35,8 @@ export default function LeadsPage() {
       const matchSearch = !search ||
         `${l.firstName} ${l.lastName} ${l.phone} ${l.email} ${l.address}`.toLowerCase().includes(search.toLowerCase())
       const matchStatus = filterStatus === 'all' || l.status === filterStatus
-      return matchSearch && matchStatus
+      const matchOrg = filterOrg === 'all' || l._orgId === filterOrg
+      return matchSearch && matchStatus && matchOrg
     })
 
     result.sort((a, b) => {
@@ -49,7 +58,7 @@ export default function LeadsPage() {
     })
 
     return result
-  }, [leads, search, filterStatus, sortBy])
+  }, [leads, search, filterStatus, filterOrg, sortBy])
 
   function getLeadDisplayName(lead) {
     if (lead.firstName || lead.lastName) return `${lead.firstName || ''} ${lead.lastName || ''}`.trim()
@@ -94,6 +103,27 @@ export default function LeadsPage() {
           </button>
         ))}
       </div>
+
+      {/* Filtre entreprise (super admin) */}
+      {isSuperAdmin() && orgs.length > 0 && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Building2 className="w-4 h-4 text-emerald-500" />
+          <span className="text-xs font-bold text-gray-500 uppercase">Entreprise :</span>
+          <button onClick={() => setFilterOrg('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${filterOrg === 'all' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            Toutes ({leads.length})
+          </button>
+          {orgs.map((org) => {
+            const count = leads.filter((l) => l._orgId === org.id).length
+            return (
+              <button key={org.id} onClick={() => setFilterOrg(org.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${filterOrg === org.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {org.name || org.id} ({count})
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Search + sort */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -165,6 +195,12 @@ export default function LeadsPage() {
                     {lead.status === 'converti' && (
                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 flex items-center gap-0.5">
                         <ArrowRightCircle className="w-3 h-3" /> Projet
+                      </span>
+                    )}
+                    {lead._orgName && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        {lead._orgName}
                       </span>
                     )}
                   </div>

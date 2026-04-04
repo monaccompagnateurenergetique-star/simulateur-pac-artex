@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft, Edit3, Trash2, Plus, ChevronRight, Layers, Calculator,
-  RefreshCw, TrendingDown, TrendingUp, Wallet, Euro, FileDown
+  RefreshCw, TrendingDown, TrendingUp, Wallet, Euro, FileDown, Send, Copy, Check, Link2
 } from 'lucide-react'
 import { useProjects } from '../hooks/useProjects'
 import { useSettings } from '../hooks/useSettings'
+import { useShareScenario } from '../hooks/useSharedScenario'
 import { CATALOG } from '../lib/constants/catalog'
 import FinancialRecap from '../components/project/FinancialRecap'
 import { generateProposalPDF } from '../lib/proposalPdfGenerator'
@@ -19,9 +20,13 @@ export default function ScenarioDetailPage() {
   } = useProjects()
   const { settings } = useSettings()
 
+  const { shareScenario } = useShareScenario()
   const [editName, setEditName] = useState(false)
   const [nameValue, setNameValue] = useState('')
   const [showAddSim, setShowAddSim] = useState(false)
+  const [shareLink, setShareLink] = useState(null)
+  const [sharing, setSharing] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   const project = projects.find((p) => p.id === projectId)
   const scenario = project?.scenarios?.find((s) => s.id === scenarioId)
@@ -67,6 +72,45 @@ export default function ScenarioDetailPage() {
     if (confirm('Retirer cette simulation du scénario ?')) {
       removeSimFromScenario(projectId, scenarioId, simId)
     }
+  }
+
+  async function handleShare() {
+    setSharing(true)
+    try {
+      const token = await shareScenario({
+        projectId,
+        projectName: `${project.firstName || ''} ${project.lastName || ''}`.trim(),
+        scenarioId,
+        scenarioName: scenario.name,
+        simulations: scenario.simulations,
+        totals: getScenarioTotals(scenario),
+        clientInfo: {
+          firstName: project.firstName,
+          lastName: project.lastName,
+          email: project.email,
+          phone: project.phone,
+          address: project.address,
+          postalCode: project.postalCode,
+          city: project.city,
+          category: project.category,
+          categoryLabel: project.categoryLabel,
+          dpe: project.dpe,
+        },
+      })
+      const url = `${window.location.origin}${import.meta.env.BASE_URL || '/'}s/${token}`
+      setShareLink(url)
+    } catch (err) {
+      console.error('Erreur partage:', err)
+    } finally {
+      setSharing(false)
+    }
+  }
+
+  function copyShareLink() {
+    if (!shareLink) return
+    navigator.clipboard.writeText(shareLink).catch(() => {})
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
   }
 
   function getSimEditUrl(sim) {
@@ -119,12 +163,22 @@ export default function ScenarioDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             {scenario.simulations.length > 0 && (
-              <button
-                onClick={handleExportPDF}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition font-medium"
-              >
-                <FileDown className="w-4 h-4" /> Proposition PDF
-              </button>
+              <>
+                <button
+                  onClick={handleShare}
+                  disabled={sharing}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition font-medium"
+                >
+                  {sharing ? <span className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" /> : <Send className="w-4 h-4" />}
+                  Envoyer au client
+                </button>
+                <button
+                  onClick={handleExportPDF}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition font-medium"
+                >
+                  <FileDown className="w-4 h-4" /> PDF
+                </button>
+              </>
             )}
             <button
               onClick={handleDeleteScenario}
@@ -134,6 +188,25 @@ export default function ScenarioDetailPage() {
             </button>
           </div>
         </div>
+        {/* Lien partage */}
+        {shareLink && (
+          <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl animate-fade-in">
+            <div className="flex items-center gap-2 mb-2">
+              <Link2 className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm font-bold text-emerald-700">Lien envoyé au client</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="text" readOnly value={shareLink}
+                className="flex-1 px-3 py-2 bg-white border border-emerald-200 rounded-lg text-sm text-gray-700 font-mono" />
+              <button onClick={copyShareLink}
+                className="flex items-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition">
+                {linkCopied ? <><Check className="w-4 h-4" /> Copié</> : <><Copy className="w-4 h-4" /> Copier</>}
+              </button>
+            </div>
+            <p className="text-[10px] text-emerald-500 mt-2">Le client pourra consulter le scénario et créer un compte pour suivre son dossier.</p>
+          </div>
+        )}
+
         <p className="text-sm text-gray-500 mt-2">
           {scenario.simulations.length} simulation{scenario.simulations.length > 1 ? 's' : ''}
           {scenario.ptz && ' + PTZ'}
