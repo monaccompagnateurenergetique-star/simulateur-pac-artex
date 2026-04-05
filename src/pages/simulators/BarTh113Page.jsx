@@ -16,15 +16,21 @@ import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarTh113Page() {
-  const { getDefault } = useSimulatorContext()
+  const { getDefault, getDealPrice, minCeePercent } = useSimulatorContext('BAR-TH-113')
 
   const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
-  const [mprCategory, setMprCategory] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [mprCategory, setMprCategoryRaw] = useState(() => getDefault('mprCategory', 'Bleu'))
   const [fuelType, setFuelType] = useState(() => getDefault('fuelType', 'granules'))
   const [replacedEnergy, setReplacedEnergy] = useState(() => getDefault('replacedEnergy', 'fioul'))
   const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
   const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 15000))
-  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 58))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
+
+  function setMprCategory(cat) {
+    setMprCategoryRaw(cat)
+    const price = getDealPrice(cat)
+    if (price != null) setPriceMWh(price)
+  }
 
   const result = useMemo(
     () => calculateBarTh113({ zone, mprCategory, priceMWh }),
@@ -140,6 +146,7 @@ export default function BarTh113Page() {
         onCeePercentChange={setCeePercent}
         mprGrantTheorique={0}
         maxEligibleCost={projectCost}
+        minCeePercent={minCeePercent}
         showMpr={false}
       />
 

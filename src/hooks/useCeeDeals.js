@@ -1,5 +1,22 @@
 import { useOrgDoc } from './useOrgCollection'
 
+const EMPTY_DELEGATAIRE = {
+  siren: '',
+  raisonSociale: '',
+  civilite: '',
+  prenom: '',
+  nom: '',
+  adresse: '',
+  ville: '',
+  codePostal: '',
+  email: '',
+  telephone: '',
+  siteWeb: '',
+  isFavori: false,
+  logo: null,
+  tampon: null,
+}
+
 /**
  * useCeeDeals — Gestion des deals CEE (oblige/delegataire)
  * Stocke dans organizations/{orgId}/settings/config sous la cle ceeDeals
@@ -17,11 +34,14 @@ export function useCeeDeals() {
     const newDeal = {
       id: crypto.randomUUID(),
       obligeName: '',
-      delegataireName: '',
       contractRef: '',
       validFrom: '',
       validTo: '',
       pricePerMWhc: { tresModeste: 12, modeste: 10, classique: 7, aise: 5 },
+      delegataire: { ...EMPTY_DELEGATAIRE },
+      useFicheOverrides: false,
+      ficheOverrides: {},
+      minCeePercent: 0,
       isDefault: deals.length === 0,
       ...deal,
       createdAt: new Date().toISOString(),
@@ -41,7 +61,6 @@ export function useCeeDeals() {
 
   function deleteDeal(id) {
     const remaining = deals.filter((d) => d.id !== id)
-    // Si on supprime le deal par defaut, mettre le premier restant comme defaut
     if (remaining.length > 0 && !remaining.some((d) => d.isDefault)) {
       remaining[0].isDefault = true
     }
@@ -67,6 +86,19 @@ export function useCeeDeals() {
     return active || getDefaultDeal()
   }
 
+  /**
+   * Résout le prix CEE pour une fiche et une catégorie donnée.
+   * Priorité : ficheOverrides > pricePerMWhc global > fallback
+   */
+  function getPriceForFiche(deal, ficheCode, categoryKey) {
+    if (!deal) return null
+    if (deal.useFicheOverrides && deal.ficheOverrides?.[ficheCode]) {
+      const override = deal.ficheOverrides[ficheCode][categoryKey]
+      if (override !== undefined && override !== null) return override
+    }
+    return deal.pricePerMWhc?.[categoryKey] ?? null
+  }
+
   return {
     deals,
     addDeal,
@@ -75,7 +107,9 @@ export function useCeeDeals() {
     setDefaultDeal,
     getDefaultDeal,
     getActiveDeal,
+    getPriceForFiche,
     synced,
     isOnline,
+    EMPTY_DELEGATAIRE,
   }
 }

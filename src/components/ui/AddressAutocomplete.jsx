@@ -1,22 +1,31 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { MapPin, Loader2, X } from 'lucide-react'
 
 /**
  * AddressAutocomplete — Input avec suggestions via API BAN (adresse.data.gouv.fr)
- * Retourne l'adresse selectionnee via onChange({ address, postalCode, city, label })
+ * Props:
+ *   value: string — texte affiché dans l'input (label complet ou adresse)
+ *   onChange({ address, postalCode, city, label }) — appelé à la sélection ou saisie libre
  */
 export default function AddressAutocomplete({ value, onChange, placeholder }) {
   const [query, setQuery] = useState(value || '')
   const [suggestions, setSuggestions] = useState([])
   const [loading, setLoading] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
+  const [selected, setSelected] = useState(false)
   const debounceRef = useRef(null)
   const wrapperRef = useRef(null)
+  const prevValueRef = useRef(value)
 
-  // Sync externe
-  useEffect(() => { setQuery(value || '') }, [value])
+  // Sync externe — seulement si la prop change depuis l'extérieur (pas depuis notre onChange)
+  useEffect(() => {
+    if (value !== prevValueRef.current && !selected) {
+      setQuery(value || '')
+    }
+    prevValueRef.current = value
+  }, [value, selected])
 
-  // Fermer au clic exterieur
+  // Fermer au clic extérieur
   useEffect(() => {
     function handleClick(e) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
@@ -27,9 +36,46 @@ export default function AddressAutocomplete({ value, onChange, placeholder }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  const search = useCallback(async (val) => {
+    setLoading(true)
+    try {
+      const res = await fetch(
+        `https://api-adresse.data.gouv.fr/search?q=${encodeURIComponent(val)}&limit=5&type=housenumber`
+      )
+      const data = await res.json()
+      let results = data.features || []
+
+      // Fallback sans type housenumber
+      if (!results.length) {
+        const res2 = await fetch(
+          `https://api-adresse.data.gouv.fr/search?q=${encodeURIComponent(val)}&limit=5`
+        )
+        const data2 = await res2.json()
+        results = data2.features || []
+      }
+
+      if (results.length) {
+        setSuggestions(results.map((f) => ({
+          label: f.properties.label,
+          address: `${f.properties.housenumber || ''} ${f.properties.street || f.properties.name || ''}`.trim(),
+          postalCode: f.properties.postcode || '',
+          city: f.properties.city || '',
+        })))
+        setShowDropdown(true)
+      } else {
+        setSuggestions([])
+        setShowDropdown(false)
+      }
+    } catch {
+      setSuggestions([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   function handleInput(val) {
     setQuery(val)
-    onChange({ address: val, postalCode: '', city: '', label: val })
+    setSelected(false)
 
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (val.length < 4) {
@@ -38,50 +84,12 @@ export default function AddressAutocomplete({ value, onChange, placeholder }) {
       return
     }
 
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true)
-      try {
-        const res = await fetch(
-          `https://api-adresse.data.gouv.fr/search?q=${encodeURIComponent(val)}&limit=5&type=housenumber`
-        )
-        const data = await res.json()
-        if (data.features?.length) {
-          setSuggestions(data.features.map((f) => ({
-            label: f.properties.label,
-            address: `${f.properties.housenumber || ''} ${f.properties.street || ''}`.trim(),
-            postalCode: f.properties.postcode || '',
-            city: f.properties.city || '',
-          })))
-          setShowDropdown(true)
-        } else {
-          // Fallback sans type housenumber
-          const res2 = await fetch(
-            `https://api-adresse.data.gouv.fr/search?q=${encodeURIComponent(val)}&limit=5`
-          )
-          const data2 = await res2.json()
-          if (data2.features?.length) {
-            setSuggestions(data2.features.map((f) => ({
-              label: f.properties.label,
-              address: f.properties.name || '',
-              postalCode: f.properties.postcode || '',
-              city: f.properties.city || '',
-            })))
-            setShowDropdown(true)
-          } else {
-            setSuggestions([])
-            setShowDropdown(false)
-          }
-        }
-      } catch {
-        setSuggestions([])
-      } finally {
-        setLoading(false)
-      }
-    }, 400)
+    debounceRef.current = setTimeout(() => search(val), 400)
   }
 
   function handleSelect(suggestion) {
     setQuery(suggestion.label)
+    setSelected(true)
     setSuggestions([])
     setShowDropdown(false)
     onChange({
@@ -94,7 +102,9 @@ export default function AddressAutocomplete({ value, onChange, placeholder }) {
 
   function handleClear() {
     setQuery('')
+    setSelected(false)
     setSuggestions([])
+    setShowDropdown(false)
     onChange({ address: '', postalCode: '', city: '', label: '' })
   }
 

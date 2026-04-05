@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Menu, X, Home, Calculator, History, Newspaper, Settings, BookOpen,
   Users, Thermometer, UserPlus, ChevronDown, Wrench, LogIn, LogOut, Cloud, CloudOff, Activity, Shield,
-  Handshake, MessageSquare, FileText, Layers
+  Handshake, MessageSquare, FileText, Layers, Award
 } from 'lucide-react'
 import NotificationBell from './NotificationBell'
 import { useAuth } from '../../contexts/AuthContext'
@@ -61,6 +61,7 @@ export default function Header() {
     { to: '/deals-cee', label: 'Deals CEE', icon: Handshake, permission: 'manage_cee_deals' },
     { to: '/tickets', label: 'Tickets', icon: MessageSquare, permission: 'create_tickets' },
     { to: '/equipe', label: 'Mon équipe', icon: Users, permission: 'manage_org_members' },
+    { to: '/admin/prospection-rge', label: 'Prospection RGE', icon: Award, permission: 'access_admin_panel' },
     { to: '/admin', label: 'Administration', icon: Shield, permission: 'access_admin_panel' },
   ].filter(l => canAccess(l.permission)) : []
 

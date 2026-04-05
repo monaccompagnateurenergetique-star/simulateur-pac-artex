@@ -143,5 +143,14 @@ service cloud.firestore {
       allow read: if isAuth();
       allow create: if true;
     }
+
+    // ── Prospection RGE (super admin only) ──
+    match /prospection_rge/{siret} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /prospection_rge/{siret}/activites/{activityId} {
+      allow read, write: if isSuperAdmin();
+    }
   }
 }

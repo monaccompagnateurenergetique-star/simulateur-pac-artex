@@ -17,15 +17,21 @@ import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarEn101Page() {
-  const { getDefault } = useSimulatorContext()
+  const { getDefault, getDealPrice, minCeePercent } = useSimulatorContext('BAR-EN-101')
 
   const [surface, setSurface] = useState(() => getDefault('surface', 80))
   const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
   const [insulationType, setInsulationType] = useState(() => getDefault('insulationType', 'combles'))
   const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
   const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 5000))
-  const [mprCategory, setMprCategory] = useState(() => getDefault('mprCategory', 'Bleu'))
-  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 58))
+  const [mprCategory, setMprCategoryRaw] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
+
+  function setMprCategory(cat) {
+    setMprCategoryRaw(cat)
+    const price = getDealPrice(cat)
+    if (price != null) setPriceMWh(price)
+  }
 
   // Rampants = éligible MPR au m², Combles perdus = pas de MPR
   const isRampants = insulationType === 'rampants'
@@ -40,7 +46,7 @@ export default function BarEn101Page() {
   const commercial = useCommercialStrategy({
     ceeEurosBase: result.ceeEuros,
     ceePercentApplied: ceePercent,
-    mprCategory: isRampants ? mprCategory : 'Rose',
+    mprCategory,
     mprGrantTheorique,
     projectCost,
     maxEligibleCost: BAR_EN_101.DEPENSE_ELIGIBLE_PER_M2 * Number(surface),
@@ -132,12 +138,13 @@ export default function BarEn101Page() {
       <CommercialStrategy
         projectCost={projectCost}
         onProjectCostChange={setProjectCost}
-        mprCategory={isRampants ? mprCategory : 'Rose'}
+        mprCategory={mprCategory}
         onMprCategoryChange={setMprCategory}
         ceePercent={ceePercent}
         onCeePercentChange={setCeePercent}
         mprGrantTheorique={mprGrantTheorique}
         maxEligibleCost={BAR_EN_101.DEPENSE_ELIGIBLE_PER_M2 * Number(surface)}
+        minCeePercent={minCeePercent}
         showMpr={isRampants}
       />
 

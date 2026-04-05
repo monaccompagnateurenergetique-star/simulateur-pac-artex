@@ -16,15 +16,21 @@ import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarTh112Page() {
-  const { getDefault } = useSimulatorContext()
+  const { getDefault, getDealPrice, minCeePercent } = useSimulatorContext('BAR-TH-112')
 
   const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
   const [etas, setEtas] = useState(() => getDefault('etas', 'high'))
   const [appareilType, setAppareilType] = useState(() => getDefault('appareilType', 'poele_granules'))
-  const [mprCategory, setMprCategory] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [mprCategory, setMprCategoryRaw] = useState(() => getDefault('mprCategory', 'Bleu'))
   const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
   const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 5000))
   const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
+
+  function setMprCategory(cat) {
+    setMprCategoryRaw(cat)
+    const price = getDealPrice(cat)
+    if (price != null) setPriceMWh(price)
+  }
   const [remplaceCharbon, setRemplaceCharbon] = useState(() => getDefault('remplaceCharbon', false))
 
   // CEE Calculation
@@ -227,6 +233,7 @@ export default function BarTh112Page() {
         onCeePercentChange={setCeePercent}
         mprGrantTheorique={mprGrantTheorique}
         maxEligibleCost={projectCost}
+        minCeePercent={minCeePercent}
       />
 
       {/* ─── SECTION 3 : Synthèse financière ─── */}

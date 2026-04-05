@@ -196,8 +196,8 @@ export default function ClientFormPage() {
   function editAvis(i) { setEditingAvisIndex(i); setAvisEditForm({ ...avisList[i] }); setShowAvisModal(true) }
 
   // ── Adresse ──
-  function handleAddressSelect({ address, postalCode, city }) {
-    setForm((p) => ({ ...p, address: address || p.address, postalCode: postalCode || p.postalCode, city: city || p.city }))
+  function handleAddressSelect({ address, postalCode, city, label }) {
+    setForm((p) => ({ ...p, address: address || p.address, postalCode: postalCode || p.postalCode, city: city || p.city, addressLabel: label || '' }))
     setSelectedDpe(null); setDpeResults(null)
   }
 
@@ -365,7 +365,7 @@ export default function ClientFormPage() {
         <div className="mb-4">
           <label className="block text-xs font-semibold text-gray-600 mb-1.5">Adresse des travaux</label>
           <AddressAutocomplete
-            value={form.address ? `${form.address}${form.postalCode ? ', ' + form.postalCode : ''}${form.city ? ' ' + form.city : ''}` : ''}
+            value={form.addressLabel || (form.address ? `${form.address}${form.postalCode ? ', ' + form.postalCode : ''}${form.city ? ' ' + form.city : ''}` : '')}
             onChange={handleAddressSelect}
             placeholder="Saisissez l'adresse complète..."
           />

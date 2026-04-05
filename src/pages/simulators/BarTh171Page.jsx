@@ -18,7 +18,7 @@ import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarTh171Page() {
-  const { getDefault } = useSimulatorContext()
+  const { getDefault, getDealPrice, minCeePercent } = useSimulatorContext('BAR-TH-171')
 
   // Inputs — pré-remplis depuis le projet ou la simulation en édition
   const [isPrimaryResidence, setIsPrimaryResidence] = useState('Oui')
@@ -28,8 +28,14 @@ export default function BarTh171Page() {
   const [etas, setEtas] = useState(() => getDefault('etas', 'high'))
   const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
   const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 12000))
-  const [mprCategory, setMprCategory] = useState(() => getDefault('mprCategory', 'Bleu'))
-  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 58))
+  const [mprCategory, setMprCategoryRaw] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
+
+  function setMprCategory(cat) {
+    setMprCategoryRaw(cat)
+    const price = getDealPrice(cat)
+    if (price != null) setPriceMWh(price)
+  }
 
   // CEE Calculation
   const ceeResult = useMemo(
@@ -168,6 +174,7 @@ export default function BarTh171Page() {
           onCeePercentChange={setCeePercent}
           mprGrantTheorique={mprGrantTheorique}
           maxEligibleCost={12000}
+          minCeePercent={minCeePercent}
         />
       )}
 

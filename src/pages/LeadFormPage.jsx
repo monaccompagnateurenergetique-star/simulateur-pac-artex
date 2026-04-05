@@ -256,13 +256,14 @@ export default function LeadFormPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Adresse</label>
               <AddressAutocomplete
-                value={form.address ? `${form.address}${form.postalCode ? ', ' + form.postalCode : ''}${form.city ? ' ' + form.city : ''}` : ''}
-                onChange={({ address, postalCode, city }) => {
+                value={form.addressLabel || (form.address ? `${form.address}${form.postalCode ? ', ' + form.postalCode : ''}${form.city ? ' ' + form.city : ''}` : '')}
+                onChange={({ address, postalCode, city, label }) => {
                   setForm((p) => ({
                     ...p,
                     address: address || p.address,
                     postalCode: postalCode || p.postalCode,
                     city: city || p.city,
+                    addressLabel: label || '',
                   }))
                   setSelectedDpe(null)
                   setDpeResults(null)

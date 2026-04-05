@@ -16,13 +16,20 @@ import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarEn103Page() {
-  const { getDefault } = useSimulatorContext()
+  const { getDefault, getDealPrice, minCeePercent } = useSimulatorContext('BAR-EN-103')
 
   const [surface, setSurface] = useState(() => getDefault('surface', 70))
   const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
   const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
   const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 4000))
-  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 58))
+  const [mprCategory, setMprCategoryRaw] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
+
+  function setMprCategory(cat) {
+    setMprCategoryRaw(cat)
+    const price = getDealPrice(cat)
+    if (price != null) setPriceMWh(price)
+  }
 
   const result = useMemo(
     () => calculateBarEn103({ surface, zone, priceMWh }),
@@ -32,7 +39,7 @@ export default function BarEn103Page() {
   const commercial = useCommercialStrategy({
     ceeEurosBase: result.ceeEuros,
     ceePercentApplied: ceePercent,
-    mprCategory: 'Rose',
+    mprCategory,
     mprGrantTheorique: 0,
     projectCost,
     maxEligibleCost: 12000,
@@ -100,11 +107,12 @@ export default function BarEn103Page() {
       <CommercialStrategy
         projectCost={projectCost}
         onProjectCostChange={setProjectCost}
-        mprCategory="Rose"
-        onMprCategoryChange={() => {}}
+        mprCategory={mprCategory}
+        onMprCategoryChange={setMprCategory}
         ceePercent={ceePercent}
         onCeePercentChange={setCeePercent}
         mprGrantTheorique={0}
+        minCeePercent={minCeePercent}
         showMpr={false}
       />
 
@@ -124,7 +132,7 @@ export default function BarEn103Page() {
       <SimulationSaveBar
         type="BAR-EN-103"
         title={`Isolation plancher — ${surface}m² ${zone}`}
-        inputs={{ surface, zone, priceMWh, projectCost, ceePercent }}
+        inputs={{ surface, zone, priceMWh, projectCost, mprCategory, ceePercent }}
         results={{ ...result, ...commercial, projectCost }}
         pdfData={{
           ficheCode: 'BAR-EN-103',

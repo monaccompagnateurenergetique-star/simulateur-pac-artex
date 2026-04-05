@@ -35,6 +35,7 @@ import TicketsPage from './pages/tickets/TicketsPage'
 import TicketDetailPage from './pages/tickets/TicketDetailPage'
 import NewTicketPage from './pages/tickets/NewTicketPage'
 import AdminTicketsPage from './pages/admin/AdminTicketsPage'
+import RgeProspectionPage from './pages/RgeProspectionPage'
 import MinisitePage from './pages/public/MinisitePage'
 import PublicSimulatorPage from './pages/public/PublicSimulatorPage'
 import BeneficiaryDashboard from './pages/beneficiary/BeneficiaryDashboard'
@@ -133,6 +134,9 @@ export default function App() {
 
           {/* Profil (tout utilisateur connecte) */}
           <Route path="/profil" element={<ProtectedRoute><ProfilPage /></ProtectedRoute>} />
+
+          {/* Prospection RGE (super admin) */}
+          <Route path="/admin/prospection-rge" element={<ProtectedRoute requiredPermission="access_admin_panel"><RgeProspectionPage /></ProtectedRoute>} />
 
           {/* Admin (super admin only) */}
           <Route path="/admin" element={<ProtectedRoute requiredPermission="access_admin_panel"><AdminPage /></ProtectedRoute>} />

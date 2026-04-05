@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { X, Zap, Shield, Users, BarChart3, ArrowRight } from 'lucide-react'
+import { X, Rocket, Shield, Users, BarChart3, ArrowRight } from 'lucide-react'
 
 /**
  * ProCtaPopup — Popup d'appel à l'action pour créer un compte pro
@@ -57,7 +57,7 @@ export default function ProCtaPopup() {
           <button onClick={handleDismiss} className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-white/20 transition">
             <X className="w-5 h-5" />
           </button>
-          <Zap className="w-12 h-12 mx-auto mb-3 text-yellow-300" />
+          <Rocket className="w-12 h-12 mx-auto mb-3 text-white/90" />
           <h2 className="text-2xl font-bold">Passez à la vitesse supérieure</h2>
           <p className="text-indigo-200 mt-2 text-sm">
             Créez votre espace professionnel gratuit et gérez vos dossiers CEE en toute simplicité

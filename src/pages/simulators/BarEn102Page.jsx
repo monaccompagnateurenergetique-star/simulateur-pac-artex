@@ -17,14 +17,21 @@ import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 import { formatCurrency, formatKWhc } from '../../utils/formatters'
 
 export default function BarEn102Page() {
-  const { getDefault } = useSimulatorContext()
+  const { getDefault, getDealPrice, minCeePercent } = useSimulatorContext('BAR-EN-102')
 
   const [surface, setSurface] = useState(() => getDefault('surface', 60))
   const [zone, setZone] = useState(() => getDefault('zone', 'H1'))
   const [method, setMethod] = useState(() => getDefault('method', 'interieur'))
   const [priceMWh, setPriceMWh] = useState(() => getDefault('priceMWh', 7.5))
   const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 8000))
-  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 58))
+  const [mprCategory, setMprCategoryRaw] = useState(() => getDefault('mprCategory', 'Bleu'))
+  const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
+
+  function setMprCategory(cat) {
+    setMprCategoryRaw(cat)
+    const price = getDealPrice(cat)
+    if (price != null) setPriceMWh(price)
+  }
 
   const result = useMemo(
     () => calculateBarEn102({ surface, zone, priceMWh }),
@@ -34,7 +41,7 @@ export default function BarEn102Page() {
   const commercial = useCommercialStrategy({
     ceeEurosBase: result.ceeEuros,
     ceePercentApplied: ceePercent,
-    mprCategory: 'Rose',
+    mprCategory,
     mprGrantTheorique: 0,
     projectCost,
     maxEligibleCost: 12000,
@@ -111,11 +118,12 @@ export default function BarEn102Page() {
       <CommercialStrategy
         projectCost={projectCost}
         onProjectCostChange={setProjectCost}
-        mprCategory="Rose"
-        onMprCategoryChange={() => {}}
+        mprCategory={mprCategory}
+        onMprCategoryChange={setMprCategory}
         ceePercent={ceePercent}
         onCeePercentChange={setCeePercent}
         mprGrantTheorique={0}
+        minCeePercent={minCeePercent}
         showMpr={false}
       />
 
@@ -135,7 +143,7 @@ export default function BarEn102Page() {
       <SimulationSaveBar
         type="BAR-EN-102"
         title={`Isolation murs ${method === 'interieur' ? 'ITI' : 'ITE'} — ${surface}m² ${zone}`}
-        inputs={{ surface, zone, method, priceMWh, projectCost, ceePercent }}
+        inputs={{ surface, zone, method, priceMWh, projectCost, mprCategory, ceePercent }}
         results={{ ...result, ...commercial, projectCost }}
         pdfData={{
           ficheCode: 'BAR-EN-102',

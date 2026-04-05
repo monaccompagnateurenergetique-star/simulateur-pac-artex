@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft, Edit, Phone, Mail, MapPin, Home,
-  ChevronRight, MessageSquare, Send, Trash2, Calculator, FileText, Plus, ExternalLink,
-  Search, Loader2, Thermometer,
-  Bell, Check, Calendar, AlertTriangle, CheckCircle, Layers, User, Zap
+  ChevronRight, ChevronDown, ChevronUp, MessageSquare, Send, Trash2, FileText, Plus, ExternalLink,
+  Loader2, Thermometer,
+  Bell, Check, Calendar, CheckCircle, Layers, User, Zap,
+  Clock, MoreHorizontal, Copy, PhoneCall, MailPlus, Globe
 } from 'lucide-react'
 import { useProjects, PROJECT_STATUSES } from '../hooks/useProjects'
 import { useRole } from '../contexts/RoleContext'
@@ -17,181 +18,854 @@ import { getLocationInfo } from '../utils/postalCode'
 import { searchDPE, getDpeColor } from '../utils/dpeApi'
 import { getCompletion } from '../lib/completionGauge'
 
-const CAT = {
-  Bleu: 'bg-blue-500 text-white', Jaune: 'bg-yellow-500 text-white',
-  Violet: 'bg-purple-500 text-white', Rose: 'bg-pink-500 text-white',
+const CAT_STYLE = {
+  Bleu: { bg: 'bg-blue-500', text: 'text-white', light: 'bg-blue-50 text-blue-700 border-blue-200' },
+  Jaune: { bg: 'bg-yellow-500', text: 'text-white', light: 'bg-amber-50 text-amber-700 border-amber-200' },
+  Violet: { bg: 'bg-purple-500', text: 'text-white', light: 'bg-purple-50 text-purple-700 border-purple-200' },
+  Rose: { bg: 'bg-pink-500', text: 'text-white', light: 'bg-pink-50 text-pink-700 border-pink-200' },
+}
+
+const fmt = (v) => v ? Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) : '0'
+
+/* ─── Mini composants ─── */
+
+function InfoItem({ icon: Icon, label, value, href, mono }) {
+  if (!value) return null
+  const content = (
+    <div className="flex items-start gap-2.5 py-1.5">
+      {Icon && <Icon className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />}
+      <div className="min-w-0">
+        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{label}</p>
+        <p className={`text-sm text-slate-800 ${mono ? 'font-mono' : ''} ${href ? 'hover:text-indigo-600 transition' : ''}`}>{value}</p>
+      </div>
+    </div>
+  )
+  if (href) return <a href={href} className="block">{content}</a>
+  return content
+}
+
+function CompletionBar({ percent, filledCount, totalCount }) {
+  const color = percent === 100 ? 'bg-emerald-500' : percent >= 70 ? 'bg-indigo-500' : percent >= 40 ? 'bg-amber-500' : 'bg-red-400'
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{ width: `${percent}%` }} />
+      </div>
+      <span className="text-[10px] font-semibold text-slate-500 tabular-nums whitespace-nowrap">{filledCount}/{totalCount}</span>
+    </div>
+  )
+}
+
+function StatusStepper({ currentStatus, onStatusChange }) {
+  const currentIdx = PROJECT_STATUSES.findIndex((s) => s.value === currentStatus)
+
+  return (
+    <div className="space-y-0.5">
+      {PROJECT_STATUSES.map((s, i) => {
+        const isCurrent = s.value === currentStatus
+        const isPast = i < currentIdx
+        const isLost = s.value === 'perdu'
+
+        return (
+          <button
+            key={s.value}
+            onClick={() => onStatusChange(s.value)}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-left transition-all ${
+              isCurrent
+                ? isLost
+                  ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                  : 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200'
+                : isPast
+                  ? 'text-emerald-600 hover:bg-emerald-50'
+                  : isLost
+                    ? 'text-red-300 hover:text-red-500 hover:bg-red-50'
+                    : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
+            }`}
+          >
+            {isPast ? (
+              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+            ) : isCurrent ? (
+              <div className={`w-3 h-3 rounded-full shrink-0 ring-[3px] ring-offset-1 ${
+                isLost ? 'bg-red-500 ring-red-200' : `${s.dot} ring-indigo-200`
+              }`} />
+            ) : (
+              <div className="w-3 h-3 rounded-full bg-slate-200 shrink-0" />
+            )}
+            <span>{s.label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 export default function ClientDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { projects: ownProjects, updateProject, updateProjectStatus, addNote, deleteNote, addScenario, getScenarioTotals, addReminder, toggleReminder, deleteReminder } = useProjects()
+  const {
+    projects: ownProjects, updateProject, updateProjectStatus,
+    addNote, deleteNote, addScenario, getScenarioTotals,
+    addReminder, toggleReminder, deleteReminder,
+  } = useProjects()
   const { isSuperAdmin } = useRole()
   const { allData: allOrgProjects } = useAllOrgData('projects')
   const projects = isSuperAdmin() && allOrgProjects.length > 0 ? [...ownProjects, ...allOrgProjects] : ownProjects
   const { history } = useSimulationHistory()
+
   const [noteText, setNoteText] = useState('')
-  const [showNewSim, setShowNewSim] = useState(false)
   const [newScenarioName, setNewScenarioName] = useState('')
   const [showAddScenario, setShowAddScenario] = useState(false)
   const [reminderText, setReminderText] = useState('')
   const [reminderDate, setReminderDate] = useState('')
-  const { beneficiary, sharedScenarios: projectSharedScenarios } = useProjectBeneficiary(id)
-  const { requests: docRequests, createRequest: createDocRequest, updateRequestStatus } = useDocumentRequests(id)
   const [showDocForm, setShowDocForm] = useState(false)
   const [docType, setDocType] = useState('autre')
   const [docMessage, setDocMessage] = useState('')
   const [dpeResults, setDpeResults] = useState(null)
   const [dpeLoading, setDpeLoading] = useState(false)
   const [showDpe, setShowDpe] = useState(false)
+  const [showNewSim, setShowNewSim] = useState(false)
+  const [contextExpanded, setContextExpanded] = useState(false)
+
+  const { beneficiary, sharedScenarios: projectSharedScenarios } = useProjectBeneficiary(id)
+  const { requests: docRequests, createRequest: createDocRequest, updateRequestStatus } = useDocumentRequests(id)
 
   const project = projects.find((c) => c.id === id)
-  if (!project) return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-gray-400">Projet introuvable</p></div>
+  if (!project) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-gray-400 text-lg">Projet introuvable</p>
+      </div>
+    )
+  }
 
   const st = PROJECT_STATUSES.find((s) => s.value === project.status)
-  const linkedSims = (project.simulations || []).map((sid) => history.find((h) => h.id === sid)).filter(Boolean)
   const loc = project.postalCode ? getLocationInfo(project.postalCode) : null
   const dpe = project.dpe
-  const fmt = (v) => v ? Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) : '0'
+  const completion = getCompletion(project)
+  const catStyle = CAT_STYLE[project.category] || {}
 
-  function handleAddNote() { if (!noteText.trim()) return; addNote(id, noteText.trim()); setNoteText('') }
-  function handleAddScenario(e) { e.preventDefault(); addScenario(id, newScenarioName.trim() || undefined); setNewScenarioName(''); setShowAddScenario(false) }
-  function handleAddReminder(e) { e.preventDefault(); if (!reminderText.trim() || !reminderDate) return; addReminder(id, { text: reminderText.trim(), dueAt: reminderDate }); setReminderText(''); setReminderDate('') }
-  async function searchDpe() { if (!project.postalCode) return; setDpeLoading(true); setDpeResults(null); setShowDpe(true); try { const { results } = await searchDPE(project.address||'', project.postalCode||'', project.city||''); setDpeResults(results) } catch {} finally { setDpeLoading(false) } }
-  function selectDpe(d) { updateProject(id, { dpe: { numeroDpe:d.numeroDpe,etiquetteDpe:d.etiquetteDpe,etiquetteGes:d.etiquetteGes,periodeConstruction:d.periodeConstruction,anneeConstruction:d.anneeConstruction,surface:d.surface,consoM2:d.consoM2,emissionGes:d.emissionGes,energieChauffage:d.energieChauffage,isolationEnveloppe:d.isolationEnveloppe,isolationMurs:d.isolationMurs,isolationMenuiseries:d.isolationMenuiseries,dateEtablissement:d.dateEtablissement,dateFinValidite:d.dateFinValidite,adresse:d.adresse,observatoireUrl:d.observatoireUrl } }); setShowDpe(false) }
+  // Totaux globaux de tous les scenarios
+  const allScenarioTotals = (project.scenarios || []).map((sc) => getScenarioTotals(sc))
+  const globalTotals = allScenarioTotals.reduce(
+    (acc, t) => ({
+      totalCost: acc.totalCost + t.totalCost,
+      totalCee: acc.totalCee + t.totalCee,
+      totalMpr: acc.totalMpr + t.totalMpr,
+      resteACharge: acc.resteACharge + t.resteACharge,
+    }),
+    { totalCost: 0, totalCee: 0, totalMpr: 0, resteACharge: 0 }
+  )
+  const hasFinancials = globalTotals.totalCost > 0
 
-  const I = ({ label, val, href }) => { if (!val) return null; return <div className="py-1.5"><p className="text-[10px] text-slate-400 mb-0.5">{label}</p>{href ? <a href={href} className="text-[13px] text-slate-700 hover:text-indigo-600">{val}</a> : <p className="text-[13px] text-slate-700">{val}</p>}</div> }
+  // Rappels en retard
+  const overdueReminders = (project.reminders || []).filter(
+    (r) => !r.done && r.dueAt && new Date(r.dueAt) < new Date()
+  )
+
+  function handleAddNote() {
+    if (!noteText.trim()) return
+    addNote(id, noteText.trim())
+    setNoteText('')
+  }
+
+  function handleAddScenario(e) {
+    e.preventDefault()
+    addScenario(id, newScenarioName.trim() || undefined)
+    setNewScenarioName('')
+    setShowAddScenario(false)
+  }
+
+  function handleAddReminder(e) {
+    e.preventDefault()
+    if (!reminderText.trim() || !reminderDate) return
+    addReminder(id, { text: reminderText.trim(), dueAt: reminderDate })
+    setReminderText('')
+    setReminderDate('')
+  }
+
+  async function handleSearchDpe() {
+    if (!project.postalCode) return
+    setDpeLoading(true)
+    setDpeResults(null)
+    setShowDpe(true)
+    try {
+      const { results } = await searchDPE(project.address || '', project.postalCode || '', project.city || '')
+      setDpeResults(results)
+    } catch {
+      /* ignore */
+    } finally {
+      setDpeLoading(false)
+    }
+  }
+
+  function selectDpe(d) {
+    updateProject(id, {
+      dpe: {
+        numeroDpe: d.numeroDpe, etiquetteDpe: d.etiquetteDpe, etiquetteGes: d.etiquetteGes,
+        periodeConstruction: d.periodeConstruction, anneeConstruction: d.anneeConstruction,
+        surface: d.surface, consoM2: d.consoM2, emissionGes: d.emissionGes,
+        energieChauffage: d.energieChauffage, isolationEnveloppe: d.isolationEnveloppe,
+        isolationMurs: d.isolationMurs, isolationMenuiseries: d.isolationMenuiseries,
+        dateEtablissement: d.dateEtablissement, dateFinValidite: d.dateFinValidite,
+        adresse: d.adresse, observatoireUrl: d.observatoireUrl,
+      },
+    })
+    setShowDpe(false)
+  }
+
+  async function handleCreateDocRequest() {
+    await createDocRequest({
+      projectId: id, beneficiaryUid: beneficiary?.uid || '',
+      docType, label: DOC_TYPES.find((d) => d.value === docType)?.label || docType,
+      message: docMessage,
+    })
+    setShowDocForm(false)
+    setDocType('autre')
+    setDocMessage('')
+  }
+
+  const fullName = `${project.civilite ? project.civilite + '. ' : ''}${project.firstName} ${project.lastName}`.trim()
+  const initials = `${(project.firstName || '?')[0]}${(project.lastName || '?')[0]}`.toUpperCase()
+  const addressLine = [project.address, project.postalCode, project.city].filter(Boolean).join(', ')
 
   return (
-    <div className="animate-fade-in">
-      {/* ═══ HEADER ═══ */}
-      <div className="bg-[#1a1f2e] border-b border-[#2a3040]">
-        <div className="max-w-[1400px] mx-auto px-5 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/projets')} className="p-1.5 rounded hover:bg-white/5"><ArrowLeft className="w-4 h-4 text-gray-500" /></button>
-            <h1 className="text-sm font-semibold text-white">{project.firstName} {project.lastName}</h1>
-            {project.category && <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${CAT[project.category]}`}>{project.categoryLabel}</span>}
-            <span className="text-[10px] px-2 py-0.5 rounded bg-white/10 text-gray-400 font-medium">{st?.label}</span>
+    <div className="animate-fade-in bg-slate-50 min-h-screen">
+
+      {/* ═══ HEADER STICKY ═══ */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
+        <div className="max-w-[1400px] mx-auto px-6">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-1.5 py-2 text-xs text-slate-400">
+            <Link to="/projets" className="hover:text-indigo-600 transition">Projets</Link>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-slate-600 font-medium">{project.firstName} {project.lastName}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Link to={`/projets/${id}/modifier`} className="px-3 py-1.5 text-[11px] text-gray-400 bg-white/5 hover:bg-white/10 rounded-lg">Modifier</Link>
-            <select value={project.status} onChange={(e) => updateProjectStatus(id, e.target.value)} className="px-3 py-1.5 text-[11px] bg-indigo-600 hover:bg-indigo-500 rounded-lg border-0 text-white cursor-pointer">
-              {PROJECT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
+
+          {/* Main header */}
+          <div className="flex items-center justify-between pb-3">
+            <div className="flex items-center gap-4">
+              {/* Avatar */}
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-base font-bold ${
+                project.category ? `${catStyle.bg} ${catStyle.text}` : 'bg-slate-200 text-slate-500'
+              }`}>
+                {initials}
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <h1 className="text-xl font-bold text-slate-900">{fullName}</h1>
+                  {project.category && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${catStyle.light}`}>
+                      {project.categoryLabel}
+                    </span>
+                  )}
+                  {st && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.color}`}>
+                      {st.label}
+                    </span>
+                  )}
+                  {overdueReminders.length > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 flex items-center gap-0.5">
+                      <Bell className="w-2.5 h-2.5" />{overdueReminders.length} en retard
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 mt-0.5">
+                  {project.phone && (
+                    <a href={`tel:${project.phone}`} className="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1 transition">
+                      <Phone className="w-3 h-3" />{project.phone}
+                    </a>
+                  )}
+                  {project.email && (
+                    <a href={`mailto:${project.email}`} className="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1 transition">
+                      <Mail className="w-3 h-3" />{project.email}
+                    </a>
+                  )}
+                  {project.city && (
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />{project.postalCode} {project.city}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              {project.phone && (
+                <a href={`tel:${project.phone}`} className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition" title="Appeler">
+                  <PhoneCall className="w-4 h-4" />
+                </a>
+              )}
+              {project.email && (
+                <a href={`mailto:${project.email}`} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition" title="Email">
+                  <MailPlus className="w-4 h-4" />
+                </a>
+              )}
+              <Link to={`/projets/${id}/modifier`} className="px-3 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5">
+                <Edit className="w-3.5 h-3.5" />Modifier
+              </Link>
+              <select
+                value={project.status}
+                onChange={(e) => updateProjectStatus(id, e.target.value)}
+                className="px-3 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 rounded-lg border-0 text-white cursor-pointer transition"
+              >
+                {PROJECT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ═══ BLOCS INFOS ═══ */}
-      <div className="bg-slate-100 border-b border-slate-200">
-        <div className="max-w-[1400px] mx-auto px-5 py-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Client */}
-          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"><User className="w-3 h-3 text-indigo-500" /> Informations Client</h3>
-              <Link to={`/projets/${id}/modifier`} className="text-slate-400 hover:text-indigo-600"><Edit className="w-3 h-3" /></Link>
-            </div>
-            <div className="grid grid-cols-2 gap-x-5">
-              <I label="Nom" val={`${project.civilite?project.civilite+'. ':''}${project.firstName} ${project.lastName}`} />
-              <I label="Occupation" val={project.occupation?.replace(/_/g,' ')} />
-              <I label="Email" val={project.email} href={`mailto:${project.email}`} />
-              <I label="Téléphone" val={project.phone} href={`tel:${project.phone}`} />
-              <I label="RFR" val={project.rfr?`${Number(project.rfr).toLocaleString('fr-FR')} € — ${project.personnes} pers.`:null} />
-              {project.category && <div className="py-1.5"><p className="text-[10px] text-slate-400 mb-1">Précarité</p><span className={`text-[10px] font-bold px-2 py-0.5 rounded ${CAT[project.category]}`}>{project.categoryLabel}</span></div>}
-            </div>
-          </div>
-          {/* Logement + DPE */}
-          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"><Home className="w-3 h-3 text-indigo-500" /> Informations Logement</h3>
+      {/* ═══ BARRE CONTEXTE : Client + Logement (collapsible) ═══ */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-[1400px] mx-auto px-6">
+          {/* Ligne resume toujours visible */}
+          <button
+            onClick={() => setContextExpanded(!contextExpanded)}
+            className="w-full flex items-center justify-between py-2.5 text-left group"
+          >
+            <div className="flex items-center gap-4 flex-wrap text-xs text-slate-500">
+              {/* Completion */}
               <div className="flex items-center gap-2">
-                <button onClick={searchDpe} disabled={!project.postalCode||dpeLoading} className="text-[10px] text-indigo-500 hover:text-indigo-700 disabled:opacity-30 flex items-center gap-0.5">{dpeLoading?<Loader2 className="w-3 h-3 animate-spin"/>:<Thermometer className="w-3 h-3"/>} DPE</button>
-                <Link to={`/projets/${id}/modifier`} className="text-slate-400 hover:text-indigo-600"><Edit className="w-3 h-3" /></Link>
+                <div className="w-20">
+                  <CompletionBar percent={completion.percent} filledCount={completion.filledCount} totalCount={completion.totalCount} />
+                </div>
+                <span className="text-[10px] text-slate-400">{completion.percent}%</span>
+              </div>
+
+              <div className="w-px h-4 bg-slate-200" />
+
+              {/* Infos cles client */}
+              {project.occupation && (
+                <span className="flex items-center gap-1">
+                  <User className="w-3 h-3 text-slate-400" />
+                  {project.occupation.replace(/_/g, ' ')}
+                </span>
+              )}
+              {project.rfr && (
+                <span>RFR {Number(project.rfr).toLocaleString('fr-FR')} € — {project.personnes} pers.</span>
+              )}
+              {project.category && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${catStyle.light}`}>
+                  {project.categoryLabel}
+                </span>
+              )}
+
+              <div className="w-px h-4 bg-slate-200" />
+
+              {/* Infos cles logement */}
+              {project.typeLogement && (
+                <span className="flex items-center gap-1">
+                  <Home className="w-3 h-3 text-slate-400" />
+                  {project.typeLogement === 'maison' ? 'Maison' : 'Appartement'}
+                </span>
+              )}
+              {project.surface && <span>{project.surface} m²</span>}
+              {project.ageBatiment && (
+                <span>{project.ageBatiment === 'plus_15' ? '+15 ans' : project.ageBatiment === 'plus_2' ? '+2 ans' : '<2 ans'}</span>
+              )}
+              {loc && <span className="text-slate-400">{loc.zoneClimatique}</span>}
+              {dpe && (
+                <span
+                  className="inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-black"
+                  style={{ backgroundColor: getDpeColor(dpe.etiquetteDpe)?.bg, color: getDpeColor(dpe.etiquetteDpe)?.text }}
+                >
+                  {dpe.etiquetteDpe}
+                </span>
+              )}
+
+              {/* KPIs financiers inline */}
+              {hasFinancials && (
+                <>
+                  <div className="w-px h-4 bg-slate-200" />
+                  <span className="font-semibold text-slate-700">{fmt(globalTotals.totalCost)} €</span>
+                  <span className="text-emerald-600 font-semibold">CEE {fmt(globalTotals.totalCee)} €</span>
+                  <span className="text-blue-600 font-semibold">MPR {fmt(globalTotals.totalMpr)} €</span>
+                  <span className="text-orange-600 font-semibold">RAC {fmt(globalTotals.resteACharge)} €</span>
+                  {globalTotals.totalCost > 0 && (
+                    <div className="w-24 flex h-1.5 rounded-full overflow-hidden bg-slate-100">
+                      {globalTotals.totalCee > 0 && (
+                        <div className="bg-emerald-500" style={{ width: `${(globalTotals.totalCee / globalTotals.totalCost) * 100}%` }} />
+                      )}
+                      {globalTotals.totalMpr > 0 && (
+                        <div className="bg-blue-500" style={{ width: `${(globalTotals.totalMpr / globalTotals.totalCost) * 100}%` }} />
+                      )}
+                      <div className="bg-orange-300 flex-1" />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 text-slate-400 group-hover:text-indigo-500 transition shrink-0 ml-4">
+              <span className="text-[10px] font-medium">{contextExpanded ? 'Masquer' : 'Details'}</span>
+              {contextExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </div>
+          </button>
+
+          {/* Contenu depliable : detail client + logement */}
+          {contextExpanded && (
+            <div className="pb-4 pt-1 grid grid-cols-1 lg:grid-cols-2 gap-4 border-t border-slate-100 animate-fade-in">
+              {/* Client */}
+              <div className="bg-slate-50 rounded-xl p-4">
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-3">
+                  <User className="w-3 h-3 text-indigo-500" />Informations client
+                </h3>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-0">
+                  <InfoItem icon={User} label="Nom complet" value={fullName} />
+                  <InfoItem label="Occupation" value={project.occupation?.replace(/_/g, ' ')} />
+                  <InfoItem icon={Mail} label="Email" value={project.email} href={`mailto:${project.email}`} />
+                  <InfoItem icon={Phone} label="Telephone" value={project.phone} href={`tel:${project.phone}`} />
+                  {project.rfr && (
+                    <InfoItem label="RFR" value={`${Number(project.rfr).toLocaleString('fr-FR')} € — ${project.personnes} pers.`} />
+                  )}
+                  {project.category && (
+                    <div className="py-1.5">
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Precarite</p>
+                      <span className={`inline-block mt-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${catStyle.light}`}>
+                        {project.categoryLabel}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Logement + DPE */}
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Home className="w-3 h-3 text-indigo-500" />Logement
+                  </h3>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleSearchDpe() }}
+                    disabled={!project.postalCode || dpeLoading}
+                    className="text-[10px] font-medium text-indigo-500 hover:text-indigo-700 disabled:opacity-30 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-indigo-50 transition"
+                  >
+                    {dpeLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Thermometer className="w-3 h-3" />}
+                    Chercher DPE
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-0">
+                  {addressLine && <InfoItem icon={MapPin} label="Adresse" value={addressLine} />}
+                  <InfoItem label="Surface" value={project.surface ? `${project.surface} m²` : null} />
+                  <InfoItem label="Type" value={
+                    project.typeLogement === 'maison' ? 'Maison individuelle' :
+                    project.typeLogement === 'appartement' ? 'Appartement' : null
+                  } />
+                  <InfoItem label="Age" value={
+                    project.ageBatiment === 'plus_15' ? 'Plus de 15 ans' :
+                    project.ageBatiment === 'plus_2' ? 'Plus de 2 ans' :
+                    project.ageBatiment === 'moins_2' ? 'Moins de 2 ans' : null
+                  } />
+                  <InfoItem label="Chauffage" value={project.chauffageActuel} />
+                  {loc && <InfoItem icon={Globe} label="Zone climatique" value={`${loc.zoneClimatique} — ${loc.region}`} />}
+                </div>
+
+                {/* DPE affiche */}
+                {dpe && (
+                  <div className="mt-3 pt-3 border-t border-slate-200">
+                    <div className="flex items-center gap-3 p-3 bg-white rounded-lg">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-base font-black shrink-0"
+                        style={{ backgroundColor: getDpeColor(dpe.etiquetteDpe)?.bg, color: getDpeColor(dpe.etiquetteDpe)?.text }}
+                      >
+                        {dpe.etiquetteDpe}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-800">DPE {dpe.etiquetteDpe} — {dpe.consoM2} kWh/m²/an</p>
+                        <p className="text-[10px] text-slate-500">{dpe.periodeConstruction} — {dpe.surface} m² — {dpe.energieChauffage}</p>
+                        {dpe.observatoireUrl && (
+                          <a href={dpe.observatoireUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-[10px] text-indigo-500 hover:underline inline-flex items-center gap-0.5 mt-0.5">
+                            <ExternalLink className="w-2.5 h-2.5" />Voir sur l'observatoire ADEME
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Resultats recherche DPE */}
+                {showDpe && dpeResults?.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-slate-200 space-y-1 max-h-36 overflow-y-auto">
+                    <p className="text-[10px] text-slate-400 font-semibold mb-1">Resultats DPE trouves :</p>
+                    {dpeResults.map((d) => (
+                      <button key={d.numeroDpe} onClick={(e) => { e.stopPropagation(); selectDpe(d) }}
+                        className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-indigo-50 text-left text-xs text-slate-600 transition">
+                        <div className="w-7 h-7 rounded flex items-center justify-center text-white font-bold text-[10px]"
+                          style={{ backgroundColor: getDpeColor(d.etiquetteDpe)?.bg }}>
+                          {d.etiquetteDpe}
+                        </div>
+                        <span>{d.consoM2} kWh/m² — {d.surface} m²</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-x-5">
-              {(project.address||project.city) && <div className="col-span-2 py-1.5"><p className="text-[10px] text-slate-400 mb-0.5">Adresse</p><p className="text-[13px] text-slate-700">{[project.address,project.postalCode,project.city].filter(Boolean).join(', ')}</p></div>}
-              <I label="Surface chauffée" val={project.surface?`${project.surface} m²`:null} />
-              <I label="Surface habitable" val={project.surfaceHabitable?`${project.surfaceHabitable} m²`:null} />
-              <I label="Type" val={project.typeLogement==='maison'?'Maison individuelle':project.typeLogement==='appartement'?'Appartement':null} />
-              <I label="Âge" val={project.ageBatiment==='plus_15'?'Plus de 15 ans':project.ageBatiment==='plus_2'?'Plus de 2 ans':project.ageBatiment==='moins_2'?'Moins de 2 ans':null} />
-              <I label="Chauffage" val={project.chauffageActuel} />
-              {loc && <I label="Zone" val={`${loc.zoneClimatique} — ${loc.region}`} />}
-            </div>
-            {dpe && <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-base font-black shrink-0" style={{backgroundColor:getDpeColor(dpe.etiquetteDpe)?.bg,color:getDpeColor(dpe.etiquetteDpe)?.text}}>{dpe.etiquetteDpe}</div>
-              <div><p className="text-[12px] font-semibold text-slate-800">DPE {dpe.etiquetteDpe} — {dpe.consoM2} kWh/m²/an</p><p className="text-[10px] text-slate-500">{dpe.periodeConstruction} — {dpe.surface} m² — {dpe.energieChauffage}</p>{dpe.observatoireUrl&&<a href={dpe.observatoireUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-indigo-500 hover:underline inline-flex items-center gap-0.5 mt-0.5"><ExternalLink className="w-2.5 h-2.5"/>ADEME</a>}</div>
-            </div>}
-            {showDpe&&dpeResults?.length>0&&<div className="mt-3 pt-3 border-t border-slate-100 space-y-1 max-h-32 overflow-y-auto">{dpeResults.map(d=><button key={d.numeroDpe} onClick={()=>selectDpe(d)} className="w-full flex items-center gap-2 p-1.5 rounded hover:bg-slate-50 text-left text-[11px] text-slate-600"><div className="w-6 h-6 rounded flex items-center justify-center text-white font-bold text-[9px]" style={{backgroundColor:getDpeColor(d.etiquetteDpe)?.bg}}>{d.etiquetteDpe}</div>{d.consoM2} kWh/m² — {d.surface} m²</button>)}</div>}
-          </div>
+          )}
         </div>
       </div>
 
-      {/* ═══ CONTENU ═══ */}
-      <div className="bg-gray-50 min-h-[60vh]">
-        <div className="max-w-[1400px] mx-auto px-5 py-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 space-y-5">
-            {/* Scénarios */}
-            <section className="bg-white rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-                <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Layers className="w-4 h-4 text-indigo-500"/>Scénarios <span className="text-gray-400 font-normal text-xs">({(project.scenarios||[]).length})</span></h2>
-                <button onClick={()=>setShowAddScenario(!showAddScenario)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5"/>Nouveau</button>
-              </div>
-              <div className="p-5 space-y-3">
-                {showAddScenario&&<form onSubmit={handleAddScenario} className="flex gap-2 mb-2"><input type="text" value={newScenarioName} onChange={e=>setNewScenarioName(e.target.value)} placeholder="Nom (optionnel)" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"/><button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Créer</button></form>}
-                {(project.scenarios||[]).length===0&&!showAddScenario&&<p className="text-sm text-gray-400 text-center py-4">Aucun scénario</p>}
-                {(project.scenarios||[]).map(sc=>{const t=getScenarioTotals(sc);return(
-                  <Link key={sc.id} to={`/projets/${id}/scenario/${sc.id}`} className="block rounded-xl border border-gray-200 hover:border-indigo-200 hover:shadow transition group overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3"><div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Layers className="w-4 h-4 text-indigo-400"/>{sc.name}</h3><p className="text-[11px] text-gray-400 ml-6">{sc.simulations.length} sim.{sc.ptz?' + PTZ':''} — {new Date(sc.createdAt).toLocaleDateString('fr-FR')}</p></div><ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500"/></div>
-                    {sc.simulations.length>0&&<div className="px-4 pb-2 space-y-1">{sc.simulations.map(sim=>{const r=sim.results||{};return<div key={sim.id} className="flex items-center justify-between py-1 px-3 bg-gray-50 rounded text-[11px]"><div className="flex items-center gap-1.5">{sim.type&&<span className="font-bold text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded text-[9px]">{sim.type}</span>}<span className="text-gray-600">{sim.title||'Simulation'}</span></div><div className="flex gap-2">{(r.ceeCommerciale||r.ceeFinal||r.ceeEuros||0)>0&&<span className="text-emerald-600 font-semibold">{(r.ceeCommerciale||r.ceeFinal||r.ceeEuros).toLocaleString('fr-FR')} €</span>}{(r.mprFinal||r.mprAmount||r.primeAmount||0)>0&&<span className="text-blue-600 font-semibold">{(r.mprFinal||r.mprAmount||r.primeAmount).toLocaleString('fr-FR')} €</span>}</div></div>})}</div>}
-                    {t.totalCost>0&&<div className="grid grid-cols-4 divide-x divide-gray-100 border-t border-gray-100"><div className="py-2 text-center"><p className="text-[9px] uppercase text-gray-400 font-semibold">Coût</p><p className="text-xs font-bold text-gray-700">{fmt(t.totalCost)} €</p></div><div className="py-2 text-center"><p className="text-[9px] uppercase text-emerald-500 font-semibold">CEE</p><p className="text-xs font-bold text-emerald-600">{fmt(t.totalCee)} €</p></div><div className="py-2 text-center"><p className="text-[9px] uppercase text-blue-500 font-semibold">MPR</p><p className="text-xs font-bold text-blue-600">{fmt(t.totalMpr)} €</p></div><div className="py-2 text-center bg-orange-50/50"><p className="text-[9px] uppercase text-orange-500 font-semibold">RAC</p><p className="text-xs font-bold text-orange-600">{fmt(t.resteACharge)} €</p></div></div>}
-                  </Link>)})}
-              </div>
-            </section>
+      {/* ═══ ZONE DE TRAVAIL PRINCIPALE ═══ */}
+      <div className="max-w-[1400px] mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-            {/* Simulations */}
-            <section className="bg-white rounded-xl border border-gray-200 shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Calculator className="w-4 h-4 text-gray-400"/>Simulations <span className="text-gray-400 font-normal text-xs">({linkedSims.length})</span></h2></div>
-              <div className="p-5">
-                <button onClick={()=>setShowNewSim(!showNewSim)} className="w-full py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 text-sm hover:border-indigo-300 hover:text-indigo-600 transition mb-3"><Plus className="w-4 h-4 inline mr-1"/>Nouvelle simulation</button>
-                {showNewSim&&<div className="mb-3 p-4 bg-gray-50 rounded-xl space-y-2">{CATALOG.map(cat=><div key={cat.category}><p className="text-[10px] text-gray-500 font-semibold mb-1">{cat.emoji} {cat.category}</p><div className="grid grid-cols-2 gap-1">{cat.items.filter(i=>i.active).map(item=><Link key={item.code} to={`${item.route}?clientId=${id}`} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 text-xs"><span className="text-gray-700">{item.title}</span><ChevronRight className="w-3 h-3 text-gray-300"/></Link>)}</div></div>)}</div>}
-                {linkedSims.length===0&&!showNewSim&&<p className="text-xs text-gray-400 text-center">Aucune</p>}
+          {/* ─── COLONNE PRINCIPALE (2/3) — Scenarios + Documents ─── */}
+          <div className="xl:col-span-2 space-y-5">
+
+            {/* Scenarios */}
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <div className="p-1.5 bg-indigo-50 rounded-lg">
+                    <Layers className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  Scenarios
+                  <span className="text-slate-400 font-normal text-xs">({(project.scenarios || []).length})</span>
+                </h2>
+                <button onClick={() => setShowAddScenario(!showAddScenario)}
+                  className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 flex items-center gap-1.5 px-3 py-2 rounded-lg transition shadow-sm">
+                  <Plus className="w-3.5 h-3.5" />Nouveau scenario
+                </button>
+              </div>
+
+              <div className="p-5 space-y-3">
+                {showAddScenario && (
+                  <form onSubmit={handleAddScenario} className="flex gap-2 mb-2">
+                    <input type="text" value={newScenarioName} onChange={(e) => setNewScenarioName(e.target.value)}
+                      placeholder="Nom du scenario (optionnel)" autoFocus
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none" />
+                    <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">Creer</button>
+                    <button type="button" onClick={() => setShowAddScenario(false)} className="px-3 py-2 text-sm text-slate-400 hover:text-slate-600">Annuler</button>
+                  </form>
+                )}
+
+                {(project.scenarios || []).length === 0 && !showAddScenario && (
+                  <div className="text-center py-12">
+                    <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                      <Layers className="w-7 h-7 text-slate-300" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-500">Aucun scenario</p>
+                    <p className="text-xs text-slate-400 mt-1 mb-4">Creez un scenario pour commencer les simulations CEE</p>
+                    <button onClick={() => setShowAddScenario(true)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition">
+                      <Plus className="w-3.5 h-3.5" />Creer un scenario
+                    </button>
+                  </div>
+                )}
+
+                {(project.scenarios || []).map((sc) => {
+                  const t = getScenarioTotals(sc)
+                  return (
+                    <Link key={sc.id} to={`/projets/${id}/scenario/${sc.id}`}
+                      className="block rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group overflow-hidden">
+                      {/* En-tete scenario */}
+                      <div className="flex items-center justify-between px-4 py-3.5">
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                            <Layers className="w-4 h-4 text-indigo-400" />
+                            {sc.name}
+                          </h3>
+                          <p className="text-[11px] text-slate-400 ml-6 mt-0.5">
+                            {sc.simulations.length} simulation{sc.simulations.length > 1 ? 's' : ''}
+                            {sc.ptz ? ' + PTZ' : ''}
+                            {' — '}
+                            {new Date(sc.createdAt).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition" />
+                      </div>
+
+                      {/* Liste des simulations */}
+                      {sc.simulations.length > 0 && (
+                        <div className="px-4 pb-2 space-y-1">
+                          {sc.simulations.map((sim) => {
+                            const r = sim.results || {}
+                            const cee = r.ceeCommerciale || r.ceeFinal || r.ceeEuros || 0
+                            const mpr = r.mprFinal || r.mprAmount || r.primeAmount || 0
+                            return (
+                              <div key={sim.id} className="flex items-center justify-between py-1.5 px-3 bg-slate-50 rounded-lg text-[11px]">
+                                <div className="flex items-center gap-1.5">
+                                  {sim.type && (
+                                    <span className="font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded text-[9px]">{sim.type}</span>
+                                  )}
+                                  <span className="text-slate-600">{sim.title || 'Simulation'}</span>
+                                </div>
+                                <div className="flex gap-3">
+                                  {cee > 0 && <span className="text-emerald-600 font-semibold">{cee.toLocaleString('fr-FR')} €</span>}
+                                  {mpr > 0 && <span className="text-blue-600 font-semibold">{mpr.toLocaleString('fr-FR')} €</span>}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* Totaux financiers */}
+                      {t.totalCost > 0 && (
+                        <div className="grid grid-cols-4 divide-x divide-slate-100 border-t border-slate-100">
+                          <div className="py-2.5 text-center">
+                            <p className="text-[9px] uppercase text-slate-400 font-bold tracking-wider">Cout</p>
+                            <p className="text-xs font-bold text-slate-700">{fmt(t.totalCost)} €</p>
+                          </div>
+                          <div className="py-2.5 text-center">
+                            <p className="text-[9px] uppercase text-emerald-500 font-bold tracking-wider">CEE</p>
+                            <p className="text-xs font-bold text-emerald-600">{fmt(t.totalCee)} €</p>
+                          </div>
+                          <div className="py-2.5 text-center">
+                            <p className="text-[9px] uppercase text-blue-500 font-bold tracking-wider">MPR</p>
+                            <p className="text-xs font-bold text-blue-600">{fmt(t.totalMpr)} €</p>
+                          </div>
+                          <div className="py-2.5 text-center bg-orange-50/50">
+                            <p className="text-[9px] uppercase text-orange-500 font-bold tracking-wider">RAC</p>
+                            <p className="text-xs font-bold text-orange-600">{fmt(t.resteACharge)} €</p>
+                          </div>
+                        </div>
+                      )}
+                    </Link>
+                  )
+                })}
+
+                {/* Simulation rapide */}
+                {(project.scenarios || []).length > 0 && (
+                  <div className="pt-2">
+                    <button onClick={() => setShowNewSim(!showNewSim)}
+                      className="w-full py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-xs font-medium hover:border-indigo-300 hover:text-indigo-600 transition flex items-center justify-center gap-1.5">
+                      <Plus className="w-3.5 h-3.5" />Simulation rapide (hors scenario)
+                    </button>
+                    {showNewSim && (
+                      <div className="mt-2 p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                        {CATALOG.map((cat) => (
+                          <div key={cat.category}>
+                            <p className="text-[10px] text-slate-500 font-semibold mb-1">{cat.emoji} {cat.category}</p>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {cat.items.filter((i) => i.active).map((item) => (
+                                <Link key={item.code} to={`${item.route}?clientId=${id}`}
+                                  className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 hover:border-indigo-300 hover:shadow-sm text-xs transition">
+                                  <span className="text-slate-700 font-medium">{item.title}</span>
+                                  <ChevronRight className="w-3 h-3 text-slate-300" />
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </section>
 
             {/* Documents */}
-            <section className="bg-white rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-                <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><FileText className="w-4 h-4 text-indigo-500"/>Documents <span className="text-gray-400 font-normal text-xs">({docRequests.length})</span></h2>
-                <button onClick={()=>setShowDocForm(!showDocForm)} disabled={!beneficiary} className={`text-[11px] px-2.5 py-1 rounded-lg ${beneficiary?'bg-indigo-600 hover:bg-indigo-700 text-white':'bg-gray-100 text-gray-400 cursor-not-allowed'}`}><Plus className="w-3 h-3 inline mr-0.5"/>Demander</button>
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <div className="p-1.5 bg-indigo-50 rounded-lg">
+                    <FileText className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  Documents
+                  <span className="text-slate-400 font-normal text-xs">({docRequests.length})</span>
+                </h2>
+                <button onClick={() => setShowDocForm(!showDocForm)} disabled={!beneficiary}
+                  className={`text-xs font-medium px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
+                    beneficiary
+                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  }`}>
+                  <Plus className="w-3 h-3" />Demander
+                </button>
               </div>
               <div className="p-5">
-                {showDocForm&&<div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200"><div className="grid grid-cols-2 gap-3 mb-3"><div><label className="block text-[10px] font-semibold text-gray-500 mb-1">Type</label><select value={docType} onChange={e=>setDocType(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs">{DOC_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select></div><div><label className="block text-[10px] font-semibold text-gray-500 mb-1">Message</label><input type="text" value={docMessage} onChange={e=>setDocMessage(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs"/></div></div><div className="flex justify-end gap-2"><button onClick={()=>setShowDocForm(false)} className="px-2.5 py-1 text-[11px] text-gray-500">Annuler</button><button onClick={async()=>{await createDocRequest({projectId:id,beneficiaryUid:beneficiary?.uid||'',docType,label:DOC_TYPES.find(d=>d.value===docType)?.label||docType,message:docMessage});setShowDocForm(false);setDocType('autre');setDocMessage('')}} className="px-2.5 py-1 bg-indigo-600 text-white text-[11px] rounded-lg"><Send className="w-3 h-3 inline mr-0.5"/>Envoyer</button></div></div>}
-                {docRequests.length===0?<p className="text-xs text-gray-400 text-center py-3">Aucun document</p>:<div className="space-y-2">{docRequests.map(req=>{const sm=DOC_REQUEST_STATUSES.find(s=>s.value===req.status)||DOC_REQUEST_STATUSES[0];return<div key={req.id} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg"><div><div className="flex items-center gap-1.5"><span className="text-xs font-medium text-gray-700">{req.label}</span><span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${sm.color}`}>{sm.label}</span></div>{req.message&&<p className="text-[10px] text-gray-400 mt-0.5">{req.message}</p>}</div>{req.status==='en_attente'&&<button onClick={()=>updateRequestStatus(req.id,'fourni')} className="p-1 rounded hover:bg-emerald-50"><Check className="w-3.5 h-3.5 text-emerald-500"/></button>}</div>})}</div>}
+                {showDocForm && (
+                  <div className="bg-slate-50 rounded-xl p-4 mb-4 border border-slate-200">
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Type</label>
+                        <select value={docType} onChange={(e) => setDocType(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-200 outline-none">
+                          {DOC_TYPES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Message</label>
+                        <input type="text" value={docMessage} onChange={(e) => setDocMessage(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-200 outline-none" />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setShowDocForm(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700">Annuler</button>
+                      <button onClick={handleCreateDocRequest}
+                        className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 flex items-center gap-1 transition">
+                        <Send className="w-3 h-3" />Envoyer
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {docRequests.length === 0 ? (
+                  <div className="text-center py-6">
+                    <FileText className="w-6 h-6 text-slate-200 mx-auto mb-2" />
+                    <p className="text-xs text-slate-400">Aucun document demande</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {docRequests.map((req) => {
+                      const sm = DOC_REQUEST_STATUSES.find((s) => s.value === req.status) || DOC_REQUEST_STATUSES[0]
+                      return (
+                        <div key={req.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-medium text-slate-700">{req.label}</span>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${sm.color}`}>{sm.label}</span>
+                            </div>
+                            {req.message && <p className="text-[10px] text-slate-400 mt-0.5">{req.message}</p>}
+                          </div>
+                          {req.status === 'en_attente' && (
+                            <button onClick={() => updateRequestStatus(req.id, 'fourni')} className="p-1.5 rounded-lg hover:bg-emerald-50 transition">
+                              <Check className="w-4 h-4 text-emerald-500" />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </section>
           </div>
 
-          {/* SIDEBAR DROITE */}
+          {/* ─── SIDEBAR DROITE (1/3) ─── */}
           <div className="space-y-5">
-            <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 mb-4"><Zap className="w-3.5 h-3.5 text-amber-500"/>Suivi & Actions</h2>
-              {beneficiary?<div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-[12px] text-emerald-700 flex items-center gap-1.5 mb-4"><CheckCircle className="w-3.5 h-3.5"/>{beneficiary.name||beneficiary.email}</div>
-              :projectSharedScenarios.length>0?<div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-[11px] text-blue-600 mb-4">En attente d'inscription</div>
-              :<div className="p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-[11px] text-gray-400 mb-4">Partagez un scénario</div>}
-              <div className="space-y-0.5">{PROJECT_STATUSES.map(s=>{const act=project.status===s.value;const idx=PROJECT_STATUSES.findIndex(x=>x.value===project.status);const si=PROJECT_STATUSES.findIndex(x=>x.value===s.value);const past=si<idx;return<button key={s.value} onClick={()=>updateProjectStatus(id,s.value)} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-left transition ${act?'bg-indigo-50 text-indigo-700 font-semibold':past?'text-emerald-600':'text-gray-400 hover:bg-gray-50'}`}>{past?<CheckCircle className="w-3 h-3 text-emerald-400 shrink-0"/>:act?<div className={`w-2.5 h-2.5 rounded-full ${s.dot} shrink-0 ring-2 ring-offset-1 ring-indigo-200`}/>:<div className="w-2.5 h-2.5 rounded-full bg-gray-200 shrink-0"/>}{s.label}</button>})}</div>
+
+            {/* Suivi & Pipeline */}
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <div className="px-5 py-3.5 border-b border-slate-100">
+                <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-500" />Suivi du projet
+                </h2>
+              </div>
+              <div className="p-4">
+                {/* Beneficiaire */}
+                {beneficiary ? (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 flex items-center gap-1.5 mb-4">
+                    <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span className="font-medium">{beneficiary.name || beneficiary.email}</span>
+                  </div>
+                ) : projectSharedScenarios.length > 0 ? (
+                  <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-600 flex items-center gap-1.5 mb-4">
+                    <Clock className="w-3.5 h-3.5 shrink-0" />En attente d'inscription
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-400 flex items-center gap-1.5 mb-4">
+                    <Send className="w-3.5 h-3.5 shrink-0" />Partagez un scenario pour lier le client
+                  </div>
+                )}
+
+                <StatusStepper currentStatus={project.status} onStatusChange={(v) => updateProjectStatus(id, v)} />
+              </div>
             </section>
 
-            <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 mb-3"><MessageSquare className="w-3.5 h-3.5"/>Notes ({(project.notes||[]).length})</h2>
-              <div className="flex gap-1.5 mb-3"><input type="text" value={noteText} onChange={e=>setNoteText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleAddNote()} placeholder="Note..." className="flex-1 px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs"/><button onClick={handleAddNote} disabled={!noteText.trim()} className="px-2 py-1.5 bg-indigo-600 text-white rounded-lg disabled:opacity-30"><Send className="w-3 h-3"/></button></div>
-              <div className="space-y-1.5 max-h-52 overflow-y-auto">{(project.notes||[]).length===0&&<p className="text-[11px] text-gray-400 text-center py-2">Aucune</p>}{(project.notes||[]).map(n=><div key={n.id} className="p-2 bg-gray-50 rounded-lg group"><div className="flex justify-between"><p className="text-[12px] text-gray-700">{n.text}</p><button onClick={()=>deleteNote(id,n.id)} className="text-gray-200 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0 ml-2"><Trash2 className="w-3 h-3"/></button></div><p className="text-[9px] text-gray-400 mt-0.5">{new Date(n.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</p></div>)}</div>
+            {/* Rappels */}
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <div className="px-5 py-3.5 border-b border-slate-100">
+                <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Bell className="w-3.5 h-3.5 text-indigo-500" />
+                  Rappels
+                  {overdueReminders.length > 0 && (
+                    <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{overdueReminders.length}</span>
+                  )}
+                </h2>
+              </div>
+              <div className="p-4">
+                <form onSubmit={handleAddReminder} className="space-y-2 mb-3">
+                  <input type="text" value={reminderText} onChange={(e) => setReminderText(e.target.value)}
+                    placeholder="Nouveau rappel..." className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-200 outline-none" />
+                  <div className="flex gap-1.5">
+                    <input type="datetime-local" value={reminderDate} onChange={(e) => setReminderDate(e.target.value)}
+                      className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-[11px] focus:ring-2 focus:ring-indigo-200 outline-none" />
+                    <button type="submit" disabled={!reminderText.trim() || !reminderDate}
+                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium disabled:opacity-30 hover:bg-indigo-700 transition">
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                  {(project.reminders || []).length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-3">Aucun rappel</p>
+                  )}
+                  {(project.reminders || []).map((r) => {
+                    const overdue = !r.done && r.dueAt && new Date(r.dueAt) < new Date()
+                    return (
+                      <div key={r.id} className={`flex items-start gap-2 p-2.5 rounded-lg text-xs group transition ${
+                        overdue ? 'bg-red-50 border border-red-200' : r.done ? 'bg-slate-50 opacity-60' : 'bg-slate-50'
+                      }`}>
+                        <button onClick={() => toggleReminder(id, r.id)}
+                          className={`mt-0.5 shrink-0 transition ${r.done ? 'text-emerald-500' : 'text-slate-300 hover:text-indigo-500'}`}>
+                          {r.done ? <CheckCircle className="w-4 h-4" /> : <div className="w-4 h-4 rounded-full border-2 border-current" />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-slate-700 ${r.done ? 'line-through' : ''}`}>{r.text}</p>
+                          <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${overdue ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
+                            <Calendar className="w-2.5 h-2.5" />
+                            {new Date(r.dueAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <button onClick={() => deleteReminder(id, r.id)}
+                          className="text-slate-200 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0 transition">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </section>
 
-            <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 mb-3"><Bell className="w-3.5 h-3.5 text-indigo-500"/>Rappels</h2>
-              <form onSubmit={handleAddReminder} className="space-y-1.5 mb-3"><input type="text" value={reminderText} onChange={e=>setReminderText(e.target.value)} placeholder="Rappel..." className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs"/><div className="flex gap-1.5"><input type="datetime-local" value={reminderDate} onChange={e=>setReminderDate(e.target.value)} className="flex-1 px-2 py-1 border border-gray-200 rounded-lg text-[10px]"/><button type="submit" disabled={!reminderText.trim()||!reminderDate} className="px-2 py-1 bg-indigo-600 text-white rounded-lg disabled:opacity-30"><Plus className="w-3 h-3"/></button></div></form>
-              <div className="space-y-1.5 max-h-44 overflow-y-auto">{(project.reminders||[]).length===0&&<p className="text-[11px] text-gray-400 text-center py-2">Aucun</p>}{(project.reminders||[]).map(r=>{const od=!r.done&&r.dueAt&&new Date(r.dueAt)<new Date();return<div key={r.id} className={`flex items-start gap-1.5 p-2 rounded-lg text-[11px] group ${od?'bg-red-50':'bg-gray-50'}`}><button onClick={()=>toggleReminder(id,r.id)} className={`mt-0.5 shrink-0 ${r.done?'text-emerald-500':'text-gray-300 hover:text-indigo-500'}`}>{r.done?<CheckCircle className="w-3.5 h-3.5"/>:<Check className="w-3.5 h-3.5"/>}</button><div className="flex-1 min-w-0"><p className={`text-gray-700 ${r.done?'line-through opacity-40':''}`}>{r.text}</p><p className={`text-[9px] mt-0.5 ${od?'text-red-500 font-bold':'text-gray-400'}`}>{new Date(r.dueAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</p></div><button onClick={()=>deleteReminder(id,r.id)} className="text-gray-200 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0"><Trash2 className="w-3 h-3"/></button></div>})}</div>
+            {/* Notes */}
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <div className="px-5 py-3.5 border-b border-slate-100">
+                <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Notes
+                  <span className="text-slate-400 font-normal">({(project.notes || []).length})</span>
+                </h2>
+              </div>
+              <div className="p-4">
+                <div className="flex gap-1.5 mb-3">
+                  <input type="text" value={noteText} onChange={(e) => setNoteText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+                    placeholder="Ajouter une note..."
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-200 outline-none" />
+                  <button onClick={handleAddNote} disabled={!noteText.trim()}
+                    className="px-3 py-2 bg-indigo-600 text-white rounded-lg disabled:opacity-30 hover:bg-indigo-700 transition">
+                    <Send className="w-3 h-3" />
+                  </button>
+                </div>
+
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {(project.notes || []).length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-3">Aucune note</p>
+                  )}
+                  {(project.notes || []).map((n) => (
+                    <div key={n.id} className="p-2.5 bg-slate-50 rounded-lg group">
+                      <div className="flex justify-between">
+                        <p className="text-xs text-slate-700 leading-relaxed">{n.text}</p>
+                        <button onClick={() => deleteNote(id, n.id)}
+                          className="text-slate-200 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0 ml-2 transition">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5" />
+                        {new Date(n.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </section>
           </div>
         </div>

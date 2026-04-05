@@ -17,7 +17,7 @@ import { formatCurrency, formatKWhc } from '../../utils/formatters'
 import { useSimulatorContext } from '../../hooks/useSimulatorContext'
 
 export default function BarTh175Page() {
-  const { getDefault } = useSimulatorContext()
+  const { getDefault } = useSimulatorContext('BAR-TH-175')
 
   const [beneficiaryType, setBeneficiaryType] = useState(() => getDefault('beneficiaryType', 'pp_occupant'))
   const [occupation, setOccupation] = useState(() => getDefault('occupation', 'principale'))

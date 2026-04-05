@@ -15,7 +15,9 @@ export default function CommercialStrategy({
   mprGrantTheorique,
   maxEligibleCost = 12000,
   showMpr = true,
+  minCeePercent = 0,
 }) {
+  const effectiveMin = Math.max(0, Math.min(100, minCeePercent))
   return (
     <section>
       <h2 className="text-xl font-bold text-gray-800 border-b pb-2 flex items-center gap-2 mb-4">
@@ -36,16 +38,14 @@ export default function CommercialStrategy({
             helper={`Plafond éligible : ${formatCurrency(maxEligibleCost)}`}
           />
 
-          {showMpr && (
-            <SelectField
-              label="Profil de Revenus MaPrimeRénov'"
-              id="mprCategory"
-              value={mprCategory}
-              onChange={onMprCategoryChange}
-              options={MPR_INCOME_OPTIONS}
-              helper={`MPR Forfaitaire Théorique : ${formatCurrency(mprGrantTheorique)}`}
-            />
-          )}
+          <SelectField
+            label={showMpr ? "Profil de Revenus MaPrimeRénov'" : "Catégorie de revenus CEE"}
+            id="mprCategory"
+            value={mprCategory}
+            onChange={onMprCategoryChange}
+            options={MPR_INCOME_OPTIONS}
+            helper={showMpr ? `MPR Forfaitaire Théorique : ${formatCurrency(mprGrantTheorique)}` : undefined}
+          />
         </div>
 
         <div className="pt-4 border-t border-green-200">
@@ -57,13 +57,13 @@ export default function CommercialStrategy({
               </span>
             }
             id="ceePercent"
-            value={ceePercent}
-            onChange={onCeePercentChange}
-            min={0}
+            value={Math.max(ceePercent, effectiveMin)}
+            onChange={(v) => onCeePercentChange(Math.max(v, effectiveMin))}
+            min={effectiveMin}
             max={100}
             step={1}
             unit="%"
-            leftLabel="0% (Max Marge)"
+            leftLabel={effectiveMin > 0 ? `${effectiveMin}% (Min contrat)` : '0% (Max Marge)'}
             rightLabel="100% (Max Aide Client)"
           />
         </div>

@@ -6,7 +6,7 @@ export default function SimulatorLayout({ code, title, description, children }) 
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 animate-fade-in">
       {/* Back link */}
       <Link
-        to="/"
+        to="/simulations"
         className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-indigo-600 transition mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
