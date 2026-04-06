@@ -55,7 +55,7 @@ export const TARGET_CLASSES = [
   { value: 'D', label: 'D (151-230 kWh/m².an)' },
 ]
 
-// ─── Catégories de travaux (min 2 requises) ───
+// ─── Catégories de travaux (legacy, kept for compatibility) ───
 export const WORK_CATEGORIES_MAISON = [
   { value: 'murs_iti', label: 'Isolation des murs (ITI) — R ≥ 3.7' },
   { value: 'murs_ite', label: 'Isolation des murs (ITE) — R ≥ 4.4' },
@@ -80,6 +80,119 @@ export const WORK_CATEGORIES_APPART = [
   { value: 'pac_air_air', label: 'PAC air/air' },
   { value: 'vmc_hygro', label: 'VMC hygroréglable' },
   { value: 'autres', label: 'Autres travaux' },
+]
+
+// ─── Postes de travaux structurés par catégorie ───
+export const WORK_GROUPS_MAISON = [
+  {
+    group: 'isolation',
+    label: 'Isolation',
+    icon: '🧱',
+    minRequired: 2,
+    items: [
+      { value: 'combles_perdus', label: 'Combles perdus', r: 'R ≥ 7', geste: 'combles' },
+      { value: 'rampants', label: 'Rampants de toiture', r: 'R ≥ 6', geste: 'combles' },
+      { value: 'toiture_terrasse', label: 'Toiture terrasse', r: 'R ≥ 6.5', geste: 'combles' },
+      { value: 'murs_ite', label: 'Murs (ITE)', r: 'R ≥ 4.4', geste: 'murs' },
+      { value: 'murs_iti', label: 'Murs (ITI)', r: 'R ≥ 3.7', geste: 'murs' },
+      { value: 'menuiseries', label: 'Fenêtres / Menuiseries', geste: 'fenetres' },
+      { value: 'plancher', label: 'Plancher bas', r: 'R ≥ 3', geste: 'plancher' },
+    ],
+  },
+  {
+    group: 'chauffage',
+    label: 'Chauffage',
+    icon: '🔥',
+    note: 'Obligatoire si chauffage fioul existant',
+    items: [
+      { value: 'pac_air_air', label: 'PAC air/air' },
+      { value: 'pac_air_eau', label: 'PAC air/eau' },
+      { value: 'chaudiere_granules', label: 'Chaudière à granulés' },
+    ],
+  },
+  {
+    group: 'ventilation',
+    label: 'Ventilation',
+    icon: '💨',
+    items: [
+      { value: 'vmc_simple', label: 'VMC simple flux' },
+      { value: 'vmc_double', label: 'VMC double flux' },
+    ],
+  },
+  {
+    group: 'ecs',
+    label: 'Eau chaude sanitaire',
+    icon: '🚿',
+    items: [
+      { value: 'ecs_electrique', label: 'Ballon ECS électrique' },
+      { value: 'ecs_thermo', label: 'Ballon ECS thermodynamique' },
+    ],
+  },
+  {
+    group: 'autres',
+    label: 'Autres travaux',
+    icon: '🔧',
+    freeInput: true,
+    items: [],
+  },
+]
+
+export const WORK_GROUPS_APPART = [
+  {
+    group: 'isolation',
+    label: 'Isolation',
+    icon: '🧱',
+    minRequired: 2,
+    items: [
+      { value: 'combles_perdus', label: 'Combles perdus', r: 'R ≥ 7', geste: 'combles' },
+      { value: 'murs_ite', label: 'Murs (ITE)', r: 'R ≥ 4.4', geste: 'murs' },
+      { value: 'murs_iti', label: 'Murs (ITI)', r: 'R ≥ 3.7', geste: 'murs' },
+      { value: 'menuiseries', label: 'Fenêtres / Menuiseries', geste: 'fenetres' },
+      { value: 'plancher', label: 'Plancher bas', r: 'R ≥ 3', geste: 'plancher' },
+    ],
+  },
+  {
+    group: 'chauffage',
+    label: 'Chauffage',
+    icon: '🔥',
+    note: 'Obligatoire si chauffage fioul existant',
+    items: [
+      { value: 'pac_air_air', label: 'PAC air/air' },
+      { value: 'pac_air_eau', label: 'PAC air/eau' },
+      { value: 'chaudiere_granules', label: 'Chaudière à granulés' },
+    ],
+  },
+  {
+    group: 'ventilation',
+    label: 'Ventilation',
+    icon: '💨',
+    items: [
+      { value: 'vmc_simple', label: 'VMC simple flux' },
+      { value: 'vmc_double', label: 'VMC double flux' },
+    ],
+  },
+  {
+    group: 'ecs',
+    label: 'Eau chaude sanitaire',
+    icon: '🚿',
+    items: [
+      { value: 'ecs_electrique', label: 'Ballon ECS électrique' },
+      { value: 'ecs_thermo', label: 'Ballon ECS thermodynamique' },
+    ],
+  },
+  {
+    group: 'autres',
+    label: 'Autres travaux',
+    icon: '🔧',
+    freeInput: true,
+    items: [],
+  },
+]
+
+export const TVA_RATES = [
+  { value: 5.5, label: '5,5% (rénovation énergétique)' },
+  { value: 10, label: '10% (travaux d\'amélioration)' },
+  { value: 20, label: '20% (taux normal)' },
 ]
 
 export const MIN_CLASS_JUMP = 2

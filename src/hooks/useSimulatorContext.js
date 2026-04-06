@@ -66,6 +66,7 @@ export function useSimulatorContext(ficheCode) {
     surface: project.surface ? Number(project.surface) : null,
     housingType: project.typeLogement === 'appartement' ? 'Appartement' : project.typeLogement === 'maison' ? 'Maison' : null,
     personnes: project.personnes ? Number(project.personnes) : null,
+    chauffageActuel: project.chauffageActuel || null,
     beneficiaryType: 'pp_occupant',
     occupation: 'principale',
     priceMWh: dealPrice,
