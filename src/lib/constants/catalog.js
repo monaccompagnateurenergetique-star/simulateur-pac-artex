@@ -6,6 +6,7 @@ export const CATALOG = [
       { code: 'BAR-TH-171', title: 'Pompe à chaleur air/eau', description: 'CEE + MPR — Coup de Pouce Chauffage', route: '/simulateur/bar-th-171', active: true },
       { code: 'BAR-TH-112', title: 'Appareil de chauffage au bois', description: 'Poêle, insert, foyer fermé, cuisinière', route: '/simulateur/bar-th-112', active: true },
       { code: 'BAR-TH-113', title: 'Chaudière biomasse individuelle', description: 'Chaudière bois / granulés', route: '/simulateur/bar-th-113', active: true },
+      { code: 'BAR-TH-179', title: 'PAC collective air/eau ou eau/eau', description: 'CEE + Coup de Pouce Chauffage collectif', route: '/simulateur/bar-th-179', active: true },
       { code: 'BAR-TH-172', title: 'PAC géothermique', route: null, active: false },
       { code: 'BAR-TH-106', title: 'Chauffe-eau thermodynamique', route: null, active: false },
       { code: 'BAR-TH-143', title: 'Système solaire combiné', route: null, active: false },

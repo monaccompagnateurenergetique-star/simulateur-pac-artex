@@ -1,10 +1,32 @@
 [
   {
-    "id": "9",
-    "title": "URGENT — Guichets MaPrimeRénov' suspendus : incident technique ANAH",
-    "date": "2026-03-28",
+    "id": "11",
+    "title": "ALERTE INFO — DÉBLOCAGE MaPrimeRénov' : le portail rouvre les dépôts de dossiers !",
+    "date": "2026-04-08",
     "category": "alerte",
     "important": true,
+    "summary": "Le portail MaPrimeRénov' rouvre enfin les dépôts de dossiers ! Le bug de liaison entre l'ANAH et la DGFIP est résolu. C'est le moment de relancer vos demandes en attente.",
+    "content": "Excellente nouvelle pour nos chantiers : le portail MaPrimeRénov' rouvre enfin les dépôts de dossiers !\n\nPour rappel, les soumissions étaient bloquées dernièrement suite à un problème technique sur les échanges de données fiscales entre l'ANAH et les impôts (DGFIP).\n\nLe bug de liaison est désormais résolu. Vous n'aurez plus de message d'erreur lors de la vérification des revenus.\n\nCE QU'IL FAUT FAIRE :\n• Relancez vos demandes en attente dès maintenant\n• Avancez sur les projets de vos clients\n• Priorisez les dossiers les plus anciens pour éviter tout dépassement de délai\n\nÀ vos dossiers et bonnes ventes à tous !",
+    "link": "https://www.maprimerenov.gouv.fr",
+    "linkLabel": "Accéder à MaPrimeRénov'"
+  },
+  {
+    "id": "10",
+    "title": "MaPrimeRénov' : réouverture du guichet — Dépôt de dossiers de nouveau possible",
+    "date": "2026-04-08",
+    "category": "aides",
+    "important": true,
+    "summary": "Les travaux de renforcement de la sécurité des échanges avec l'administration fiscale sont achevés. La création et le dépôt de nouveaux dossiers MaPrimeRénov' sont de nouveau possibles.",
+    "content": "Bonne nouvelle pour les professionnels et les ménages : les guichets MaPrimeRénov' sont de nouveau opérationnels.\n\nLes travaux de renforcement de la sécurité des échanges avec l'administration fiscale sont achevés. La création et le dépôt de nouveaux dossiers sont de nouveau possibles.\n\nMerci pour votre patience.\n\nCE QUI CHANGE :\n• La création de nouveaux comptes ANAH est de nouveau possible\n• Le dépôt de dossiers MaPrimeRénov' (par geste et rénovation d'ampleur) reprend normalement\n• Les échanges avec l'administration fiscale sont désormais renforcés\n\nCONSEIL : Si vous aviez des dossiers en attente pendant la suspension, déposez-les dès maintenant. Priorisez les dossiers les plus anciens pour éviter tout dépassement de délai.",
+    "link": "https://www.maprimerenov.gouv.fr",
+    "linkLabel": "Accéder à MaPrimeRénov'"
+  },
+  {
+    "id": "9",
+    "title": "RÉSOLU — Guichets MaPrimeRénov' suspendus : incident technique ANAH",
+    "date": "2026-03-28",
+    "category": "alerte",
+    "important": false,
     "summary": "Les guichets MaPrimeRénov' (par geste et rénovation d'ampleur) sont temporairement suspendus en raison d'un incident technique lié à la protection des données fiscales.",
     "content": "Depuis plusieurs jours, les guichets MaPrimeRénov' (par geste et rénovation d'ampleur) sont temporairement suspendus en raison d'un incident technique.\n\nLa cause : un défaut de protection des données dans le cadre de l'application d'échange de l'ANAH avec l'administration fiscale. Lors de la création des comptes ANAH, une vérification des données fiscales (sur la base de l'identifiant fiscal renseigné par le bénéficiaire) est requise afin de sécuriser l'identité des bénéficiaires. C'est cette vérification qui est actuellement défaillante.\n\n« Nous sommes conscients de la gêne occasionnée pour les ménages et les professionnels concernés. Nos équipes sont pleinement mobilisées, en lien avec les services de l'administration fiscale, pour permettre un retour à la normale dans les meilleurs délais » précise l'ANAH à MoneyVox.\n\nIMPACT POUR LES PROFESSIONNELS :\n• Les nouvelles créations de compte ANAH sont impossibles pour le moment\n• Les nouveaux dossiers MaPrimeRénov' ne peuvent pas être déposés\n• Les dossiers déjà créés peuvent continuer leurs démarches normalement\n• Les dossiers CEE ne sont PAS impactés\n\nCONSEIL : Anticipez en préparant vos dossiers (devis, attestations) pour être prêts dès la réouverture. Orientez vos prospects vers les aides CEE en attendant."
   },

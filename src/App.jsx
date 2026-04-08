@@ -12,6 +12,7 @@ import BarTh112Page from './pages/simulators/BarTh112Page'
 import BarTh113Page from './pages/simulators/BarTh113Page'
 import BarTh174Page from './pages/simulators/BarTh174Page'
 import BarTh175Page from './pages/simulators/BarTh175Page'
+import BarTh179Page from './pages/simulators/BarTh179Page'
 import SettingsPage from './pages/SettingsPage'
 import ToolboxPage from './pages/ToolboxPage'
 import ClientsPage from './pages/ClientsPage'
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="/simulateur/bar-th-113" element={<BarTh113Page />} />
           <Route path="/simulateur/bar-th-174" element={<BarTh174Page />} />
           <Route path="/simulateur/bar-th-175" element={<BarTh175Page />} />
+          <Route path="/simulateur/bar-th-179" element={<BarTh179Page />} />
           <Route path="/maprimeadapt" element={<MaPrimeAdaptPage />} />
           <Route path="/simulations" element={<SimulationsPage />} />
           <Route path="/simulations/ptz" element={<PtzPage />} />

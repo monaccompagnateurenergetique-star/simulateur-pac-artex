@@ -12,14 +12,25 @@ const SELECTED_FIELDS = [
   'periode_construction',
   'annee_construction',
   'surface_habitable_logement',
+  'surface_habitable_immeuble',
   'type_batiment',
+  'nombre_appartement',
+  'nombre_niveau_immeuble',
+  'type_installation_chauffage',
   'type_energie_principale_chauffage',
+  'type_generateur_chauffage_principal',
+  'type_installation_ecs',
+  'type_energie_principale_ecs',
+  'type_ventilation',
   'date_etablissement_dpe',
   'date_fin_validite_dpe',
   'conso_5_usages_par_m2_ep',
   'emission_ges_5_usages',
+  'cout_total_5_usages',
+  'cout_chauffage',
   'qualite_isolation_enveloppe',
   'qualite_isolation_murs',
+  'qualite_isolation_plancher_bas',
   'qualite_isolation_menuiseries',
   'adresse_ban',
   'code_postal_ban',
@@ -122,19 +133,29 @@ function formatDPE(raw) {
     periodeConstruction: raw.periode_construction,
     anneeConstruction: raw.annee_construction,
     surface,
+    surfaceImmeuble: raw.surface_habitable_immeuble ? Number(raw.surface_habitable_immeuble) : null,
     typeBatiment: raw.type_batiment,
+    nombreAppartements: raw.nombre_appartement ? Number(raw.nombre_appartement) : null,
+    nombreNiveaux: raw.nombre_niveau_immeuble ? Number(raw.nombre_niveau_immeuble) : null,
+    installationChauffage: raw.type_installation_chauffage,
     energieChauffage: raw.type_energie_principale_chauffage,
+    generateurChauffage: raw.type_generateur_chauffage_principal,
+    installationEcs: raw.type_installation_ecs,
+    energieEcs: raw.type_energie_principale_ecs,
+    typeVentilation: raw.type_ventilation,
     consoM2,
     emissionGes: raw.emission_ges_5_usages ? Math.round(Number(raw.emission_ges_5_usages)) : null,
+    coutTotal: raw.cout_total_5_usages ? Math.round(Number(raw.cout_total_5_usages)) : null,
+    coutChauffage: raw.cout_chauffage ? Math.round(Number(raw.cout_chauffage)) : null,
     isolationEnveloppe: raw.qualite_isolation_enveloppe,
     isolationMurs: raw.qualite_isolation_murs,
+    isolationPlancherBas: raw.qualite_isolation_plancher_bas,
     isolationMenuiseries: raw.qualite_isolation_menuiseries,
     dateEtablissement: raw.date_etablissement_dpe,
     dateFinValidite: raw.date_fin_validite_dpe,
     adresse: raw.adresse_ban,
     codePostal: raw.code_postal_ban,
     commune: raw.nom_commune_ban,
-    // Lien vers l'observatoire ADEME (consultable dans le navigateur)
     observatoireUrl: raw.numero_dpe
       ? `https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${raw.numero_dpe}`
       : null,
@@ -145,13 +166,20 @@ function formatDPE(raw) {
  * Prospection : recherche tous les DPE d'une ville ou code postal
  * Avec pagination et filtres (étiquette, type de bâtiment)
  */
-export async function prospectDPE({ postalCode, city, etiquette, typeBatiment, sort = '-date_etablissement_dpe', page = 1, size = 50 }) {
+export async function prospectDPE({
+  postalCode, city, etiquette, typeBatiment,
+  installationChauffage, energieChauffage, installationEcs,
+  sort = '-date_etablissement_dpe', page = 1, size = 50,
+}) {
   const filters = []
 
   if (postalCode) filters.push(`code_postal_ban:"${postalCode}"`)
   if (city) filters.push(`nom_commune_ban:"${city}"`)
   if (etiquette) filters.push(`etiquette_dpe:"${etiquette}"`)
   if (typeBatiment) filters.push(`type_batiment:"${typeBatiment}"`)
+  if (installationChauffage) filters.push(`type_installation_chauffage:"${installationChauffage}"`)
+  if (energieChauffage) filters.push(`type_energie_principale_chauffage:"${energieChauffage}"`)
+  if (installationEcs) filters.push(`type_installation_ecs:"${installationEcs}"`)
 
   if (filters.length === 0) throw new Error('Ville ou code postal requis')
 

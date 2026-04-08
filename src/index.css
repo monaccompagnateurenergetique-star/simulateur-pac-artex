@@ -1,24 +1,68 @@
 @import "tailwindcss";
 
 @theme {
+  /* Legacy (compat v1) */
   --color-artex-dark: #121212;
   --color-artex-lime: #84cc16;
   --color-artex-lime-dark: #65a30d;
   --color-artex-indigo: #4f46e5;
   --color-artex-indigo-dark: #3730a3;
   --color-artex-slate: #f0f4f8;
-  --font-family-sans: 'Inter', system-ui, sans-serif;
+
+  /* ─── Design System v2 ─── */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+
+  /* Brand / Accent */
+  --color-artex-green: #88DB1B;
+  --color-brand-600: #74bf16;
+  --color-brand-100: #e4f7c3;
+  --color-brand-50: #f4fce3;
+
+  /* Surfaces */
+  --color-artex-primary: #111318;
+  --color-artex-secondary: #1C1F24;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F8FAFB;
+  --color-surface-tertiary: #F1F3F5;
+
+  /* Textes */
+  --color-text: #111827;
+  --color-text-secondary: #4B5563;
+  --color-muted: #6B7280;
+
+  /* Bordures */
+  --color-border: #E5E7EB;
+  --color-border-light: #F3F4F6;
+
+  /* Statuts */
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
 }
 
 @layer base {
   body {
-    font-family: var(--font-family-sans);
-    background-color: var(--color-artex-slate);
-    color: #1e293b;
+    font-family: var(--font-sans);
+    background-color: var(--color-surface-secondary);
+    color: var(--color-text);
     margin: 0;
   }
 }
 
+/* ─── Shadows (outside @theme for Tailwind compat) ─── */
+@layer utilities {
+  .shadow-v2-xs { box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .shadow-v2-sm { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .shadow-v2-md { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+}
+
+/* ─── Animations ─── */
 @keyframes pulse-once {
   0% { transform: scale(1); }
   50% { transform: scale(1.02); }
@@ -26,23 +70,21 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-result {
-  animation: pulse-once 0.3s ease-in-out;
+@keyframes result-pop {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.4s ease-out;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.5s ease-out;
-}
+.animate-result { animation: pulse-once 0.3s ease-in-out; }
+.animate-fade-in { animation: fade-in 0.4s ease-out; }
+.animate-slide-up { animation: slide-up 0.5s ease-out; }
+.animate-result-pop { animation: result-pop 0.35s ease-out; }
