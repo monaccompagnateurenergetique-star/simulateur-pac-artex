@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   UserPlus, Users, TrendingUp, Briefcase, Bell, AlertTriangle,
-  Calendar, ChevronRight, ArrowRightCircle, Plus, Calculator,
+  Calendar, ChevronRight, ArrowRightCircle, Plus,
   Wallet, Euro, FileText, Clock, ShieldAlert, Award
 } from 'lucide-react'
 import { useLeads, LEAD_STATUSES } from '../hooks/useLeads'
@@ -257,13 +257,6 @@ export default function DashboardPage() {
           >
             <Plus className="w-3.5 h-3.5" />
             Nouveau projet
-          </Link>
-          <Link
-            to="/boite-a-outils"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white text-gray-700 text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition"
-          >
-            <Calculator className="w-3.5 h-3.5" />
-            Simuler
           </Link>
         </div>
       </div>
