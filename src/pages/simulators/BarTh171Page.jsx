@@ -737,7 +737,6 @@ export default function BarTh171Page() {
                   { label: 'Surface chauffée', value: `${surface} m²` },
                   { label: 'Zone climatique', value: zone },
                   { label: 'Efficacité (Etas)', value: etas === 'high' ? '≥ 140%' : '111% à 140%' },
-                  { label: 'Prix CEE', value: `${priceMWh} €/MWhc` },
                   { label: 'Profil revenus', value: mprCategory },
                 ],
                 results: [
