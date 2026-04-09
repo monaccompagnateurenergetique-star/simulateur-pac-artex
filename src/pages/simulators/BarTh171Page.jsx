@@ -81,19 +81,21 @@ function Select({ label, id, value, onChange, options, helper }) {
   )
 }
 
-function Toggle({ options, value, onChange, size = 'md' }) {
+function Toggle({ options, value, onChange, size = 'md', ariaLabel }) {
   const pad = size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'
   return (
-    <div className="inline-flex p-1 bg-[var(--color-surface-tertiary)] rounded-[var(--radius-sm)] gap-0.5">
+    <div className="inline-flex p-1 bg-[var(--color-surface-tertiary)] rounded-[var(--radius-sm)] gap-0.5" role="radiogroup" aria-label={ariaLabel}>
       {options.map(o => (
         <button
           key={String(o.value)}
           type="button"
+          role="radio"
+          aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={`${pad} rounded-[6px] font-semibold transition-all duration-200 ${
             value === o.value
-              ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-xs)]'
-              : 'text-[var(--color-muted)] hover:text-[var(--color-text-secondary)]'
+              ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-xs)] scale-[1.02]'
+              : 'text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] active:scale-95'
           }`}
         >
           {o.label}
@@ -437,7 +439,9 @@ export default function BarTh171Page() {
                     min={effectiveMin} max={100}
                     value={Math.max(ceePercent, effectiveMin)}
                     onChange={(e) => setCeePercent(Math.max(parseInt(e.target.value), effectiveMin))}
-                    className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                    disabled={offreUnEuro}
+                    aria-label="Pourcentage CEE appliqué au devis"
+                    className={`w-full h-2 rounded-full appearance-none ${offreUnEuro ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
                     style={{
                       background: (() => {
                         const pct = effectiveMin < 100 ? ((ceePercent - effectiveMin) / (100 - effectiveMin)) * 100 : 0
@@ -445,6 +449,11 @@ export default function BarTh171Page() {
                       })(),
                     }}
                   />
+                  {offreUnEuro && (
+                    <p className="text-[10px] text-[var(--color-brand-600)] font-medium mt-1.5 flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Optimisé automatiquement par l'offre à 1 €
+                    </p>
+                  )}
                   <div className="flex justify-between text-[10px] text-[var(--color-muted)] mt-1.5">
                     <span>{effectiveMin > 0 ? `${effectiveMin}% (Min contrat)` : '0% — Max marge'}</span>
                     {optimalCeePercent !== null && optimalCeePercent < 100 && (
@@ -454,64 +463,80 @@ export default function BarTh171Page() {
                   </div>
 
                   {/* Preview sous le slider */}
-                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--color-border-light)]">
-                    <div className="flex items-center gap-1.5 text-xs tabular-nums">
-                      <span className="text-[var(--color-muted)]">CEE client</span>
-                      <span className="font-bold text-[var(--color-brand-600)]">{formatCurrency(commercial.ceeCommerciale)}</span>
+                  <div className="mt-4 pt-3 border-t border-[var(--color-border-light)]">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs tabular-nums">
+                      <div className="flex flex-col">
+                        <span className="text-[var(--color-muted)] text-[10px]">CEE client</span>
+                        <span className="font-bold text-[var(--color-brand-600)]">{formatCurrency(commercial.ceeCommerciale)}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[var(--color-muted)] text-[10px]">MPR</span>
+                        <span className={`font-bold ${commercial.isCeilingExceeded ? 'text-[var(--color-warning)]' : 'text-sky-500'}`}>{formatCurrency(commercial.mprFinal)}</span>
+                      </div>
                       {showInstallateur && (
-                        <>
-                          <span className="text-[var(--color-muted)]">+</span>
-                          <span className="text-[var(--color-muted)]">Installateur</span>
+                        <div className="flex flex-col">
+                          <span className="text-[var(--color-muted)] text-[10px]">Marge installateur</span>
                           <span className="font-bold text-[var(--color-danger)]">{formatCurrency(commercial.ceeMargin)}</span>
-                        </>
+                        </div>
                       )}
-                      <span className="text-[var(--color-muted)]">=</span>
-                      <span className="font-bold text-[var(--color-text)]">{formatCurrency(showInstallateur ? ceeEurosBase : commercial.ceeCommerciale)}</span>
-                      <span className="text-[var(--color-muted)]">+</span>
-                      <span className="text-[var(--color-muted)]">MPR</span>
-                      <span className={`font-bold ${commercial.isCeilingExceeded ? 'text-[var(--color-warning)]' : 'text-[var(--color-success)]'}`}>{formatCurrency(commercial.mprFinal)}</span>
+                      <div className="flex flex-col">
+                        <span className="text-[var(--color-muted)] text-[10px]">Total aides</span>
+                        <span className="font-bold text-[var(--color-text)]">{formatCurrency(commercial.totalAid)}</span>
+                      </div>
                     </div>
                     <button
                       onClick={() => setShowInstallateur(!showInstallateur)}
-                      className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--color-surface-tertiary)] text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] transition"
+                      className="mt-2 inline-flex items-center gap-1 text-[10px] text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] transition"
                       title={showInstallateur ? 'Masquer part installateur' : 'Voir part installateur'}
                     >
-                      {showInstallateur ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {showInstallateur ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      {showInstallateur ? 'Masquer marge' : 'Voir marge installateur'}
                     </button>
                   </div>
                 </div>
 
-                {/* Toggle Offre à 1€ */}
-                {commercial.resteACharge > 1 && (
-                  <div className="mt-4 pt-3 border-t border-[var(--color-border-light)]">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Euro className="w-4 h-4 text-[var(--color-brand-600)]" />
-                        <div>
-                          <span className="text-[13px] font-semibold text-[var(--color-text)]">Offre à 1 €</span>
-                          <p className="text-[11px] text-[var(--color-muted)]">Optimise CEE/MPR + prise en charge du RAC</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={toggleOffreUnEuro}
-                        className={`relative w-11 h-6 rounded-full transition-colors ${offreUnEuro ? 'bg-[var(--color-brand-600)]' : 'bg-[var(--color-border)]'}`}
-                      >
-                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${offreUnEuro ? 'translate-x-5' : ''}`} />
-                      </button>
-                    </div>
-                    {offreUnEuro && (
-                      <div className="mt-2 p-2.5 bg-[var(--color-brand-50)] rounded-[var(--radius-sm)] border border-[var(--color-brand-200)]">
-                        <p className="text-[12px] text-[var(--color-brand-700)]">
-                          CEE optimisé à <strong>{ceePercent}%</strong> — MPR maximisée à <strong>{formatCurrency(commercial.mprFinal)}</strong>.
-                          L'installateur prend en charge <strong>{formatCurrency(priseEnChargeRAC)}</strong> de RAC.
-                          Client = <strong>1 €</strong> symbolique.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </Card>
+          )}
+
+          {/* ─── Offre à 1 € — Card dédiée ─── */}
+          {!isIneligible && commercial.resteACharge > 1 && (
+            <div className={`rounded-[var(--radius)] border-2 transition-all ${offreUnEuro ? 'border-[var(--color-brand-600)] bg-[var(--color-brand-50)]' : 'border-[var(--color-border)] bg-[var(--color-surface)]'} p-4`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${offreUnEuro ? 'bg-[var(--color-brand-600)] text-white' : 'bg-[var(--color-surface-tertiary)] text-[var(--color-muted)]'}`}>
+                    <Euro className="w-[18px] h-[18px]" />
+                  </div>
+                  <div>
+                    <span className="text-[14px] font-bold text-[var(--color-text)]">Offre à 1 €</span>
+                    <p className="text-[11px] text-[var(--color-muted)]">Optimise CEE/MPR + l'installateur prend en charge le reste</p>
+                  </div>
+                </div>
+                <button
+                  onClick={toggleOffreUnEuro}
+                  className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${offreUnEuro ? 'bg-[var(--color-brand-600)]' : 'bg-[var(--color-border)]'}`}
+                  aria-label="Activer l'offre à 1 euro"
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform ${offreUnEuro ? 'translate-x-5' : ''}`} />
+                </button>
+              </div>
+              {offreUnEuro && (
+                <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+                  <div className="p-2 rounded-[var(--radius-sm)] bg-white/80">
+                    <p className="text-[10px] text-[var(--color-muted)] uppercase">CEE optimisé</p>
+                    <p className="text-sm font-bold text-[var(--color-brand-600)]">{ceePercent}%</p>
+                  </div>
+                  <div className="p-2 rounded-[var(--radius-sm)] bg-white/80">
+                    <p className="text-[10px] text-[var(--color-muted)] uppercase">Prise en charge</p>
+                    <p className="text-sm font-bold text-amber-600">{formatCurrency(priseEnChargeRAC)}</p>
+                  </div>
+                  <div className="p-2 rounded-[var(--radius-sm)] bg-white/80">
+                    <p className="text-[10px] text-[var(--color-muted)] uppercase">Client paie</p>
+                    <p className="text-sm font-black text-[var(--color-brand-600)]">1 €</p>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* ─── Alerte plafond + Optimisation ─── */}
@@ -539,7 +564,7 @@ export default function BarTh171Page() {
                 return (
                   <div className="border-t border-amber-200">
                     {/* Comparaison visuelle */}
-                    <div className="grid grid-cols-2 divide-x divide-amber-200">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 sm:divide-x divide-y sm:divide-y-0 divide-amber-200">
                       {/* Colonne Actuel */}
                       <div className="p-4 bg-amber-50/50">
                         <p className="text-[10px] uppercase tracking-wider font-bold text-amber-500 mb-3">Actuel — {ceePercent}% CEE</p>
@@ -613,18 +638,26 @@ export default function BarTh171Page() {
             </div>
           )}
 
+          {/* Bandeau confirmation optimisation */}
+          {!isIneligible && !commercial.isCeilingExceeded && optimalCeePercent !== null && optimalCeePercent === ceePercent && (
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-green-50 border border-green-200 rounded-[var(--radius)]">
+              <Check className="w-4 h-4 text-green-600 shrink-0" />
+              <span className="text-xs font-semibold text-green-700">Répartition optimisée — CEE et MPR maximisés</span>
+            </div>
+          )}
+
           {/* ─── Synthèse financière ─── */}
           {!isIneligible && (
             <>
               <div className="bg-[var(--color-artex-primary)] rounded-[var(--radius)] p-6 shadow-[var(--shadow-md)] animate-result-pop">
                 <div className="grid grid-cols-2 gap-6 text-center">
                   <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">CEE</p>
+                    <p className="text-xs font-medium text-[var(--color-artex-green)]/60 uppercase tracking-wider mb-1">CEE</p>
                     <p className="text-2xl font-extrabold text-[var(--color-artex-green)]">{formatCurrency(commercial.ceeCommerciale)}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">MPR</p>
-                    <p className="text-2xl font-extrabold text-[var(--color-success)]">{formatCurrency(commercial.mprFinal)}</p>
+                    <p className="text-xs font-medium text-sky-400/60 uppercase tracking-wider mb-1">MPR</p>
+                    <p className="text-2xl font-extrabold text-sky-400">{formatCurrency(commercial.mprFinal)}</p>
                   </div>
                 </div>
 
