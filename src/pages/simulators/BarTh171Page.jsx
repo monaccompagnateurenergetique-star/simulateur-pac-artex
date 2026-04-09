@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft, Users, Home, Zap, Euro, TrendingUp, ChevronDown, Eye, EyeOff,
@@ -151,6 +151,7 @@ export default function BarTh171Page() {
   const [showInstallateur, setShowInstallateur] = useState(false)
   const [showEdfModal, setShowEdfModal] = useState(false)
   const [offreUnEuro, setOffreUnEuro] = useState(false)
+  const savedCeePercent = useRef(null)
 
   // Calcul précarité
   const mprCategory = precariteMode === 'direct'
@@ -185,10 +186,28 @@ export default function BarTh171Page() {
     maxEligibleCost: 12000,
   }), [ceeEurosBase, ceePercent, mprCategory, mprGrantTheorique, projectCost, minCeePercent])
 
-  // Offre à 1€ : l'installateur prend en charge le RAC
+  // Offre à 1€ : optimise CEE/MPR puis l'installateur prend en charge le RAC restant
   const priseEnChargeRAC = offreUnEuro ? Math.max(commercial.resteACharge - 1, 0) : 0
   const racFinal = offreUnEuro ? Math.min(commercial.resteACharge, 1) : commercial.resteACharge
   const totalAidFinal = offreUnEuro ? commercial.totalAid + priseEnChargeRAC : commercial.totalAid
+
+  function toggleOffreUnEuro() {
+    if (!offreUnEuro) {
+      // ON → sauvegarder le % actuel, puis optimiser CEE/MPR
+      savedCeePercent.current = ceePercent
+      if (optimalCeePercent !== null && optimalCeePercent < 100) {
+        setCeePercent(optimalCeePercent)
+      }
+      setOffreUnEuro(true)
+    } else {
+      // OFF → restaurer le % précédent
+      if (savedCeePercent.current !== null) {
+        setCeePercent(savedCeePercent.current)
+        savedCeePercent.current = null
+      }
+      setOffreUnEuro(false)
+    }
+  }
 
   const isIneligible = !isPrimaryResidence
 
@@ -470,11 +489,11 @@ export default function BarTh171Page() {
                         <Euro className="w-4 h-4 text-[var(--color-brand-600)]" />
                         <div>
                           <span className="text-[13px] font-semibold text-[var(--color-text)]">Offre à 1 €</span>
-                          <p className="text-[11px] text-[var(--color-muted)]">Prise en charge du RAC par l'installateur</p>
+                          <p className="text-[11px] text-[var(--color-muted)]">Optimise CEE/MPR + prise en charge du RAC</p>
                         </div>
                       </div>
                       <button
-                        onClick={() => setOffreUnEuro(!offreUnEuro)}
+                        onClick={toggleOffreUnEuro}
                         className={`relative w-11 h-6 rounded-full transition-colors ${offreUnEuro ? 'bg-[var(--color-brand-600)]' : 'bg-[var(--color-border)]'}`}
                       >
                         <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${offreUnEuro ? 'translate-x-5' : ''}`} />
@@ -483,8 +502,9 @@ export default function BarTh171Page() {
                     {offreUnEuro && (
                       <div className="mt-2 p-2.5 bg-[var(--color-brand-50)] rounded-[var(--radius-sm)] border border-[var(--color-brand-200)]">
                         <p className="text-[12px] text-[var(--color-brand-700)]">
-                          L'installateur prend en charge <strong>{formatCurrency(priseEnChargeRAC)}</strong> du reste à charge.
-                          Le client ne paie que <strong>1 €</strong> symbolique.
+                          CEE optimisé à <strong>{ceePercent}%</strong> — MPR maximisée à <strong>{formatCurrency(commercial.mprFinal)}</strong>.
+                          L'installateur prend en charge <strong>{formatCurrency(priseEnChargeRAC)}</strong> de RAC.
+                          Client = <strong>1 €</strong> symbolique.
                         </p>
                       </div>
                     )}
