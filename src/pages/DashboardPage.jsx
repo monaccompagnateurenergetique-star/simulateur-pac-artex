@@ -259,7 +259,7 @@ export default function DashboardPage() {
             Nouveau projet
           </Link>
           <Link
-            to="/outils/simulateurs"
+            to="/boite-a-outils"
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white text-gray-700 text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition"
           >
             <Calculator className="w-3.5 h-3.5" />
