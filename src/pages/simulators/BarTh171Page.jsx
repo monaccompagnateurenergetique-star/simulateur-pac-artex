@@ -644,7 +644,7 @@ export default function BarTh171Page() {
                         </div>
                       </div>
                       <div className="flex justify-between items-center pt-3 border-t border-[var(--color-artex-green)]/30">
-                        <span className="text-sm font-bold text-white">LE CLIENT PAIE</span>
+                        <span className="text-sm font-bold text-white">RESTE À CHARGE</span>
                         <span className="text-3xl font-black text-[var(--color-artex-green)]">1 €</span>
                       </div>
                     </div>
