@@ -276,10 +276,10 @@ export function generateSimulationPDF({
   const badgeInfo = MPR_BADGE[mprCategory]
   if (badgeInfo) {
     const bl = `${mprCategory} — ${badgeInfo.label}`
-    const bw = drawBadge(doc, bl, 0, 0, badgeInfo.bg, badgeInfo.text) // mesure
-    // Re-draw centré
-    doc.setFillColor(...C.white)
-    doc.rect(W / 2 - bw / 2 - 1, y - 1, bw + 2, 9, 'F') // effacer le badge test
+    // Calculer la largeur sans dessiner
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    const bw = doc.getTextWidth(bl) + 10
     drawBadge(doc, bl, W / 2 - bw / 2, y, badgeInfo.bg, badgeInfo.text)
     y += 11
   }
@@ -296,9 +296,9 @@ export function generateSimulationPDF({
   // Badge mode Anah
   if (isAnah) {
     const ml = "MaPrimeRenov' Parcours Accompagne"
-    const mw = drawBadge(doc, ml, 0, 0, C.brand, C.white)
-    doc.setFillColor(...C.white)
-    doc.rect(W / 2 - mw / 2 - 1, y - 1, mw + 2, 9, 'F')
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    const mw = doc.getTextWidth(ml) + 10
     drawBadge(doc, ml, W / 2 - mw / 2, y, C.brand, C.white)
     y += 11
   }
