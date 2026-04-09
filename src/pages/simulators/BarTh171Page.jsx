@@ -730,7 +730,8 @@ export default function BarTh171Page() {
               results={{ ceeEurosBase, volumeCEE, projectCost, ...commercial }}
               pdfData={{
                 ficheCode: 'BAR-TH-171',
-                ficheTitle: 'Simulateur Aides PAC Air/Eau',
+                ficheTitle: 'PAC Air/Eau — Simulation Aides CEE + MPR',
+                mprCategory,
                 params: [
                   { label: 'Type de logement', value: housingType },
                   { label: 'Surface chauffée', value: `${surface} m²` },
