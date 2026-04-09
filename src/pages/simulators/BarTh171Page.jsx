@@ -693,20 +693,20 @@ export default function BarTh171Page() {
                       <div className="h-full bg-[var(--color-artex-green)] transition-all duration-500" style={{ width: `${(commercial.ceeCommerciale / projectCost) * 100}%` }} />
                     )}
                     {commercial.mprFinal > 0 && (
-                      <div className="h-full bg-[var(--color-success)] transition-all duration-500" style={{ width: `${(commercial.mprFinal / projectCost) * 100}%` }} />
+                      <div className="h-full bg-sky-400 transition-all duration-500" style={{ width: `${(commercial.mprFinal / projectCost) * 100}%` }} />
                     )}
                     {offreUnEuro && priseEnChargeRAC > 0 && (
-                      <div className="h-full bg-[var(--color-brand-600)] transition-all duration-500" style={{ width: `${(priseEnChargeRAC / projectCost) * 100}%` }} />
+                      <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${(priseEnChargeRAC / projectCost) * 100}%` }} />
                     )}
                     {racFinal > 0 && !offreUnEuro && (
                       <div className="h-full bg-orange-400 transition-all duration-500" style={{ width: `${(racFinal / projectCost) * 100}%` }} />
                     )}
                   </div>
                   <div className="flex justify-between mt-1.5 text-[10px] text-gray-400">
-                    <span>CEE {Math.round((commercial.ceeCommerciale / projectCost) * 100)}%</span>
-                    {commercial.mprFinal > 0 && <span>MPR {Math.round((commercial.mprFinal / projectCost) * 100)}%</span>}
-                    {offreUnEuro && priseEnChargeRAC > 0 && <span className="text-[var(--color-brand-400)]">Installateur {Math.round((priseEnChargeRAC / projectCost) * 100)}%</span>}
-                    {!offreUnEuro && <span>RAC {Math.round((commercial.resteACharge / projectCost) * 100)}%</span>}
+                    <span className="text-[var(--color-artex-green)]">CEE {Math.round((commercial.ceeCommerciale / projectCost) * 100)}%</span>
+                    {commercial.mprFinal > 0 && <span className="text-sky-400">MPR {Math.round((commercial.mprFinal / projectCost) * 100)}%</span>}
+                    {offreUnEuro && priseEnChargeRAC > 0 && <span className="text-amber-400">Installateur {Math.round((priseEnChargeRAC / projectCost) * 100)}%</span>}
+                    {!offreUnEuro && <span className="text-orange-400">RAC {Math.round((commercial.resteACharge / projectCost) * 100)}%</span>}
                     {offreUnEuro && <span className="text-[var(--color-artex-green)]">Client 1 €</span>}
                   </div>
                 </div>
