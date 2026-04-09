@@ -150,6 +150,7 @@ export default function BarTh171Page() {
   const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
   const [showInstallateur, setShowInstallateur] = useState(false)
   const [showEdfModal, setShowEdfModal] = useState(false)
+  const [offreUnEuro, setOffreUnEuro] = useState(false)
 
   // Calcul précarité
   const mprCategory = precariteMode === 'direct'
@@ -183,6 +184,11 @@ export default function BarTh171Page() {
     projectCost,
     maxEligibleCost: 12000,
   }), [ceeEurosBase, ceePercent, mprCategory, mprGrantTheorique, projectCost, minCeePercent])
+
+  // Offre à 1€ : l'installateur prend en charge le RAC
+  const priseEnChargeRAC = offreUnEuro ? Math.max(commercial.resteACharge - 1, 0) : 0
+  const racFinal = offreUnEuro ? Math.min(commercial.resteACharge, 1) : commercial.resteACharge
+  const totalAidFinal = offreUnEuro ? commercial.totalAid + priseEnChargeRAC : commercial.totalAid
 
   const isIneligible = !isPrimaryResidence
 
@@ -455,6 +461,35 @@ export default function BarTh171Page() {
                     </button>
                   </div>
                 </div>
+
+                {/* Toggle Offre à 1€ */}
+                {commercial.resteACharge > 1 && (
+                  <div className="mt-4 pt-3 border-t border-[var(--color-border-light)]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Euro className="w-4 h-4 text-[var(--color-brand-600)]" />
+                        <div>
+                          <span className="text-[13px] font-semibold text-[var(--color-text)]">Offre à 1 €</span>
+                          <p className="text-[11px] text-[var(--color-muted)]">Prise en charge du RAC par l'installateur</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setOffreUnEuro(!offreUnEuro)}
+                        className={`relative w-11 h-6 rounded-full transition-colors ${offreUnEuro ? 'bg-[var(--color-brand-600)]' : 'bg-[var(--color-border)]'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${offreUnEuro ? 'translate-x-5' : ''}`} />
+                      </button>
+                    </div>
+                    {offreUnEuro && (
+                      <div className="mt-2 p-2.5 bg-[var(--color-brand-50)] rounded-[var(--radius-sm)] border border-[var(--color-brand-200)]">
+                        <p className="text-[12px] text-[var(--color-brand-700)]">
+                          L'installateur prend en charge <strong>{formatCurrency(priseEnChargeRAC)}</strong> du reste à charge.
+                          Le client ne paie que <strong>1 €</strong> symbolique.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </Card>
           )}
@@ -528,12 +563,24 @@ export default function BarTh171Page() {
                       </button>
                     )}
                   </div>
-                  <span className="text-3xl font-extrabold text-[var(--color-artex-green)]">{formatCurrency(commercial.totalAid)}</span>
+                  <span className="text-3xl font-extrabold text-[var(--color-artex-green)]">{formatCurrency(totalAidFinal)}</span>
                 </div>
+
+                {offreUnEuro && priseEnChargeRAC > 0 && (
+                  <div className="flex justify-between items-center mt-2 px-3 py-1.5 bg-[var(--color-brand-600)]/15 rounded-lg">
+                    <span className="text-[11px] font-medium text-[var(--color-artex-green)]">dont prise en charge installateur</span>
+                    <span className="text-sm font-bold text-[var(--color-artex-green)]">{formatCurrency(priseEnChargeRAC)}</span>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/10">
                   <span className="text-sm font-medium text-gray-300">RESTE À CHARGE</span>
-                  <span className="text-2xl font-extrabold text-white">{formatCurrency(commercial.resteACharge)}</span>
+                  <div className="flex items-center gap-2">
+                    {offreUnEuro && commercial.resteACharge > 1 && (
+                      <span className="text-sm text-gray-500 line-through">{formatCurrency(commercial.resteACharge)}</span>
+                    )}
+                    <span className={`text-2xl font-extrabold ${offreUnEuro ? 'text-[var(--color-artex-green)]' : 'text-white'}`}>{formatCurrency(racFinal)}</span>
+                  </div>
                 </div>
 
                 {/* Barre de répartition */}
@@ -545,14 +592,18 @@ export default function BarTh171Page() {
                     {commercial.mprFinal > 0 && (
                       <div className="h-full bg-[var(--color-success)] transition-all duration-500" style={{ width: `${(commercial.mprFinal / projectCost) * 100}%` }} />
                     )}
-                    {commercial.resteACharge > 0 && (
-                      <div className="h-full bg-orange-400 transition-all duration-500" style={{ width: `${(commercial.resteACharge / projectCost) * 100}%` }} />
+                    {offreUnEuro && priseEnChargeRAC > 0 && (
+                      <div className="h-full bg-[var(--color-brand-600)] transition-all duration-500" style={{ width: `${(priseEnChargeRAC / projectCost) * 100}%` }} />
+                    )}
+                    {racFinal > 0 && (
+                      <div className="h-full bg-orange-400 transition-all duration-500" style={{ width: `${(racFinal / projectCost) * 100}%` }} />
                     )}
                   </div>
                   <div className="flex justify-between mt-1.5 text-[10px] text-gray-400">
                     <span>CEE {Math.round((commercial.ceeCommerciale / projectCost) * 100)}%</span>
                     {commercial.mprFinal > 0 && <span>MPR {Math.round((commercial.mprFinal / projectCost) * 100)}%</span>}
-                    <span>RAC {Math.round((commercial.resteACharge / projectCost) * 100)}%</span>
+                    {offreUnEuro && priseEnChargeRAC > 0 && <span className="text-[var(--color-brand-400)]">Installateur {Math.round((priseEnChargeRAC / projectCost) * 100)}%</span>}
+                    <span>RAC {racFinal <= 1 ? '1 €' : `${Math.round((racFinal / projectCost) * 100)}%`}</span>
                   </div>
                 </div>
               </div>
@@ -582,6 +633,12 @@ export default function BarTh171Page() {
                       <span className="text-[var(--color-text-secondary)]">MaPrimeRénov'</span>
                       <span className="font-bold text-[var(--color-success)] tabular-nums">{formatCurrency(commercial.mprFinal)}</span>
                     </div>
+                    {offreUnEuro && priseEnChargeRAC > 0 && (
+                      <div className="flex justify-between px-4 py-2.5 border-t border-[var(--color-border-light)] bg-[var(--color-brand-50)]">
+                        <span className="text-[var(--color-brand-700)] font-medium">Prise en charge installateur (offre 1 €)</span>
+                        <span className="font-bold text-[var(--color-brand-600)] tabular-nums">{formatCurrency(priseEnChargeRAC)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between px-4 py-2.5 border-t border-[var(--color-border)] bg-[var(--color-surface-tertiary)]">
                       <span className="font-bold text-[var(--color-text)]">Revenu total (aides + installateur)</span>
                       <span className="font-extrabold text-[var(--color-text)] tabular-nums">{formatCurrency(commercial.totalAid + commercial.ceeMargin)}</span>
