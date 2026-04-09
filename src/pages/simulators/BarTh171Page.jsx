@@ -516,7 +516,7 @@ export default function BarTh171Page() {
                             Vous perdez {formatCurrency(mprGrantTheorique - commercial.mprFinal)} de MPR
                           </p>
                           <p className="text-[11px] text-[var(--color-muted)] mt-0.5">
-                            Plafond {Math.round(commercial.maxAidPercentage * 100)}% dépassé — optimisez à {optimalCeePercent}% pour <span className="font-bold text-[var(--color-brand-600)]">+{formatCurrency(gainTotal)} de marge</span>
+                            Plafond {Math.round(commercial.maxAidPercentage * 100)}% dépassé — optimisez à {optimalCeePercent}% pour gagner <span className="font-bold text-[var(--color-brand-600)]">{formatCurrency(gainTotal)} de marge supplémentaire</span>
                           </p>
                         </div>
                       </div>
