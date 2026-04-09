@@ -1,20 +1,25 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-// ─── Palette Artex ───
+// ─── Palette Artex v3 — plus raffinée ───
 const C = {
   primary:      [17, 19, 24],
+  primaryLight: [30, 34, 42],
   brand:        [116, 191, 22],
   brandDark:    [74, 122, 15],
   brandLight:   [136, 219, 27],
-  brandBg:      [240, 253, 230],
+  brandBg:      [245, 255, 235],
   sky:          [56, 189, 248],
+  skyDark:      [14, 116, 192],
   skyBg:        [240, 249, 255],
   amber:        [251, 191, 36],
+  orange:       [249, 115, 22],
   text:         [30, 41, 59],
-  textLight:    [100, 116, 139],
+  textMuted:    [100, 116, 139],
+  textLight:    [148, 163, 184],
   border:       [226, 232, 240],
-  bgLight:      [248, 250, 252],
+  borderLight:  [241, 245, 249],
+  surface:      [248, 250, 252],
   white:        [255, 255, 255],
 }
 
@@ -51,66 +56,88 @@ function sanitize(str) {
     .replace(/\u2265/g, '>=')
 }
 
-// ─── Icone cercle avec lettre ───
-function drawIcon(doc, letter, x, y, color, size = 6) {
-  doc.setFillColor(...color)
-  doc.circle(x, y, size / 2, 'F')
-  doc.setFontSize(size * 0.55)
-  doc.setTextColor(...C.white)
-  doc.setFont('helvetica', 'bold')
-  doc.text(letter, x, y + size * 0.15, { align: 'center' })
+// ─── Primitives de dessin v3 ───
+
+/** Micro-ombre portée (rectangle gris décalé sous la card) */
+function drawShadow(doc, x, y, w, h, r = 3) {
+  doc.setFillColor(0, 0, 0)
+  doc.setGState(new doc.GState({ opacity: 0.04 }))
+  doc.roundedRect(x + 0.5, y + 0.7, w, h, r, r, 'F')
+  doc.setGState(new doc.GState({ opacity: 1 }))
 }
 
-// ─── Section header avec icone ───
-function drawSectionHeader(doc, title, subtitle, icon, iconColor, x, y, width) {
-  drawIcon(doc, icon, x + 4, y + 3.5, iconColor, 7)
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...C.primary)
-  doc.text(title, x + 10, y + 3)
-  if (subtitle) {
-    doc.setFontSize(7)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(...C.textLight)
-    doc.text(subtitle, x + 10, y + 7)
-  }
-  return y + (subtitle ? 12 : 8)
-}
-
-// ─── Card avec bordure ───
-function drawCard(doc, x, y, w, h) {
-  doc.setFillColor(...C.white)
-  doc.roundedRect(x, y, w, h, 2.5, 2.5, 'F')
-  doc.setDrawColor(...C.border)
-  doc.setLineWidth(0.3)
-  doc.roundedRect(x, y, w, h, 2.5, 2.5, 'S')
+/** Card propre avec ombre + bordure fine */
+function drawCard(doc, x, y, w, h, { shadow = true, radius = 3, fill = C.white, borderColor = C.border } = {}) {
+  if (shadow) drawShadow(doc, x, y, w, h, radius)
+  doc.setFillColor(...fill)
+  doc.roundedRect(x, y, w, h, radius, radius, 'F')
+  doc.setDrawColor(...borderColor)
+  doc.setLineWidth(0.25)
+  doc.roundedRect(x, y, w, h, radius, radius, 'S')
   doc.setLineWidth(0.2)
 }
 
-// ─── Ligne parametre dans une card ───
-function drawParamLine(doc, label, value, x, y, w, isAlt) {
+/** Section header — trait vert à gauche + titre */
+function drawSectionTitle(doc, title, subtitle, x, y, accentColor = C.brand) {
+  // Trait accent vertical
+  doc.setFillColor(...accentColor)
+  doc.roundedRect(x, y, 1.2, subtitle ? 9 : 6, 0.6, 0.6, 'F')
+
+  doc.setFontSize(10.5)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...C.primary)
+  doc.text(title, x + 5, y + 4)
+
+  if (subtitle) {
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...C.textMuted)
+    doc.text(subtitle, x + 5, y + 9)
+    return y + 14
+  }
+  return y + 9
+}
+
+/** Ligne de paramètre label — valeur dans une card */
+function drawParamRow(doc, label, value, x, y, w, isAlt = false) {
   if (isAlt) {
-    doc.setFillColor(...C.bgLight)
-    doc.rect(x, y - 3, w, 7, 'F')
+    doc.setFillColor(...C.surface)
+    doc.rect(x, y - 3.2, w, 6.5, 'F')
   }
   doc.setFontSize(7.5)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(...C.textLight)
+  doc.setTextColor(...C.textMuted)
   doc.text(label, x + 4, y)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...C.text)
   doc.text(value, x + w - 4, y, { align: 'right' })
 }
 
+/** Badge pill (MPR category, etc.) */
+function drawBadge(doc, text, x, y, bg, fg) {
+  doc.setFontSize(7)
+  doc.setFont('helvetica', 'bold')
+  const tw = doc.getTextWidth(text) + 10
+  doc.setFillColor(...bg)
+  doc.roundedRect(x, y, tw, 7, 3.5, 3.5, 'F')
+  doc.setTextColor(...fg)
+  doc.text(text, x + tw / 2, y + 4.8, { align: 'center' })
+  return tw
+}
+
+/** Coche verte pour les avantages */
+function drawCheckmark(doc, x, y, color = C.brand) {
+  doc.setDrawColor(...color)
+  doc.setLineWidth(0.7)
+  doc.line(x - 1.5, y, x - 0.3, y + 1.5)
+  doc.line(x - 0.3, y + 1.5, x + 2, y - 1)
+  doc.setLineWidth(0.2)
+}
+
 function drawDpeBadge(doc, letter, x, y, size, active = false) {
   const colors = DPE_COLORS[letter] || { bg: [156, 163, 175], text: [255, 255, 255] }
   const r = size * 0.22
-  if (active) {
-    doc.setFillColor(0, 0, 0)
-    doc.setGState(new doc.GState({ opacity: 0.12 }))
-    doc.roundedRect(x + 0.6, y + 0.6, size, size, r, r, 'F')
-    doc.setGState(new doc.GState({ opacity: 1 }))
-  }
+  if (active) drawShadow(doc, x, y, size, size, r)
   doc.setFillColor(...colors.bg)
   doc.roundedRect(x, y, size, size, r, r, 'F')
   doc.setTextColor(...colors.text)
@@ -129,7 +156,7 @@ function drawChevron(doc, x, y, h, color) {
 }
 
 /**
- * Genere un PDF de simulation — Design Artex v2
+ * Genere un PDF de simulation — Design Artex v3
  */
 export function generateSimulationPDF({
   company = {},
@@ -154,7 +181,7 @@ export function generateSimulationPDF({
   const doc = new jsPDF('p', 'mm', 'a4')
   const W = doc.internal.pageSize.getWidth()
   const H = doc.internal.pageSize.getHeight()
-  const mx = 15
+  const mx = 16
   const cw = W - mx * 2
   const dateStr = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
   let y = 0
@@ -169,128 +196,142 @@ export function generateSimulationPDF({
   const cee = summary.ceeCommerciale || 0
   const mpr = summary.mprFinal || 0
 
-  // ════════════════════════════════════════════
-  //  EN-TETE — Bandeau dark
-  // ════════════════════════════════════════════
-  doc.setFillColor(...C.primary)
-  doc.rect(0, 0, W, 34, 'F')
+  // ════════════════════════════════════════════════════════════
+  //  HEADER — Bandeau dark élégant + accent vert top
+  // ════════════════════════════════════════════════════════════
+  // Accent vert fin tout en haut
   doc.setFillColor(...C.brandLight)
-  doc.rect(0, 34, W, 1, 'F')
+  doc.rect(0, 0, W, 1.8, 'F')
+
+  // Bandeau dark
+  doc.setFillColor(...C.primary)
+  doc.rect(0, 1.8, W, 30, 'F')
+
+  // Filet vert bas du header
+  doc.setFillColor(...C.brand)
+  doc.rect(0, 31.8, W, 0.6, 'F')
 
   if (company.logo) {
-    try { doc.addImage(company.logo, 'AUTO', mx, 4, 24, 24) } catch (e) { /* skip */ }
+    try { doc.addImage(company.logo, 'AUTO', mx, 5, 22, 22) } catch (e) { /* skip */ }
   }
 
-  const hx = company.logo ? mx + 29 : mx
-  doc.setTextColor(...C.brandLight)
-  doc.setFontSize(14)
-  doc.setFont('helvetica', 'bold')
-  doc.text(company.name || 'Artex360', hx, 13)
+  const hx = company.logo ? mx + 27 : mx
 
+  // Nom entreprise
+  doc.setFontSize(15)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...C.brandLight)
+  doc.text(company.name || 'Artex360', hx, 11)
+
+  // Infos entreprise
   doc.setFontSize(6.5)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(150, 160, 180)
-  const lines = []
-  if (company.address) lines.push(company.address)
-  if (company.postalCode || company.city) lines.push(`${company.postalCode || ''} ${company.city || ''}`.trim())
-  if (company.phone) lines.push(`Tel : ${company.phone}`)
-  if (company.email) lines.push(company.email)
-  lines.forEach((l, i) => doc.text(l, hx, 18 + i * 2.8))
+  doc.setTextColor(140, 150, 170)
+  const infoLines = []
+  if (company.address) infoLines.push(company.address)
+  if (company.postalCode || company.city) infoLines.push(`${company.postalCode || ''} ${company.city || ''}`.trim())
+  if (company.phone) infoLines.push(`Tel : ${company.phone}`)
+  if (company.email) infoLines.push(company.email)
+  infoLines.forEach((l, i) => doc.text(l, hx, 15.5 + i * 2.8))
+
+  // Date + certifications à droite
+  doc.setFontSize(7.5)
+  doc.setTextColor(...C.white)
+  doc.setFont('helvetica', 'normal')
+  doc.text(dateStr, W - mx, 10, { align: 'right' })
 
   if (company.siret || company.rge) {
     doc.setFontSize(6)
     doc.setTextColor(110, 120, 140)
-    if (company.siret) doc.text(`SIRET : ${company.siret}`, W - mx, 11, { align: 'right' })
-    if (company.rge) doc.text(`RGE : ${company.rge}`, W - mx, 15, { align: 'right' })
+    let ry = 15
+    if (company.siret) { doc.text(`SIRET : ${company.siret}`, W - mx, ry, { align: 'right' }); ry += 3 }
+    if (company.rge) doc.text(`RGE : ${company.rge}`, W - mx, ry, { align: 'right' })
   }
 
-  doc.setFontSize(7)
-  doc.setTextColor(110, 120, 140)
-  doc.text(dateStr, W - mx, 22, { align: 'right' })
+  y = 38
 
-  y = 41
-
-  // ════════════════════════════════════════════
-  //  TITRE + BADGE
-  // ════════════════════════════════════════════
-  doc.setFontSize(13)
+  // ════════════════════════════════════════════════════════════
+  //  TITRE CENTRAL + BADGE MPR
+  // ════════════════════════════════════════════════════════════
+  doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...C.primary)
   doc.text('SIMULATION DE RENOVATION ENERGETIQUE', W / 2, y, { align: 'center' })
-  y += 5
+  y += 5.5
 
-  doc.setFontSize(9)
+  doc.setFontSize(8.5)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...C.brand)
   doc.text(`${ficheCode} — ${ficheTitle || ''}`, W / 2, y, { align: 'center' })
-  y += 3
+  y += 4
 
-  doc.setDrawColor(...C.brandLight)
-  doc.setLineWidth(0.5)
-  doc.line(W / 2 - 28, y, W / 2 + 28, y)
+  // Séparateur fin centré
+  doc.setDrawColor(...C.border)
+  doc.setLineWidth(0.3)
+  doc.line(W / 2 - 35, y, W / 2 + 35, y)
   doc.setLineWidth(0.2)
   y += 5
 
-  // Client + Badge MPR sur meme ligne
-  if (clientName || mprCategory) {
-    if (clientName) {
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...C.text)
-      doc.text(`Client : ${clientName}`, mx, y + 3)
-    }
-    const badgeInfo = MPR_BADGE[mprCategory]
-    if (badgeInfo) {
-      const bl = `${mprCategory} — ${badgeInfo.label}`
-      const bw = doc.getTextWidth(bl) * 0.85 + 10
-      const bx = clientName ? W - mx - bw : W / 2 - bw / 2
-      doc.setFillColor(...badgeInfo.bg)
-      doc.roundedRect(bx, y - 0.5, bw, 7, 3, 3, 'F')
-      doc.setFontSize(6.5)
-      doc.setTextColor(...badgeInfo.text)
-      doc.setFont('helvetica', 'bold')
-      doc.text(bl, bx + bw / 2, y + 3.5, { align: 'center' })
-    }
-    y += 10
+  // Badge MPR centré
+  const badgeInfo = MPR_BADGE[mprCategory]
+  if (badgeInfo) {
+    const bl = `${mprCategory} — ${badgeInfo.label}`
+    const bw = drawBadge(doc, bl, 0, 0, badgeInfo.bg, badgeInfo.text) // mesure
+    // Re-draw centré
+    doc.setFillColor(...C.white)
+    doc.rect(W / 2 - bw / 2 - 1, y - 1, bw + 2, 9, 'F') // effacer le badge test
+    drawBadge(doc, bl, W / 2 - bw / 2, y, badgeInfo.bg, badgeInfo.text)
+    y += 11
   }
 
-  // Badge mode
+  // Client name
+  if (clientName) {
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...C.text)
+    doc.text(`Client : ${clientName}`, mx, y)
+    y += 5
+  }
+
+  // Badge mode Anah
   if (isAnah) {
     const ml = "MaPrimeRenov' Parcours Accompagne"
-    const mw = doc.getTextWidth(ml) * 0.85 + 12
-    doc.setFillColor(...C.brand)
-    doc.roundedRect(W / 2 - mw / 2, y, mw, 7, 3, 3, 'F')
-    doc.setFontSize(7)
-    doc.setTextColor(...C.white)
-    doc.setFont('helvetica', 'bold')
-    doc.text(ml, W / 2, y + 4.8, { align: 'center' })
-    y += 10
+    const mw = drawBadge(doc, ml, 0, 0, C.brand, C.white)
+    doc.setFillColor(...C.white)
+    doc.rect(W / 2 - mw / 2 - 1, y - 1, mw + 2, 9, 'F')
+    drawBadge(doc, ml, W / 2 - mw / 2, y, C.brand, C.white)
+    y += 11
   }
 
-  // ════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════
   //  SAUT DPE
-  // ════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════
   if (classInitiale && classCible) {
-    drawCard(doc, mx, y, cw, 34)
-    doc.setFontSize(9)
+    const dpeH = 36
+    drawCard(doc, mx, y, cw, dpeH)
+
+    doc.setFillColor(...C.brand)
+    doc.roundedRect(mx, y, 1.2, dpeH, 0.6, 0.6, 'F')
+
+    doc.setFontSize(9.5)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...C.primary)
-    drawIcon(doc, 'E', mx + 7, y + 7, C.brand, 7)
-    doc.text('PERFORMANCE ENERGETIQUE', mx + 13, y + 8)
+    doc.text('PERFORMANCE ENERGETIQUE', mx + 6, y + 7)
 
     const jumpLabel = `+${jumps} classe${jumps > 1 ? 's' : ''} DPE`
-    doc.setFillColor(...C.brand)
-    const jumpW = doc.getTextWidth(jumpLabel) + 8
-    doc.roundedRect(W - mx - jumpW - 4, y + 3, jumpW, 8, 3, 3, 'F')
     doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    const jumpW = doc.getTextWidth(jumpLabel) + 8
+    doc.setFillColor(...C.brand)
+    doc.roundedRect(W - mx - jumpW - 4, y + 3, jumpW, 7, 3.5, 3.5, 'F')
     doc.setTextColor(...C.white)
-    doc.text(jumpLabel, W - mx - jumpW / 2 - 4, y + 8.2, { align: 'center' })
+    doc.text(jumpLabel, W - mx - jumpW / 2 - 4, y + 7.5, { align: 'center' })
 
-    const trailY = y + 15
+    const trailY = y + 14
     const startIdx = CLASS_ORDER.indexOf(classInitiale)
     const endIdx = CLASS_ORDER.indexOf(classCible)
     const trail = CLASS_ORDER.slice(startIdx, endIdx + 1)
-    const activeSize = 13, inactiveSize = 9, arrowW = 6
+    const activeSize = 14, inactiveSize = 9.5, arrowW = 6
     let totalW = activeSize + arrowW
     for (let i = 1; i < trail.length - 1; i++) totalW += inactiveSize + 2
     if (trail.length > 2) totalW += arrowW
@@ -309,14 +350,15 @@ export function generateSimulationPDF({
       cx += arrowW
     }
     drawDpeBadge(doc, classCible, cx, trailY, activeSize, true)
-    y += 38
+
+    y += dpeH + 5
   }
 
-  // ════════════════════════════════════════════
-  //  TRAVAUX / PARAMETRES — Cards avec icones
-  // ════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════
+  //  TRAVAUX / PARAMETRES — Cards 2 colonnes
+  // ════════════════════════════════════════════════════════════
   if (workItems && workItems.length > 0) {
-    y = drawSectionHeader(doc, 'TRAVAUX PREVUS', 'Postes de renovation', 'T', C.brand, mx, y, cw)
+    y = drawSectionTitle(doc, 'TRAVAUX PREVUS', 'Postes de renovation', mx, y, C.brand)
 
     const worksBody = workItems.filter(w => w.type || w.label).map(w => {
       const ht = Number(w.prixHT) || 0
@@ -332,23 +374,23 @@ export function generateSimulationPDF({
         head: [['Poste', 'HT', 'TVA', 'TTC']],
         body: worksBody,
         theme: 'grid',
-        headStyles: { fillColor: C.primary, textColor: C.white, fontStyle: 'bold', fontSize: 7.5, cellPadding: 2.5 },
-        bodyStyles: { fontSize: 7.5, textColor: C.text, cellPadding: 2.5, lineColor: [230, 235, 245], lineWidth: 0.3 },
+        headStyles: { fillColor: C.primary, textColor: C.white, fontStyle: 'bold', fontSize: 7.5, cellPadding: 3 },
+        bodyStyles: { fontSize: 7.5, textColor: C.text, cellPadding: 3, lineColor: C.borderLight, lineWidth: 0.3 },
         columnStyles: {
           0: { cellWidth: cw * 0.46, fontStyle: 'bold' },
           1: { cellWidth: cw * 0.18, halign: 'right' },
-          2: { cellWidth: cw * 0.12, halign: 'center', textColor: C.textLight },
+          2: { cellWidth: cw * 0.12, halign: 'center', textColor: C.textMuted },
           3: { cellWidth: cw * 0.24, halign: 'right', fontStyle: 'bold', textColor: C.primary },
         },
-        alternateRowStyles: { fillColor: C.bgLight },
+        alternateRowStyles: { fillColor: C.surface },
       })
       y = doc.lastAutoTable.finalY + 6
     }
   } else {
-    // ─── 2 cards cote a cote : Beneficiaire + Logement ───
-    const halfW = (cw - 4) / 2
+    // ─── 2 cards côte à côte : Bénéficiaire + Logement ───
+    const gap = 5
+    const halfW = (cw - gap) / 2
 
-    // Separer params en 2 groupes intelligemment
     const benefParams = []
     const logementParams = []
     cleanParams.forEach(p => {
@@ -359,229 +401,274 @@ export function generateSimulationPDF({
         benefParams.push(p)
     })
 
-    // Card Beneficiaire
-    const cardH1 = Math.max(benefParams.length, logementParams.length) * 7 + 16
-    drawCard(doc, mx, y, halfW, cardH1)
-    let cy = drawSectionHeader(doc, 'Beneficiaire', 'Profil de revenus', 'B', [59, 130, 246], mx + 3, y + 2, halfW)
+    const maxRows = Math.max(benefParams.length, logementParams.length)
+    const cardH = maxRows * 7 + 18
+
+    // Card Bénéficiaire
+    drawCard(doc, mx, y, halfW, cardH)
+    doc.setFillColor(59, 130, 246)
+    doc.roundedRect(mx, y, 1.2, cardH, 0.6, 0.6, 'F') // accent bleu
+
+    let cy = y + 5
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...C.primary)
+    doc.text('Beneficiaire', mx + 5, cy)
+    cy += 4
+    doc.setFontSize(6.5)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...C.textMuted)
+    doc.text('Profil de revenus', mx + 5, cy)
+    cy += 5.5
+
     benefParams.forEach((p, i) => {
-      drawParamLine(doc, p.label, p.value, mx + 2, cy + 1, halfW - 4, i % 2 === 0)
+      drawParamRow(doc, p.label, p.value, mx + 1.5, cy, halfW - 3, i % 2 === 0)
       cy += 7
     })
 
     // Card Logement
-    drawCard(doc, mx + halfW + 4, y, halfW, cardH1)
-    cy = drawSectionHeader(doc, 'Logement', 'Caracteristiques du bien', 'L', C.brand, mx + halfW + 7, y + 2, halfW)
+    const lx = mx + halfW + gap
+    drawCard(doc, lx, y, halfW, cardH)
+    doc.setFillColor(...C.brand)
+    doc.roundedRect(lx, y, 1.2, cardH, 0.6, 0.6, 'F') // accent vert
+
+    cy = y + 5
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...C.primary)
+    doc.text('Logement', lx + 5, cy)
+    cy += 4
+    doc.setFontSize(6.5)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...C.textMuted)
+    doc.text('Caracteristiques du bien', lx + 5, cy)
+    cy += 5.5
+
     logementParams.forEach((p, i) => {
-      drawParamLine(doc, p.label, p.value, mx + halfW + 6, cy + 1, halfW - 4, i % 2 === 0)
+      drawParamRow(doc, p.label, p.value, lx + 1.5, cy, halfW - 3, i % 2 === 0)
       cy += 7
     })
 
-    y += cardH1 + 5
+    y += cardH + 6
   }
 
-  // ════════════════════════════════════════════
-  //  FINANCEMENT
-  // ════════════════════════════════════════════
-  if (y + 80 > H) { doc.addPage(); y = 20 }
+  // ════════════════════════════════════════════════════════════
+  //  VOTRE FINANCEMENT
+  // ════════════════════════════════════════════════════════════
+  if (y + 85 > H) { doc.addPage(); y = 20 }
 
-  y = drawSectionHeader(doc, 'VOTRE FINANCEMENT', 'Repartition des aides', 'F', C.brandDark, mx, y, cw)
+  y = drawSectionTitle(doc, 'VOTRE FINANCEMENT', 'Repartition des aides', mx, y, C.brandDark)
 
-  // ─── Cards CEE + MPR cote a cote (comme le web) ───
+  // ─── Cards CEE + MPR côte à côte ───
   const hasCee = cee > 0
   const hasMpr = mpr > 0
 
   if (hasCee || hasMpr) {
+    const gap = 5
     const cols = (hasCee && hasMpr) ? 2 : 1
-    const cardW = cols === 2 ? (cw - 4) / 2 : cw
-    const cardH = 18
+    const cardW = cols === 2 ? (cw - gap) / 2 : cw
+    const cardH = 22
 
     if (hasCee) {
-      // Card CEE — fond vert leger
-      doc.setFillColor(...C.brandBg)
-      doc.roundedRect(mx, y, cardW, cardH, 2.5, 2.5, 'F')
-      doc.setDrawColor(200, 240, 180)
-      doc.roundedRect(mx, y, cardW, cardH, 2.5, 2.5, 'S')
+      // Card CEE
+      drawCard(doc, mx, y, cardW, cardH, { fill: C.brandBg, borderColor: [200, 240, 180] })
+      doc.setFillColor(...C.brand)
+      doc.roundedRect(mx, y, 1.2, cardH, 0.6, 0.6, 'F')
 
-      drawIcon(doc, 'C', mx + 6, y + cardH / 2, C.brand, 6)
-      doc.setFontSize(7)
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(...C.textLight)
-      doc.text('PRIME CEE', mx + 12, y + 6)
-      doc.setFontSize(13)
+      doc.setFontSize(7.5)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...C.textMuted)
+      doc.text('PRIME CEE', mx + 6, y + 7)
+      doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(...C.brand)
-      doc.text(fmt(cee), mx + 12, y + 13)
+      doc.text(fmt(cee), mx + 6, y + 16)
     }
 
     if (hasMpr) {
-      const mprX = hasCee ? mx + cardW + 4 : mx
-      const mprW = hasCee ? cardW : cardW
+      const mprX = hasCee ? mx + cardW + gap : mx
 
-      // Card MPR — fond bleu leger
-      doc.setFillColor(...C.skyBg)
-      doc.roundedRect(mprX, y, mprW, cardH, 2.5, 2.5, 'F')
-      doc.setDrawColor(186, 230, 253)
-      doc.roundedRect(mprX, y, mprW, cardH, 2.5, 2.5, 'S')
+      // Card MPR
+      drawCard(doc, mprX, y, cardW, cardH, { fill: C.skyBg, borderColor: [186, 230, 253] })
+      doc.setFillColor(...C.sky)
+      doc.roundedRect(mprX, y, 1.2, cardH, 0.6, 0.6, 'F')
 
-      drawIcon(doc, 'M', mprX + 6, y + cardH / 2, C.sky, 6)
-      doc.setFontSize(7)
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(...C.textLight)
-      doc.text("MAPRIMERENOV'", mprX + 12, y + 6)
-      doc.setFontSize(13)
+      doc.setFontSize(7.5)
       doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...C.sky)
-      doc.text(fmt(mpr), mprX + 12, y + 13)
+      doc.setTextColor(...C.textMuted)
+      doc.text("MAPRIMERENOV'", mprX + 6, y + 7)
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...C.skyDark)
+      doc.text(fmt(mpr), mprX + 6, y + 16)
     }
 
     y += cardH + 5
   }
 
-  // ─── Anah detail cards ───
+  // ─── Anah detail ───
   if (isAnah && mpr > 0) {
-    const infoCardW = (cw - 8) / 3
-    const infoCardH = 14
-
     const infoCards = [
-      { label: 'Sauts DPE', value: `${jumps} classes`, color: C.textLight },
+      { label: 'Sauts DPE', value: `${jumps} classes`, color: C.text },
       { label: 'Taux MPR', value: `${Math.round((mprTaux || 0) * 100)}%`, color: C.brand },
-      { label: 'Depense eligible', value: fmt(mprDepenseEligible || 0), color: C.textLight },
+      { label: 'Depense eligible', value: fmt(mprDepenseEligible || 0), color: C.text },
     ]
+    const gap = 4
+    const infoW = (cw - gap * 2) / 3
+    const infoH = 15
 
     infoCards.forEach((card, i) => {
-      const cx = mx + i * (infoCardW + 4)
-      drawCard(doc, cx, y, infoCardW, infoCardH)
+      const cx = mx + i * (infoW + gap)
+      drawCard(doc, cx, y, infoW, infoH)
       doc.setFontSize(6.5)
       doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...C.text)
-      doc.text(card.label, cx + 4, y + 5)
-      doc.setFontSize(8)
+      doc.setTextColor(...C.textMuted)
+      doc.text(card.label, cx + 4, y + 5.5)
+      doc.setFontSize(9)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(...card.color)
-      doc.text(card.value, cx + 4, y + 10.5)
+      doc.text(card.value, cx + 4, y + 11.5)
     })
-
-    y += infoCardH + 5
+    y += infoH + 5
   }
 
-  // ─── Bloc dark synthese ───
-  const synthH = 42
-
+  // ─── Bloc SYNTHESE dark ───
+  const synthH = 48
+  drawShadow(doc, mx, y, cw, synthH, 3)
   doc.setFillColor(...C.primary)
   doc.roundedRect(mx, y, cw, synthH, 3, 3, 'F')
 
-  const sl = mx + 10
-  const sr = W - mx - 10
-  let sy = y + 10
+  // Accent vert en haut du bloc
+  doc.setFillColor(...C.brandLight)
+  doc.roundedRect(mx + 0.5, y, cw - 1, 1.2, 0.6, 0.6, 'F')
 
-  // Cout projet
-  doc.setFontSize(8)
+  const sl = mx + 12
+  const sr = W - mx - 12
+  let sy = y + 11
+
+  // Coût projet
+  doc.setFontSize(8.5)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(150, 160, 180)
+  doc.setTextColor(140, 150, 170)
   doc.text('Cout total du projet', sl, sy)
-  doc.setTextColor(...C.white)
+  doc.setTextColor(200, 210, 225)
   doc.setFont('helvetica', 'bold')
   doc.text(fmt(cost), sr, sy, { align: 'right' })
 
-  // Separateur
-  sy += 6
+  // Séparateur pointillé
+  sy += 5
   doc.setDrawColor(50, 55, 70)
+  doc.setLineDashPattern([1.5, 1.5], 0)
   doc.line(sl, sy, sr, sy)
-  sy += 7
+  doc.setLineDashPattern([], 0)
+  sy += 8
 
-  // TOTAL AIDES
+  // TOTAL DES AIDES
   doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(150, 160, 180)
+  doc.setTextColor(140, 150, 170)
   doc.text('TOTAL DES AIDES', sl, sy)
   doc.setTextColor(...C.brandLight)
-  doc.setFontSize(14)
-  doc.text(fmt(totalAid), sr, sy, { align: 'right' })
-  sy += 11
+  doc.setFontSize(18)
+  doc.text(fmt(totalAid), sr, sy + 1, { align: 'right' })
+  sy += 14
 
-  // RESTE A CHARGE
+  // RESTE A CHARGE — surligné
   doc.setFillColor(255, 255, 255)
-  doc.setGState(new doc.GState({ opacity: 0.07 }))
-  doc.roundedRect(sl - 4, sy - 5, cw - 12, 13, 2.5, 2.5, 'F')
+  doc.setGState(new doc.GState({ opacity: 0.06 }))
+  doc.roundedRect(sl - 5, sy - 6, cw - 14, 14, 2.5, 2.5, 'F')
   doc.setGState(new doc.GState({ opacity: 1 }))
 
-  doc.setFontSize(9)
+  doc.setFontSize(9.5)
   doc.setTextColor(...C.white)
   doc.setFont('helvetica', 'bold')
-  doc.text('RESTE A CHARGE', sl, sy + 2.5)
-  doc.setFontSize(15)
-  doc.text(fmt(rac), sr, sy + 3, { align: 'right' })
+  doc.text('RESTE A CHARGE', sl, sy + 2)
+  doc.setFontSize(18)
+  doc.text(fmt(rac), sr, sy + 2.5, { align: 'right' })
 
-  y += synthH + 5
+  y += synthH + 4
 
-  // ─── Barre multi-segments ───
-  const barH = 7
+  // ─── Barre de répartition multi-segments ───
+  const barH = 8
   const barSegments = []
   if (hasCee) barSegments.push({ label: 'CEE', value: cee, color: C.brandLight })
   if (hasMpr) barSegments.push({ label: 'MPR', value: mpr, color: C.sky })
-  if (rac > 0) barSegments.push({ label: 'RAC', value: rac, color: [180, 190, 205] })
+  if (rac > 0) barSegments.push({ label: 'RAC', value: rac, color: [180, 190, 210] })
 
   if (barSegments.length > 0 && cost > 0) {
     let bx = mx
+    const totalBarW = cw
     barSegments.forEach((seg, i) => {
       if (seg.value <= 0) return
-      const w = Math.max(2, (seg.value / cost) * cw)
+      const pct = seg.value / cost
+      const w = Math.max(3, pct * totalBarW)
       doc.setFillColor(...seg.color)
-      const rl = i === 0 ? 2 : 0
-      const rr = i === barSegments.length - 1 ? 2 : 0
-      doc.roundedRect(bx, y, w, barH, rl, rr, 'F')
-      if (w > 22) {
-        doc.setFontSize(5)
-        doc.setTextColor(...C.white)
+
+      // Coins arrondis seulement aux extrémités
+      if (barSegments.length === 1) {
+        doc.roundedRect(bx, y, w, barH, 2.5, 2.5, 'F')
+      } else if (i === 0) {
+        // Premier segment : arrondi à gauche
+        doc.roundedRect(bx, y, w + 2, barH, 2.5, 2.5, 'F')
+        doc.rect(bx + w - 2, y, 4, barH, 'F') // couvre l'arrondi droit
+      } else if (i === barSegments.length - 1) {
+        // Dernier segment : arrondi à droite
+        doc.roundedRect(bx - 2, y, w + 2, barH, 2.5, 2.5, 'F')
+        doc.rect(bx - 2, y, 4, barH, 'F') // couvre l'arrondi gauche
+      } else {
+        doc.rect(bx, y, w, barH, 'F')
+      }
+
+      // Label DANS la barre si assez large
+      if (w > 18) {
+        doc.setFontSize(5.5)
         doc.setFont('helvetica', 'bold')
-        doc.text(`${seg.label} ${Math.round((seg.value / cost) * 100)}%`, bx + w / 2, y + barH * 0.6, { align: 'center' })
+        doc.setTextColor(255, 255, 255)
+        doc.text(`${seg.label} ${Math.round(pct * 100)}%`, bx + w / 2, y + barH * 0.62, { align: 'center' })
       }
       bx += w
     })
 
-    // Legende
-    y += barH + 3
+    // Légende sous la barre
+    y += barH + 4
     let lx = mx
     barSegments.forEach(seg => {
       if (seg.value <= 0) return
       doc.setFillColor(...seg.color)
-      doc.roundedRect(lx, y - 1.5, 2.5, 2.5, 0.6, 0.6, 'F')
-      doc.setFontSize(6.5)
+      doc.roundedRect(lx, y - 1, 3, 3, 0.8, 0.8, 'F')
+      doc.setFontSize(7)
       doc.setTextColor(...C.text)
       doc.setFont('helvetica', 'bold')
       const t = `${seg.label} : ${fmt(seg.value)}`
-      doc.text(t, lx + 4, y + 0.5)
-      lx += 4 + doc.getTextWidth(t) + 6
+      doc.text(t, lx + 5, y + 1)
+      lx += 5 + doc.getTextWidth(t) + 8
     })
-    y += 6
+    y += 7
   }
 
-  // ════════════════════════════════════════════
-  //  DETAILS TECHNIQUES — Card avec icone
-  // ════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════
+  //  DETAILS TECHNIQUES
+  // ════════════════════════════════════════════════════════════
   if (cleanResults.length > 0) {
     if (y + 30 > H) { doc.addPage(); y = 20 }
-    y += 2
-    y = drawSectionHeader(doc, 'DETAILS TECHNIQUES', 'Donnees de calcul', 'D', C.textLight, mx, y, cw)
+    y += 3
+    y = drawSectionTitle(doc, 'DETAILS TECHNIQUES', 'Donnees de calcul', mx, y, C.textMuted)
 
-    const detailH = cleanResults.length * 7 + 4
+    const detailH = cleanResults.length * 7 + 6
     drawCard(doc, mx, y, cw, detailH)
-    let dy = y + 4
+    let dy = y + 5
     cleanResults.forEach((r, i) => {
-      drawParamLine(doc, r.label, r.value, mx + 1, dy, cw - 2, i % 2 === 0)
+      drawParamRow(doc, r.label, r.value, mx + 2, dy, cw - 4, i % 2 === 0)
       dy += 7
     })
-    y += detailH + 4
+    y += detailH + 5
   }
 
-  // ════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════
   //  MARGE CEE (interne)
-  // ════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════
   if (margin && margin.showOnPdf) {
-    doc.setFillColor(...C.skyBg)
-    doc.roundedRect(mx, y, cw, 16, 2, 2, 'F')
-    doc.setDrawColor(186, 230, 253)
-    doc.roundedRect(mx, y, cw, 16, 2, 2, 'S')
+    drawCard(doc, mx, y, cw, 16, { fill: C.skyBg, borderColor: [186, 230, 253] })
     doc.setFontSize(7.5)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(30, 64, 175)
@@ -593,48 +680,55 @@ export function generateSimulationPDF({
     y += 20
   }
 
-  // ════════════════════════════════════════════
-  //  AVANTAGES — avec icones vertes
-  // ════════════════════════════════════════════
-  if (y + 42 > H) { doc.addPage(); y = 20 }
+  // ════════════════════════════════════════════════════════════
+  //  VOS AVANTAGES — Coches vertes uniformes
+  // ════════════════════════════════════════════════════════════
+  if (y + 40 > H) { doc.addPage(); y = 20 }
   y += 2
-  y = drawSectionHeader(doc, 'VOS AVANTAGES', null, 'A', C.brand, mx, y, cw)
+  y = drawSectionTitle(doc, 'VOS AVANTAGES', null, mx, y, C.brand)
 
   const advantages = isAnah ? [
-    { icon: 'M', text: "MaPrimeRenov' : jusqu'a 80% de prise en charge selon vos revenus" },
-    { icon: 'E', text: "Economies d'energie : reduisez vos factures de chauffage durablement" },
-    { icon: 'C', text: 'Confort thermique ameliore ete comme hiver' },
-    { icon: 'V', text: 'Valorisation de votre bien immobilier grace a un meilleur DPE' },
+    "MaPrimeRenov' : jusqu'a 80% de prise en charge selon vos revenus",
+    "Economies d'energie : reduisez vos factures de chauffage durablement",
+    'Confort thermique ameliore ete comme hiver',
+    'Valorisation de votre bien immobilier grace a un meilleur DPE',
   ] : [
-    { icon: 'E', text: "Economies d'energie : reduisez vos factures de chauffage durablement" },
-    { icon: 'C', text: 'Confort thermique ameliore ete comme hiver' },
-    { icon: 'V', text: 'Valorisation de votre bien immobilier grace a un meilleur DPE' },
-    { icon: 'A', text: "Prime CEE deduite directement — pas d'avance de tresorerie" },
+    "Economies d'energie : reduisez vos factures de chauffage durablement",
+    'Confort thermique ameliore ete comme hiver',
+    'Valorisation de votre bien immobilier grace a un meilleur DPE',
+    "Prime CEE deduite directement — pas d'avance de tresorerie",
   ]
 
-  advantages.forEach(adv => {
-    drawIcon(doc, adv.icon, mx + 4, y + 0.5, C.brand, 5.5)
+  advantages.forEach(text => {
+    drawCheckmark(doc, mx + 4, y)
     doc.setFontSize(7.5)
     doc.setTextColor(...C.text)
     doc.setFont('helvetica', 'normal')
-    doc.text(adv.text, mx + 10, y + 1.5, { maxWidth: cw - 12 })
-    y += 7
+    doc.text(text, mx + 9, y + 1, { maxWidth: cw - 12 })
+    y += 7.5
   })
 
-  // ════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════
   //  FOOTER
-  // ════════════════════════════════════════════
-  const footerY = H - 10
-  doc.setDrawColor(...C.border)
-  doc.line(mx, footerY - 4, W - mx, footerY - 4)
-  doc.setFillColor(...C.brandLight)
-  doc.rect(0, H - 1.5, W, 1.5, 'F')
+  // ════════════════════════════════════════════════════════════
+  const footerY = H - 12
 
+  // Ligne de séparation
+  doc.setDrawColor(...C.border)
+  doc.setLineWidth(0.3)
+  doc.line(mx, footerY - 3, W - mx, footerY - 3)
+  doc.setLineWidth(0.2)
+
+  // Disclaimer
   doc.setFontSize(6)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...C.textLight)
-  doc.text(`Simulation indicative — fiche ${ficheCode}. Montants sous reserve d'eligibilite. Non contractuel.`, W / 2, footerY, { align: 'center', maxWidth: cw })
-  doc.text(`${company.name || 'Artex360'} — Document genere le ${dateStr}`, W / 2, footerY + 3.5, { align: 'center', maxWidth: cw })
+  doc.text(`Simulation indicative — fiche ${ficheCode}. Montants sous reserve d'eligibilite. Non contractuel.`, W / 2, footerY + 0.5, { align: 'center' })
+  doc.text(`${company.name || 'Artex360'} — Document genere le ${dateStr}`, W / 2, footerY + 4, { align: 'center' })
+
+  // Accent vert bottom
+  doc.setFillColor(...C.brandLight)
+  doc.rect(0, H - 2, W, 2, 'F')
 
   const safeName = clientName ? clientName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) + '_' : ''
   doc.save(`simulation_${safeName}${ficheCode}_${new Date().toISOString().slice(0, 10)}.pdf`)
