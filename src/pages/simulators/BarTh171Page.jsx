@@ -630,6 +630,7 @@ export default function BarTh171Page() {
 
                 <div className="h-px bg-white/10 my-5" />
 
+                {/* TOTAL AIDES = CEE + MPR uniquement */}
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-white">TOTAL AIDES</span>
@@ -643,25 +644,47 @@ export default function BarTh171Page() {
                       </button>
                     )}
                   </div>
-                  <span className="text-3xl font-extrabold text-[var(--color-artex-green)]">{formatCurrency(totalAidFinal)}</span>
+                  <span className="text-3xl font-extrabold text-[var(--color-artex-green)]">{formatCurrency(commercial.totalAid)}</span>
                 </div>
 
-                {offreUnEuro && priseEnChargeRAC > 0 && (
-                  <div className="flex justify-between items-center mt-2 px-3 py-1.5 bg-[var(--color-brand-600)]/15 rounded-lg">
-                    <span className="text-[11px] font-medium text-[var(--color-artex-green)]">dont prise en charge installateur</span>
-                    <span className="text-sm font-bold text-[var(--color-artex-green)]">{formatCurrency(priseEnChargeRAC)}</span>
+                {/* RESTE À CHARGE sans offre 1€ */}
+                {!offreUnEuro && (
+                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/10">
+                    <span className="text-sm font-medium text-gray-300">RESTE À CHARGE</span>
+                    <span className="text-2xl font-extrabold text-white">{formatCurrency(commercial.resteACharge)}</span>
                   </div>
                 )}
 
-                <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/10">
-                  <span className="text-sm font-medium text-gray-300">RESTE À CHARGE</span>
-                  <div className="flex items-center gap-2">
-                    {offreUnEuro && commercial.resteACharge > 1 && (
-                      <span className="text-sm text-gray-500 line-through">{formatCurrency(commercial.resteACharge)}</span>
-                    )}
-                    <span className={`text-2xl font-extrabold ${offreUnEuro ? 'text-[var(--color-artex-green)]' : 'text-white'}`}>{formatCurrency(racFinal)}</span>
+                {/* Bloc Offre à 1€ — séparé et clair */}
+                {offreUnEuro && priseEnChargeRAC > 0 && (
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <div className="rounded-lg bg-white/5 border border-white/10 p-4 space-y-3">
+                      <p className="text-[11px] uppercase tracking-wider font-bold text-[var(--color-artex-green)]">Offre à 1 €</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-400">Coût du projet</span>
+                          <span className="font-semibold text-white">{formatCurrency(projectCost)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-400">Aides (CEE + MPR)</span>
+                          <span className="font-semibold text-[var(--color-artex-green)]">− {formatCurrency(commercial.totalAid)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm pt-2 border-t border-white/10">
+                          <span className="text-gray-400">Reste à charge initial</span>
+                          <span className="font-semibold text-orange-400">{formatCurrency(commercial.resteACharge)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-400">Prise en charge installateur</span>
+                          <span className="font-semibold text-[var(--color-brand-400)]">− {formatCurrency(priseEnChargeRAC)}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center pt-3 border-t border-[var(--color-artex-green)]/30">
+                        <span className="text-sm font-bold text-white">LE CLIENT PAIE</span>
+                        <span className="text-3xl font-black text-[var(--color-artex-green)]">1 €</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Barre de répartition */}
                 <div className="mt-5">
@@ -675,7 +698,7 @@ export default function BarTh171Page() {
                     {offreUnEuro && priseEnChargeRAC > 0 && (
                       <div className="h-full bg-[var(--color-brand-600)] transition-all duration-500" style={{ width: `${(priseEnChargeRAC / projectCost) * 100}%` }} />
                     )}
-                    {racFinal > 0 && (
+                    {racFinal > 0 && !offreUnEuro && (
                       <div className="h-full bg-orange-400 transition-all duration-500" style={{ width: `${(racFinal / projectCost) * 100}%` }} />
                     )}
                   </div>
@@ -683,7 +706,8 @@ export default function BarTh171Page() {
                     <span>CEE {Math.round((commercial.ceeCommerciale / projectCost) * 100)}%</span>
                     {commercial.mprFinal > 0 && <span>MPR {Math.round((commercial.mprFinal / projectCost) * 100)}%</span>}
                     {offreUnEuro && priseEnChargeRAC > 0 && <span className="text-[var(--color-brand-400)]">Installateur {Math.round((priseEnChargeRAC / projectCost) * 100)}%</span>}
-                    <span>RAC {racFinal <= 1 ? '1 €' : `${Math.round((racFinal / projectCost) * 100)}%`}</span>
+                    {!offreUnEuro && <span>RAC {Math.round((commercial.resteACharge / projectCost) * 100)}%</span>}
+                    {offreUnEuro && <span className="text-[var(--color-artex-green)]">Client 1 €</span>}
                   </div>
                 </div>
               </div>
