@@ -672,55 +672,64 @@ export default function BarTh171Page() {
                 <ul className="space-y-2 text-[13px] text-gray-700">
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                    <span>Ménage aux <strong>revenus modestes ou très modestes</strong> (profil Bleu ou Jaune)</span>
+                    <span>Ménage aux <strong>revenus modestes ou très modestes</strong> (profil Bleu ou Jaune MaPrimeRénov')</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                    <span>Installation d'une <strong>pompe à chaleur air/eau</strong></span>
+                    <span>Installation d'une <strong>PAC air/eau ou eau/eau</strong> (PAC air/air exclue)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                    <span>En remplacement d'un chauffage <strong>gaz ou fioul</strong></span>
+                    <span>En remplacement d'une chaudière <strong>gaz ou fioul</strong></span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                    <span><strong>Résidence principale</strong> de plus de 2 ans</span>
+                    <span>Logement en <strong>France métropolitaine</strong> continentale</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                    <span>Être client EDF pour l'<strong>électricité du logement</strong></span>
+                    <span>Installation par un <strong>artisan RGE</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>Accessible <strong>quel que soit votre fournisseur</strong> d'énergie</span>
                   </li>
                 </ul>
               </div>
 
-              {/* Justificatifs */}
+              {/* Calendrier */}
               <div>
-                <h4 className="text-[13px] font-semibold text-gray-900 mb-2">Justificatifs à fournir</h4>
+                <h4 className="text-[13px] font-semibold text-gray-900 mb-2">Calendrier & limites</h4>
                 <ul className="space-y-1.5 text-[13px] text-gray-600">
                   <li className="flex items-start gap-2">
                     <span className="text-blue-400 mt-0.5">•</span>
-                    Avis d'imposition (RFR pour catégorie revenus)
+                    Devis signé <strong>après le 8 avril 2026</strong>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-400 mt-0.5">•</span>
-                    Facture de l'installation PAC air/eau (artisan RGE)
+                    Travaux terminés <strong>avant le 31 décembre 2027</strong>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-400 mt-0.5">•</span>
-                    Justificatif de contrat EDF électricité
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">•</span>
-                    Attestation sur l'honneur de remplacement gaz/fioul
+                    Limité aux <strong>80 000 premiers dossiers</strong> (premiers arrivés, premiers servis)
                   </li>
                 </ul>
+              </div>
+
+              {/* Note */}
+              {/* Cumul */}
+              <div className="flex items-start gap-2 p-3 bg-green-50 rounded-lg border border-green-100">
+                <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                <p className="text-[12px] text-green-800">
+                  <strong>Cumulable</strong> avec MaPrimeRénov' et la prime Coup de Pouce CEE. Plan EDF de 240 M€ pour accélérer le remplacement des chaudières fossiles.
+                </p>
               </div>
 
               {/* Note */}
               <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-100">
                 <Info className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                 <p className="text-[12px] text-amber-800">
-                  Cette prime EDF est <strong>cumulable</strong> avec les CEE et MaPrimeRénov'. Elle n'est pas intégrée au calcul du simulateur — le montant affiché est purement informatif.
+                  Ce montant n'est <strong>pas intégré</strong> au calcul du simulateur — information purement indicative. Inscription sur <a href="https://www.jepassealelectrique.fr" target="_blank" rel="noopener noreferrer" className="underline font-semibold hover:text-amber-900">jepassealelectrique.fr</a>
                 </p>
               </div>
             </div>
