@@ -663,12 +663,19 @@ export default function BarTh171Page() {
                       <div className="h-full bg-orange-400 transition-all duration-500" style={{ width: `${(racFinal / projectCost) * 100}%` }} />
                     )}
                   </div>
-                  <div className="flex justify-between mt-1.5 text-[10px] font-medium">
-                    <span className="text-[var(--color-artex-green)]">CEE {Math.round((commercial.ceeCommerciale / projectCost) * 100)}%</span>
-                    {commercial.mprFinal > 0 && <span className="text-sky-300">MPR {Math.round((commercial.mprFinal / projectCost) * 100)}%</span>}
-                    {offreUnEuro && priseEnChargeRAC > 0 && <span className="text-amber-300">Installateur {Math.round((priseEnChargeRAC / projectCost) * 100)}%</span>}
-                    {!offreUnEuro && <span className="text-orange-300">RAC {Math.round((commercial.resteACharge / projectCost) * 100)}%</span>}
-                    {offreUnEuro && <span className="text-white/70">RAC 1 €</span>}
+                  <div className="flex mt-1.5 text-[10px] font-medium">
+                    {commercial.ceeCommerciale > 0 && (
+                      <span className="text-[var(--color-artex-green)] truncate" style={{ width: `${(commercial.ceeCommerciale / projectCost) * 100}%` }}>CEE {Math.round((commercial.ceeCommerciale / projectCost) * 100)}%</span>
+                    )}
+                    {commercial.mprFinal > 0 && (
+                      <span className="text-sky-300 truncate" style={{ width: `${(commercial.mprFinal / projectCost) * 100}%` }}>MPR {Math.round((commercial.mprFinal / projectCost) * 100)}%</span>
+                    )}
+                    {offreUnEuro && priseEnChargeRAC > 0 && (
+                      <span className="text-amber-300 truncate" style={{ width: `${(priseEnChargeRAC / projectCost) * 100}%` }}>Installateur {Math.round((priseEnChargeRAC / projectCost) * 100)}%</span>
+                    )}
+                    {!offreUnEuro && commercial.resteACharge > 0 && (
+                      <span className="text-orange-300 text-right truncate" style={{ width: `${(commercial.resteACharge / projectCost) * 100}%` }}>RAC {Math.round((commercial.resteACharge / projectCost) * 100)}%</span>
+                    )}
                   </div>
                 </div>
               </div>
