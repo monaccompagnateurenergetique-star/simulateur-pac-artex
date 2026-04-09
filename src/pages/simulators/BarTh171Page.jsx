@@ -507,22 +507,22 @@ export default function BarTh171Page() {
               {commercial.isCeilingExceeded && optimalCeePercent !== null && optimalCeePercent !== ceePercent && optimizedResult && (() => {
                 const gainTotal = (optimizedResult.mprFinal - commercial.mprFinal) + (optimizedResult.ceeMargin - commercial.ceeMargin)
                 return (
-                  <div className="p-4 bg-amber-50 border-b border-amber-200">
+                  <div className="p-4 bg-[var(--color-surface-secondary)] border-b border-[var(--color-border-light)]">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                        <AlertTriangle className="w-5 h-5 text-[var(--color-warning)] shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-amber-800">
+                          <p className="text-sm font-bold text-[var(--color-text)]">
                             Vous perdez {formatCurrency(mprGrantTheorique - commercial.mprFinal)} de MPR
                           </p>
-                          <p className="text-[11px] text-amber-600 mt-0.5">
-                            Plafond {Math.round(commercial.maxAidPercentage * 100)}% dépassé — optimisez à {optimalCeePercent}% pour <span className="font-bold text-green-700">+{formatCurrency(gainTotal)} de marge</span>
+                          <p className="text-[11px] text-[var(--color-muted)] mt-0.5">
+                            Plafond {Math.round(commercial.maxAidPercentage * 100)}% dépassé — optimisez à {optimalCeePercent}% pour <span className="font-bold text-[var(--color-brand-600)]">+{formatCurrency(gainTotal)} de marge</span>
                           </p>
                         </div>
                       </div>
                       <button
                         onClick={handleOptimize}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-[var(--radius-sm)] transition shadow-sm shrink-0"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--color-brand-600)] hover:bg-[var(--color-brand-700,#5fa313)] text-white text-xs font-bold rounded-[var(--radius-sm)] transition shadow-sm shrink-0"
                       >
                         <TrendingUp className="w-3.5 h-3.5" />
                         +{formatCurrency(gainTotal)} — Optimiser
@@ -534,16 +534,16 @@ export default function BarTh171Page() {
 
               {/* Bandeau confirmation optimisation */}
               {commercial.isCeilingExceeded && optimalCeePercent !== null && optimalCeePercent === ceePercent && (
-                <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span className="text-xs text-amber-700">Plafond {Math.round(commercial.maxAidPercentage * 100)}% — MPR réduite à {formatCurrency(commercial.mprFinal)}</span>
+                <div className="px-4 py-2.5 bg-[var(--color-surface-secondary)] border-b border-[var(--color-border-light)] flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-[var(--color-warning)] shrink-0" />
+                  <span className="text-xs text-[var(--color-muted)]">Plafond {Math.round(commercial.maxAidPercentage * 100)}% — MPR réduite à {formatCurrency(commercial.mprFinal)}</span>
                 </div>
               )}
 
               {!commercial.isCeilingExceeded && optimalCeePercent !== null && optimalCeePercent === ceePercent && (
-                <div className="px-4 py-2.5 bg-green-50 border-b border-green-200 flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-600 shrink-0" />
-                  <span className="text-xs font-semibold text-green-700">Répartition optimisée — CEE et MPR maximisés</span>
+                <div className="px-4 py-2.5 bg-[var(--color-brand-50)] border-b border-[var(--color-brand-100)] flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[var(--color-brand-600)] shrink-0" />
+                  <span className="text-xs font-semibold text-[var(--color-brand-700,#4a7a0f)]">Répartition optimisée — CEE et MPR maximisés</span>
                 </div>
               )}
 
