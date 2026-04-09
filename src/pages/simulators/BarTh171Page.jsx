@@ -640,7 +640,7 @@ export default function BarTh171Page() {
                         </div>
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-400">Prise en charge installateur</span>
-                          <span className="font-semibold text-[var(--color-brand-400)]">− {formatCurrency(priseEnChargeRAC)}</span>
+                          <span className="font-semibold text-amber-400">− {formatCurrency(priseEnChargeRAC)}</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center pt-3 border-t border-[var(--color-artex-green)]/30">
