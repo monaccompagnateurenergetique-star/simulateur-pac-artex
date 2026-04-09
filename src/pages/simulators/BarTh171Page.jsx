@@ -516,7 +516,18 @@ export default function BarTh171Page() {
                 <div className="h-px bg-white/10 my-5" />
 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-bold text-white">TOTAL AIDES</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white">TOTAL AIDES</span>
+                    {isEdfEligible && (
+                      <button
+                        onClick={() => setShowEdfModal(true)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-400/30 hover:bg-blue-500/30 transition-colors cursor-pointer"
+                      >
+                        <Gift className="w-3 h-3" />
+                        +{formatCurrency(PRIME_EDF)} EDF
+                      </button>
+                    )}
+                  </div>
                   <span className="text-3xl font-extrabold text-[var(--color-artex-green)]">{formatCurrency(commercial.totalAid)}</span>
                 </div>
 
