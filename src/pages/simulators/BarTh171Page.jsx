@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft, Users, Home, Zap, Euro, TrendingUp, ChevronDown, Eye, EyeOff,
-  SlidersHorizontal, Info, AlertTriangle, Check
+  SlidersHorizontal, Info, AlertTriangle, Check, X, Gift
 } from 'lucide-react'
 import { BAR_TH_171 } from '../../lib/constants/barTh171'
 import { ZONE_OPTIONS } from '../../lib/constants/zones'
@@ -149,6 +149,7 @@ export default function BarTh171Page() {
   const [projectCost, setProjectCost] = useState(() => getDefault('projectCost', 12000))
   const [ceePercent, setCeePercent] = useState(() => getDefault('ceePercent', 100))
   const [showInstallateur, setShowInstallateur] = useState(false)
+  const [showEdfModal, setShowEdfModal] = useState(false)
 
   // Calcul précarité
   const mprCategory = precariteMode === 'direct'
@@ -167,6 +168,11 @@ export default function BarTh171Page() {
   // MPR
   const mprGrants = MPR_GRANTS['bar-th-171'] || {}
   const mprGrantTheorique = mprGrants[mprCategory] || 0
+
+  // Prime EDF "Je passe à l'électrique" — 1 000 € forfait
+  // Éligible si : profil Bleu/Jaune + remplacement gaz/fioul → PAC air/eau (BAR-TH-171 = toujours PAC air/eau)
+  const isEdfEligible = isPrimaryResidence && (mprCategory === 'Bleu' || mprCategory === 'Jaune')
+  const PRIME_EDF = 1000
 
   // Commercial
   const commercial = useMemo(() => computeCommercialStrategy({
@@ -301,7 +307,18 @@ export default function BarTh171Page() {
                 )}
 
                 <div className="pt-1">
-                  <PrecariteBadge category={mprCategory} />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <PrecariteBadge category={mprCategory} />
+                    {isEdfEligible && (
+                      <button
+                        onClick={() => setShowEdfModal(true)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+                      >
+                        <Gift className="w-3.5 h-3.5" />
+                        Prime EDF +{formatCurrency(PRIME_EDF)}
+                      </button>
+                    )}
+                  </div>
                   {mprGrantTheorique > 0 && (
                     <p className="text-[11px] text-[var(--color-muted)] mt-1.5">
                       MPR forfaitaire : <span className="font-semibold text-[var(--color-text)]">{formatCurrency(mprGrantTheorique)}</span>
@@ -611,6 +628,94 @@ export default function BarTh171Page() {
           </p>
         </div>
       </div>
+
+      {/* Modal Prime EDF */}
+      {showEdfModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowEdfModal(false)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Gift className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Prime EDF — « Je passe à l'électrique »</h3>
+                  <p className="text-xs text-gray-500">Bonus cumulable avec CEE + MaPrimeRénov'</p>
+                </div>
+              </div>
+              <button onClick={() => setShowEdfModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              {/* Montant */}
+              <div className="text-center py-4 bg-blue-50 rounded-lg">
+                <p className="text-3xl font-extrabold text-blue-700">{formatCurrency(PRIME_EDF)}</p>
+                <p className="text-sm text-blue-600 mt-1">Forfait unique par logement</p>
+              </div>
+
+              {/* Conditions */}
+              <div>
+                <h4 className="text-[13px] font-semibold text-gray-900 mb-2">Conditions d'éligibilité</h4>
+                <ul className="space-y-2 text-[13px] text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>Ménage aux <strong>revenus modestes ou très modestes</strong> (profil Bleu ou Jaune)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>Installation d'une <strong>pompe à chaleur air/eau</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>En remplacement d'un chauffage <strong>gaz ou fioul</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                    <span><strong>Résidence principale</strong> de plus de 2 ans</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>Être client EDF pour l'<strong>électricité du logement</strong></span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Justificatifs */}
+              <div>
+                <h4 className="text-[13px] font-semibold text-gray-900 mb-2">Justificatifs à fournir</h4>
+                <ul className="space-y-1.5 text-[13px] text-gray-600">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400 mt-0.5">•</span>
+                    Avis d'imposition (RFR pour catégorie revenus)
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400 mt-0.5">•</span>
+                    Facture de l'installation PAC air/eau (artisan RGE)
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400 mt-0.5">•</span>
+                    Justificatif de contrat EDF électricité
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400 mt-0.5">•</span>
+                    Attestation sur l'honneur de remplacement gaz/fioul
+                  </li>
+                </ul>
+              </div>
+
+              {/* Note */}
+              <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-100">
+                <Info className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                <p className="text-[12px] text-amber-800">
+                  Cette prime EDF est <strong>cumulable</strong> avec les CEE et MaPrimeRénov'. Elle n'est pas intégrée au calcul du simulateur — le montant affiché est purement informatif.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
