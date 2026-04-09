@@ -516,40 +516,100 @@ export default function BarTh171Page() {
 
           {/* ─── Alerte plafond + Optimisation ─── */}
           {!isIneligible && commercial.isCeilingExceeded && (
-            <div className="bg-amber-50 border border-amber-300 rounded-[var(--radius)] p-4 space-y-3">
-              <div className="flex items-start gap-2.5">
-                <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-bold text-amber-800">ATTENTION : Plafond d'aide dépassé !</p>
-                  <p className="text-xs text-amber-700 mt-1">
-                    L'aide totale ({Math.round(commercial.maxAidPercentage * 100)}% du coût éligible) est dépassée.
-                    La prime MaPrimeRénov' est réduite à <span className="font-bold">{formatCurrency(commercial.mprFinal)}</span> au lieu de {formatCurrency(mprGrantTheorique)} pour respecter le plafond.
-                  </p>
+            <div className="bg-amber-50 border border-amber-300 rounded-[var(--radius)] overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-800">Plafond d'aide dépassé ({Math.round(commercial.maxAidPercentage * 100)}%)</p>
+                    <p className="text-xs text-amber-700 mt-1">
+                      MaPrimeRénov' réduite à <span className="font-bold">{formatCurrency(commercial.mprFinal)}</span> au lieu de {formatCurrency(mprGrantTheorique)}.
+                      Vous perdez <span className="font-bold text-red-600">{formatCurrency(mprGrantTheorique - commercial.mprFinal)}</span> de MPR.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {optimalCeePercent !== null && optimalCeePercent !== ceePercent && optimizedResult && (
-                <div className="bg-white rounded-[var(--radius-sm)] border border-amber-200 p-4">
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div>
-                      <p className="text-xs font-semibold text-amber-800 mb-2">Répartition optimale à {optimalCeePercent}% CEE :</p>
-                      <div className="flex items-center gap-4 text-xs">
-                        <span className="text-[var(--color-text-secondary)]">CEE : <span className="font-bold text-[var(--color-brand-600)]">{formatCurrency(optimizedResult.ceeCommerciale)}</span></span>
-                        <span className="text-[var(--color-text-secondary)]">MPR : <span className="font-bold text-[var(--color-success)]">{formatCurrency(optimizedResult.mprFinal)}</span></span>
-                        <span className="text-[var(--color-text-secondary)]">CEE installateur : <span className="font-bold text-[var(--color-danger)]">{formatCurrency(optimizedResult.ceeMargin)}</span></span>
-                        <span className="text-[var(--color-text-secondary)]">RAC : <span className="font-bold text-[var(--color-text)]">{formatCurrency(optimizedResult.resteACharge)}</span></span>
+              {optimalCeePercent !== null && optimalCeePercent !== ceePercent && optimizedResult && (() => {
+                const gainMPR = optimizedResult.mprFinal - commercial.mprFinal
+                const gainMargin = optimizedResult.ceeMargin - commercial.ceeMargin
+                const gainTotal = gainMPR + gainMargin
+                const aidClientActuel = commercial.totalAid
+                const aidClientOptimal = optimizedResult.totalAid
+                return (
+                  <div className="border-t border-amber-200">
+                    {/* Comparaison visuelle */}
+                    <div className="grid grid-cols-2 divide-x divide-amber-200">
+                      {/* Colonne Actuel */}
+                      <div className="p-4 bg-amber-50/50">
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-amber-500 mb-3">Actuel — {ceePercent}% CEE</p>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">CEE client</span>
+                            <span className="font-bold text-[var(--color-brand-600)]">{formatCurrency(commercial.ceeCommerciale)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">MPR</span>
+                            <span className="font-bold text-red-500">{formatCurrency(commercial.mprFinal)} <span className="text-[10px] font-normal">⚠️ réduite</span></span>
+                          </div>
+                          <div className="flex justify-between pt-1.5 border-t border-amber-200">
+                            <span className="text-gray-500">Aide client</span>
+                            <span className="font-bold">{formatCurrency(aidClientActuel)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Marge installateur</span>
+                            <span className="font-bold text-[var(--color-danger)]">{formatCurrency(commercial.ceeMargin)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Colonne Optimisé */}
+                      <div className="p-4 bg-green-50/60">
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-green-600 mb-3">Optimisé — {optimalCeePercent}% CEE ✓</p>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">CEE client</span>
+                            <span className="font-bold text-[var(--color-brand-600)]">{formatCurrency(optimizedResult.ceeCommerciale)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">MPR</span>
+                            <span className="font-bold text-green-600">{formatCurrency(optimizedResult.mprFinal)} <span className="text-[10px] font-normal">✓ max</span></span>
+                          </div>
+                          <div className="flex justify-between pt-1.5 border-t border-green-200">
+                            <span className="text-gray-500">Aide client</span>
+                            <span className="font-bold">{formatCurrency(aidClientOptimal)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Marge installateur</span>
+                            <span className="font-bold text-green-600">{formatCurrency(optimizedResult.ceeMargin)}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <button
-                      onClick={handleOptimize}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-[var(--radius-sm)] transition shadow-[var(--shadow-xs)]"
-                    >
-                      <SlidersHorizontal className="w-3.5 h-3.5" />
-                      Optimiser CEE + MPR
-                    </button>
+
+                    {/* Bandeau gain + CTA */}
+                    <div className="flex items-center justify-between px-4 py-3 bg-green-600">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 text-white">
+                          <TrendingUp className="w-4 h-4" />
+                          <span className="text-sm font-bold">+{formatCurrency(gainTotal)} de marge</span>
+                        </div>
+                        <div className="flex gap-3 text-[11px] text-green-100">
+                          {gainMPR > 0 && <span>MPR +{formatCurrency(gainMPR)}</span>}
+                          {gainMargin > 0 && <span>Marge +{formatCurrency(gainMargin)}</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleOptimize}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-green-700 text-xs font-bold rounded-[var(--radius-sm)] hover:bg-green-50 transition shadow-lg"
+                      >
+                        <SlidersHorizontal className="w-3.5 h-3.5" />
+                        Optimiser
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
           )}
 
