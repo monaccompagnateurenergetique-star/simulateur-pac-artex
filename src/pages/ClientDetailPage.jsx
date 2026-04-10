@@ -13,6 +13,8 @@ import { useAllOrgData } from '../hooks/useAllOrgData'
 import { useDocumentRequests, DOC_TYPES, DOC_REQUEST_STATUSES } from '../hooks/useDocumentRequests'
 import { useProjectBeneficiary } from '../hooks/useProjectBeneficiary'
 import { useSimulationHistory } from '../hooks/useSimulationHistory'
+import { useSettings } from '../hooks/useSettings'
+import DocumentRequestModal from '../components/project/DocumentRequestModal'
 import { CATALOG } from '../lib/constants/catalog'
 import { getLocationInfo } from '../utils/postalCode'
 import { searchDPE, getDpeColor } from '../utils/dpeApi'
@@ -118,6 +120,7 @@ export default function ClientDetailPage() {
   const [reminderText, setReminderText] = useState('')
   const [reminderDate, setReminderDate] = useState('')
   const [showDocForm, setShowDocForm] = useState(false)
+  const [showDocRequestModal, setShowDocRequestModal] = useState(false)
   const [docType, setDocType] = useState('autre')
   const [docMessage, setDocMessage] = useState('')
   const [dpeResults, setDpeResults] = useState(null)
@@ -128,6 +131,7 @@ export default function ClientDetailPage() {
 
   const { beneficiary, sharedScenarios: projectSharedScenarios } = useProjectBeneficiary(id)
   const { requests: docRequests, createRequest: createDocRequest, updateRequestStatus } = useDocumentRequests(id)
+  const { settings } = useSettings()
 
   const project = projects.find((c) => c.id === id)
   if (!project) {
@@ -668,14 +672,20 @@ export default function ClientDetailPage() {
                   Documents
                   <span className="text-slate-400 font-normal text-xs">({docRequests.length})</span>
                 </h2>
-                <button onClick={() => setShowDocForm(!showDocForm)} disabled={!beneficiary}
-                  className={`text-xs font-medium px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
-                    beneficiary
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  }`}>
-                  <Plus className="w-3 h-3" />Demander
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowDocRequestModal(true)}
+                    className="text-xs font-medium px-3 py-2 rounded-lg transition flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+                    <MailPlus className="w-3 h-3" />Demander des pièces
+                  </button>
+                  <button onClick={() => setShowDocForm(!showDocForm)} disabled={!beneficiary}
+                    className={`text-xs font-medium px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
+                      beneficiary
+                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    }`}>
+                    <Plus className="w-3 h-3" />Ajouter
+                  </button>
+                </div>
               </div>
               <div className="p-5">
                 {showDocForm && (
@@ -870,6 +880,23 @@ export default function ClientDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ═══ MODAL — Demande de pièces ═══ */}
+      <DocumentRequestModal
+        open={showDocRequestModal}
+        onClose={() => setShowDocRequestModal(false)}
+        clientFirstName={beneficiary?.firstName || project?.firstName || ''}
+        clientLastName={beneficiary?.lastName || project?.lastName || ''}
+        clientEmail={beneficiary?.email || project?.email || ''}
+        initialTags={['CEE']}
+        initialPrecarity={
+          project?.category === 'Bleu' ? 'tres_modeste' :
+          project?.category === 'Jaune' ? 'modeste' :
+          project?.category === 'Violet' ? 'intermediaire' :
+          project?.category === 'Rose' ? 'superieur' : ''
+        }
+        company={settings?.company || {}}
+      />
     </div>
   )
 }
