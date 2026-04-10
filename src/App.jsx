@@ -14,6 +14,7 @@ import BarTh174Page from './pages/simulators/BarTh174Page'
 import BarTh175Page from './pages/simulators/BarTh175Page'
 import BarTh179Page from './pages/simulators/BarTh179Page'
 import SettingsPage from './pages/SettingsPage'
+import DocumentLibraryPage from './pages/DocumentLibraryPage'
 import ToolboxPage from './pages/ToolboxPage'
 import ClientsPage from './pages/ClientsPage'
 import ClientFormPage from './pages/ClientFormPage'
@@ -86,6 +87,7 @@ export default function App() {
           <Route path="/historique" element={<ProtectedRoute requiredPermission="access_simulations"><HistoryPage /></ProtectedRoute>} />
           <Route path="/actualites" element={<NewsPage />} />
           <Route path="/parametrage" element={<ProtectedRoute requiredPermission="access_simulations"><SettingsPage /></ProtectedRoute>} />
+          <Route path="/parametrage/documents" element={<ProtectedRoute requiredPermission="access_simulations"><DocumentLibraryPage /></ProtectedRoute>} />
           <Route path="/boite-a-outils" element={<ToolboxPage />} />
           <Route path="/prospection-dpe" element={<ProtectedRoute requiredPermission="access_simulations"><DpeProspectionPage /></ProtectedRoute>} />
 

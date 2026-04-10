@@ -1,5 +1,6 @@
 import { useRef } from 'react'
-import { Settings, Building2, Euro, Upload, RotateCcw, Save, Check } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Settings, Building2, Euro, Upload, RotateCcw, Save, Check, FileText, ChevronRight } from 'lucide-react'
 import { useSettings } from '../hooks/useSettings'
 import InputField from '../components/ui/InputField'
 
@@ -35,6 +36,25 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-500">Configurez vos informations société et vos tarifs CEE</p>
         </div>
       </div>
+
+      {/* ─── LIENS RAPIDES ─── */}
+      <Link
+        to="/parametrage/documents"
+        className="block bg-white rounded-2xl border border-gray-200 shadow-sm hover:border-emerald-300 hover:shadow-md transition group"
+      >
+        <div className="flex items-center justify-between px-6 py-5">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-50 rounded-xl group-hover:bg-emerald-100 transition">
+              <FileText className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-800">Bibliothèque de Documents</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Gérez la liste des documents justificatifs CEE / MPR / Anah</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition" />
+        </div>
+      </Link>
 
       {/* ─── SOCIÉTÉ ─── */}
       <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
