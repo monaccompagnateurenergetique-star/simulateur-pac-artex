@@ -15,6 +15,7 @@ import { useProjectBeneficiary } from '../hooks/useProjectBeneficiary'
 import { useSimulationHistory } from '../hooks/useSimulationHistory'
 import { useSettings } from '../hooks/useSettings'
 import DocumentRequestModal from '../components/project/DocumentRequestModal'
+import ProjectDocuments from '../components/project/ProjectDocuments'
 import { CATALOG } from '../lib/constants/catalog'
 import { getLocationInfo } from '../utils/postalCode'
 import { searchDPE, getDpeColor } from '../utils/dpeApi'
@@ -662,88 +663,32 @@ export default function ClientDetailPage() {
               </div>
             </section>
 
-            {/* Documents */}
-            <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <div className="p-1.5 bg-indigo-50 rounded-lg">
-                    <FileText className="w-4 h-4 text-indigo-600" />
-                  </div>
-                  Documents
-                  <span className="text-slate-400 font-normal text-xs">({docRequests.length})</span>
-                </h2>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setShowDocRequestModal(true)}
-                    className="text-xs font-medium px-3 py-2 rounded-lg transition flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
-                    <MailPlus className="w-3 h-3" />Demander des pièces
-                  </button>
-                  <button onClick={() => setShowDocForm(!showDocForm)} disabled={!beneficiary}
-                    className={`text-xs font-medium px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
-                      beneficiary
-                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    }`}>
-                    <Plus className="w-3 h-3" />Ajouter
-                  </button>
-                </div>
-              </div>
-              <div className="p-5">
-                {showDocForm && (
-                  <div className="bg-slate-50 rounded-xl p-4 mb-4 border border-slate-200">
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Type</label>
-                        <select value={docType} onChange={(e) => setDocType(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-200 outline-none">
-                          {DOC_TYPES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Message</label>
-                        <input type="text" value={docMessage} onChange={(e) => setDocMessage(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-200 outline-none" />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => setShowDocForm(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700">Annuler</button>
-                      <button onClick={handleCreateDocRequest}
-                        className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 flex items-center gap-1 transition">
-                        <Send className="w-3 h-3" />Envoyer
-                      </button>
-                    </div>
-                  </div>
-                )}
+            {/* Documents — Checklist avec upload Cloud Storage */}
+            <ProjectDocuments
+              projectId={id}
+              projectTags={
+                project.scenarios?.some((s) => s.items?.some((i) => i.ficheCode))
+                  ? [...new Set(project.scenarios.flatMap((s) => (s.items || []).map((i) => {
+                      if (i.ficheCode?.startsWith('BAR-')) return 'CEE'
+                      return null
+                    }).filter(Boolean)).concat(project.category ? ['MPR'] : []))]
+                  : ['CEE']
+              }
+              precarity={
+                project.category === 'Bleu' ? 'tres_modeste' :
+                project.category === 'Jaune' ? 'modeste' :
+                project.category === 'Violet' ? 'intermediaire' :
+                project.category === 'Rose' ? 'superieur' : ''
+              }
+            />
 
-                {docRequests.length === 0 ? (
-                  <div className="text-center py-6">
-                    <FileText className="w-6 h-6 text-slate-200 mx-auto mb-2" />
-                    <p className="text-xs text-slate-400">Aucun document demande</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {docRequests.map((req) => {
-                      const sm = DOC_REQUEST_STATUSES.find((s) => s.value === req.status) || DOC_REQUEST_STATUSES[0]
-                      return (
-                        <div key={req.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-medium text-slate-700">{req.label}</span>
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${sm.color}`}>{sm.label}</span>
-                            </div>
-                            {req.message && <p className="text-[10px] text-slate-400 mt-0.5">{req.message}</p>}
-                          </div>
-                          {req.status === 'en_attente' && (
-                            <button onClick={() => updateRequestStatus(req.id, 'fourni')} className="p-1.5 rounded-lg hover:bg-emerald-50 transition">
-                              <Check className="w-4 h-4 text-emerald-500" />
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </section>
+            {/* Bouton Demander des pièces */}
+            <div className="flex justify-end">
+              <button onClick={() => setShowDocRequestModal(true)}
+                className="text-xs font-medium px-3 py-2 rounded-lg transition flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+                <MailPlus className="w-3 h-3" />Demander des pièces par email
+              </button>
+            </div>
           </div>
 
           {/* ─── SIDEBAR DROITE (1/3) ─── */}

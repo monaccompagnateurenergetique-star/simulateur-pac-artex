@@ -1,5 +1,6 @@
 import { initializeApp, deleteApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
 
 /**
@@ -20,12 +21,14 @@ export const isFirebaseConfigured = !!(firebaseConfig.apiKey && firebaseConfig.p
 let app = null
 let db = null
 let auth = null
+let storage = null
 
 if (isFirebaseConfigured) {
   try {
     app = initializeApp(firebaseConfig)
     db = getFirestore(app)
     auth = getAuth(app)
+    storage = getStorage(app)
   } catch (error) {
     console.warn('Firebase initialization failed:', error)
   }
@@ -48,5 +51,5 @@ export async function createAccountForUser(email, password) {
   }
 }
 
-export { db, auth, firebaseConfig }
+export { db, auth, storage, firebaseConfig }
 export default app
