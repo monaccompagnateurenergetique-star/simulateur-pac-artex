@@ -666,14 +666,7 @@ export default function ClientDetailPage() {
             {/* Documents — Checklist avec upload Cloud Storage */}
             <ProjectDocuments
               projectId={id}
-              projectTags={
-                project.scenarios?.some((s) => s.items?.some((i) => i.ficheCode))
-                  ? [...new Set(project.scenarios.flatMap((s) => (s.items || []).map((i) => {
-                      if (i.ficheCode?.startsWith('BAR-')) return 'CEE'
-                      return null
-                    }).filter(Boolean)).concat(project.category ? ['MPR'] : []))]
-                  : ['CEE']
-              }
+              initialTags={['CEE']}
               precarity={
                 project.category === 'Bleu' ? 'tres_modeste' :
                 project.category === 'Jaune' ? 'modeste' :

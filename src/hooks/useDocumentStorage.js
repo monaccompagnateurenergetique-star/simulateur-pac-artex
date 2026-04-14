@@ -127,7 +127,16 @@ export function useDocumentStorage(projectId) {
             const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
             setUploadProgress(progress)
           },
-          (error) => reject(error),
+          (error) => {
+            // Message d'erreur explicite pour les règles Firebase
+            if (error.code === 'storage/unauthorized') {
+              reject(new Error('Accès refusé. Vérifiez les règles de sécurité Firebase Storage (Rules).'))
+            } else if (error.code === 'storage/unknown') {
+              reject(new Error('Erreur Storage. Vérifiez que Firebase Storage est activé dans la console Firebase.'))
+            } else {
+              reject(error)
+            }
+          },
           async () => {
             const url = await getDownloadURL(uploadTask.snapshot.ref)
             resolve(url)

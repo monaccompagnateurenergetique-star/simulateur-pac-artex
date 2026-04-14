@@ -19,12 +19,19 @@ function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`
 }
 
+const TAG_OPTIONS = [
+  { value: 'CEE', label: 'CEE' },
+  { value: 'MPR', label: "MaPrimeRénov'" },
+  { value: 'ANAH', label: 'Anah' },
+  { value: 'RENO_AMPLEUR', label: "Rénov. d'Ampleur" },
+]
+
 /**
  * ProjectDocuments — Section documents du projet avec upload Cloud Storage
  * Affiche une checklist par phase (avant/après travaux)
  * avec statut, upload drag & drop, et gestion des fichiers.
  */
-export default function ProjectDocuments({ projectId, projectTags = ['CEE'], precarity = '' }) {
+export default function ProjectDocuments({ projectId, initialTags = ['CEE'], precarity = '' }) {
   const {
     documents: uploadedDocs,
     loading,
@@ -37,16 +44,23 @@ export default function ProjectDocuments({ projectId, projectTags = ['CEE'], pre
 
   const { documents: libraryDocs } = useDocumentLibrary()
   const [phase, setPhase] = useState('avant')
+  const [selectedTags, setSelectedTags] = useState(initialTags)
   const [dragOver, setDragOver] = useState(null) // docType en cours de drag
   const [error, setError] = useState('')
   const fileInputRef = useRef(null)
   const [activeUploadType, setActiveUploadType] = useState(null)
 
-  // Docs requis pour la phase et les tags du projet (uniquement actifs)
+  function toggleTag(tag) {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    )
+  }
+
+  // Docs requis pour la phase et les tags sélectionnés (uniquement actifs)
   const requiredDocs = libraryDocs.filter((doc) => {
     if (!doc.enabled) return false
     if (doc.phase !== phase && doc.phase !== 'both') return false
-    const hasTag = doc.tags.some((t) => projectTags.includes(t))
+    const hasTag = doc.tags.some((t) => selectedTags.includes(t))
     if (!hasTag) return false
     if (precarity && doc.precarity && !doc.precarity.includes(precarity)) return false
     return true
@@ -136,7 +150,36 @@ export default function ProjectDocuments({ projectId, projectTags = ['CEE'], pre
           />
         </div>
 
+        {/* Dispositifs */}
+        <div className="mb-2">
+          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+            Dispositif(s) du dossier
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {TAG_OPTIONS.map((opt) => {
+              const active = selectedTags.includes(opt.value)
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleTag(opt.value)}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition ${
+                    active
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                      : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Phase tabs */}
+        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+          Phase du dossier
+        </label>
         <div className="flex rounded-lg border border-slate-200 overflow-hidden">
           {PHASE_TABS.map((tab) => (
             <button
