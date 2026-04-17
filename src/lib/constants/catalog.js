@@ -40,4 +40,11 @@ export const CATALOG = [
       { code: 'MaPrimeAdapt\'', title: 'Ma Prime Adapt\'', description: 'Adaptation du logement (perte d\'autonomie / handicap)', route: '/maprimeadapt', active: true },
     ],
   },
+  {
+    category: 'Outils techniques',
+    emoji: '📐',
+    items: [
+      { code: 'DIM-PAC', title: 'Dimensionnement PAC', description: 'Estimez la puissance PAC air/eau adaptée', route: '/simulateur/dim-pac', active: true },
+    ],
+  },
 ]
