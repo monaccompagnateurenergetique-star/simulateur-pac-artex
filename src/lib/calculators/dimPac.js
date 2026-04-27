@@ -130,6 +130,31 @@ export function calculatePacSizing(input) {
     : PAC_SIZING.ETAS_HT_REQUIRED
   const etasTempRef = (emitterMode === 'BT' && !forceHT) ? 35 : 55
 
+  // ─── 12. DTU 65.16 — Vérification dimensionnement ─────────
+  // Ratio = P_PAC_recommandée / P_déperditions (hors ECS pour le ratio DTU)
+  const deperditionsHorsEcs = deperditionsWithIntermittence
+  const dtuRatio = deperditionsHorsEcs > 0
+    ? puissanceRecommandeeKw / deperditionsHorsEcs
+    : 0
+  const dtuMinKw = +(deperditionsHorsEcs * PAC_SIZING.DTU_MIN_RATIO).toFixed(1)
+  const dtuMaxKw = +(deperditionsHorsEcs * PAC_SIZING.DTU_MAX_RATIO).toFixed(1)
+  const dtuConforme = dtuRatio >= PAC_SIZING.DTU_MIN_RATIO && dtuRatio <= PAC_SIZING.DTU_MAX_RATIO
+
+  let dtuVerdict, dtuDetail
+  if (deperditionsHorsEcs <= 0) {
+    dtuVerdict = 'indéterminé'
+    dtuDetail = 'Déperditions nulles — vérifier les données.'
+  } else if (dtuRatio < PAC_SIZING.DTU_MIN_RATIO) {
+    dtuVerdict = 'sous-dimensionnée'
+    dtuDetail = `Ratio ${(dtuRatio * 100).toFixed(0)}% < 80% — appoint obligatoire, confort non garanti. PAC min DTU : ${dtuMinKw} kW.`
+  } else if (dtuRatio > PAC_SIZING.DTU_MAX_RATIO) {
+    dtuVerdict = 'surdimensionnée'
+    dtuDetail = `Ratio ${(dtuRatio * 100).toFixed(0)}% > 120% — cycles courts, usure prématurée, COP dégradé. PAC max DTU : ${dtuMaxKw} kW.`
+  } else {
+    dtuVerdict = 'conforme'
+    dtuDetail = `Ratio ${(dtuRatio * 100).toFixed(0)}% — dimensionnement correct (plage DTU 80-120%).`
+  }
+
   return {
     gBase,
     gEffectif,
@@ -155,6 +180,13 @@ export function calculatePacSizing(input) {
     emitterMode,
     etasRequired,
     etasTempRef,
+    // DTU 65.16
+    dtuRatio,
+    dtuMinKw,
+    dtuMaxKw,
+    dtuConforme,
+    dtuVerdict,
+    dtuDetail,
   }
 }
 

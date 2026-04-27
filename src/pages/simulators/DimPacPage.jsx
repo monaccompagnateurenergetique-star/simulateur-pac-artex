@@ -725,7 +725,7 @@ export default function DimPacPage() {
                 <span className="text-xl font-semibold text-gray-200">kW</span>
               </div>
 
-              {/* Gauge plage */}
+              {/* Gauge plage BAR-TH-171 */}
               <div className="mt-4 pt-4 border-t border-white/10">
                 <p className="text-[10px] uppercase tracking-wider text-gray-400 text-center mb-2">Plage BAR-TH-171 éligible</p>
                 <div className="relative h-5 rounded-full overflow-hidden flex bg-white/5">
@@ -760,6 +760,95 @@ export default function DimPacPage() {
             </div>
           </div>
 
+          {/* ═══ DTU 65.16 — Règle de dimensionnement ═══ */}
+          <div className={`p-4 rounded-[var(--radius)] border ${
+            result.dtuConforme
+              ? 'bg-[var(--color-artex-green,#84cc16)]/10 border-[var(--color-artex-green,#84cc16)]/30'
+              : result.dtuVerdict === 'sous-dimensionnée'
+                ? 'bg-amber-500/10 border-amber-500/30'
+                : 'bg-red-500/10 border-red-500/30'
+          }`}>
+            <div className="flex items-center gap-2 mb-3">
+              <FlaskConical className={`w-5 h-5 ${result.dtuConforme ? 'text-[var(--color-artex-green,#84cc16)]' : 'text-amber-400'}`} />
+              <h3 className="text-sm font-bold text-gray-200">DTU 65.16 — Règle de dimensionnement</h3>
+              <span className={`ml-auto text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
+                result.dtuConforme
+                  ? 'bg-[var(--color-artex-green,#84cc16)]/20 text-[var(--color-artex-green,#84cc16)]'
+                  : result.dtuVerdict === 'sous-dimensionnée'
+                    ? 'bg-amber-500/20 text-amber-400'
+                    : 'bg-red-500/20 text-red-400'
+              }`}>
+                {result.dtuVerdict}
+              </span>
+            </div>
+
+            {/* Jauge DTU 80-120% */}
+            <div className="mb-3">
+              <div className="relative h-8 rounded-lg overflow-hidden flex bg-white/5">
+                {/* Zones */}
+                <div className="w-[26.7%] bg-gradient-to-r from-red-600/30 to-amber-500/30 flex items-center justify-center">
+                  <span className="text-[9px] font-bold text-red-400/80">{'< 80%'}</span>
+                </div>
+                <div className="w-[13.3%] bg-gradient-to-r from-[var(--color-artex-green,#84cc16)]/20 to-[var(--color-artex-green,#84cc16)]/40 flex items-center justify-center border-x border-[var(--color-artex-green,#84cc16)]/30">
+                  <span className="text-[9px] font-bold text-[var(--color-artex-green,#84cc16)]">80%</span>
+                </div>
+                <div className="w-[13.3%] bg-[var(--color-artex-green,#84cc16)]/30 flex items-center justify-center">
+                  <span className="text-[9px] font-bold text-[var(--color-artex-green,#84cc16)]">100%</span>
+                </div>
+                <div className="w-[13.3%] bg-gradient-to-r from-[var(--color-artex-green,#84cc16)]/40 to-[var(--color-artex-green,#84cc16)]/20 flex items-center justify-center border-x border-[var(--color-artex-green,#84cc16)]/30">
+                  <span className="text-[9px] font-bold text-[var(--color-artex-green,#84cc16)]">120%</span>
+                </div>
+                <div className="w-[33.4%] bg-gradient-to-r from-amber-500/30 to-red-600/30 flex items-center justify-center">
+                  <span className="text-[9px] font-bold text-red-400/80">{'> 120%'}</span>
+                </div>
+                {/* Curseur position dynamique */}
+                {(() => {
+                  // Map ratio to percentage position: 0% → left, 80% → 26.7%, 100% → 46.6%, 120% → 53.3%, 200% → 100%
+                  const ratio = result.dtuRatio * 100
+                  let pos
+                  if (ratio <= 80) pos = (ratio / 80) * 26.7
+                  else if (ratio <= 120) pos = 26.7 + ((ratio - 80) / 40) * 26.6
+                  else pos = Math.min(100, 53.3 + ((ratio - 120) / 80) * 46.7)
+                  return (
+                    <div
+                      className="absolute top-0 bottom-0 flex items-center"
+                      style={{ left: `${pos}%`, transform: 'translateX(-50%)' }}
+                    >
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold shadow-lg ${
+                        result.dtuConforme
+                          ? 'bg-[var(--color-artex-green,#84cc16)] border-white text-[var(--color-artex-dark,#121212)]'
+                          : 'bg-amber-500 border-white text-white'
+                      }`}>
+                        {Math.round(ratio)}
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* Détails chiffrés */}
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="p-2 rounded-[var(--radius-sm)] bg-white/5">
+                <p className="text-[10px] uppercase text-gray-400">Min DTU (80%)</p>
+                <p className="text-sm font-bold text-gray-200">{result.dtuMinKw} kW</p>
+              </div>
+              <div className="p-2 rounded-[var(--radius-sm)] bg-white/5">
+                <p className="text-[10px] uppercase text-gray-400">Recommandée</p>
+                <p className={`text-sm font-bold ${result.dtuConforme ? 'text-[var(--color-artex-green,#84cc16)]' : 'text-amber-400'}`}>{result.puissanceRecommandeeKw} kW</p>
+                <p className="text-[10px] text-gray-500">ratio {(result.dtuRatio * 100).toFixed(0)}%</p>
+              </div>
+              <div className="p-2 rounded-[var(--radius-sm)] bg-white/5">
+                <p className="text-[10px] uppercase text-gray-400">Max DTU (120%)</p>
+                <p className="text-sm font-bold text-gray-200">{result.dtuMaxKw} kW</p>
+              </div>
+            </div>
+
+            <p className="mt-3 text-xs text-gray-400">
+              {result.dtuDetail}
+            </p>
+          </div>
+
           {/* Chips détail */}
           <div className="flex flex-wrap gap-2 p-4 bg-white/5 rounded-[var(--radius-sm)]">
             <Chip label="G base" value={result.gBase.toFixed(2)} />
@@ -769,27 +858,34 @@ export default function DimPacPage() {
             <Chip label="T_base" value={`${result.tBaseCorrigee.toFixed(1)}°C`} />
             <Chip label="Intermittence" value={`×${result.intermittenceCoeff}`} />
             {includeEcs && <Chip label="ECS" value={`+${result.ecsKw.toFixed(1)} kW`} />}
+            <Chip label="DTU ratio" value={`${(result.dtuRatio * 100).toFixed(0)}%`} />
           </div>
 
           {/* Compliance */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <ComplianceBadge
+              variant={result.dtuConforme ? 'ok' : 'ko'}
+              iconEl={result.dtuConforme ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+              title="DTU 65.16"
+              subtitle={`${(result.dtuRatio * 100).toFixed(0)}% — ${result.dtuVerdict}`}
+            />
             <ComplianceBadge
               variant={result.eligibleBarTh171 ? 'ok' : 'ko'}
               iconEl={result.eligibleBarTh171 ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-              title="Éligibilité BAR-TH-171"
+              title="BAR-TH-171"
               subtitle={result.eligibleBarTh171 ? `Dépose ${heatingDef?.label.toLowerCase()} ✓` : 'Dépose fossile requise'}
             />
             <ComplianceBadge
               variant="info"
               iconEl={<Thermometer className="w-5 h-5" />}
               title="ETAS requise"
-              subtitle={`≥ ${Math.round(result.etasRequired * 100)}% @ ${result.etasTempRef}°C (${result.emitterMode === 'BT' ? 'Basse T°' : result.emitterMode === 'mixte' ? 'Mixte' : 'Moyenne/Haute T°'})`}
+              subtitle={`≥ ${Math.round(result.etasRequired * 100)}% @ ${result.etasTempRef}°C (${result.emitterMode === 'BT' ? 'BT' : result.emitterMode === 'mixte' ? 'Mixte' : 'MT/HT'})`}
             />
             <ComplianceBadge
               variant="info"
               iconEl={<Gauge className="w-5 h-5" />}
-              title="Taux de couverture"
-              subtitle={`PAC entre ${Math.round(PAC_SIZING.MIN_COVERAGE * 100)}% et ${Math.round(PAC_SIZING.MAX_COVERAGE * 100)}% des déperditions`}
+              title="Couverture"
+              subtitle={`BAR-TH-171 : ${Math.round(PAC_SIZING.MIN_COVERAGE * 100)}-${Math.round(PAC_SIZING.MAX_COVERAGE * 100)}%`}
             />
           </div>
         </div>

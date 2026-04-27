@@ -30,6 +30,16 @@ export const PAC_SIZING = {
   MIN_COVERAGE: 0.60,    // < 60% → sous-dimensionnée
   MAX_COVERAGE: 1.30,    // > 130% → surdimensionnée
 
+  /**
+   * DTU 65.16 — Règle de dimensionnement PAC
+   * Le ratio P_PAC / P_déperditions doit être compris entre 80% et 120%.
+   *  - < 80% : sous-dimensionnée → appoint obligatoire, confort non garanti
+   *  - 80-120% : conforme DTU → dimensionnement correct
+   *  - > 120% : surdimensionnée → cycles courts, usure prématurée, COP dégradé
+   */
+  DTU_MIN_RATIO: 0.80,
+  DTU_MAX_RATIO: 1.20,
+
   /** ETAS mini requis selon application */
   ETAS_BT_REQUIRED: 1.26,  // Basse T° (35°C)
   ETAS_HT_REQUIRED: 1.11,  // Moyenne/Haute T° (55°C)
