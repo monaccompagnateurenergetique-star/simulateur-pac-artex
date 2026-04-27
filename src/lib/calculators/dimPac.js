@@ -1,5 +1,6 @@
 import { PAC_SIZING } from '../constants/dimPac'
 import { ZONE_BASE_TEMPERATURES_DETAIL, ZONE_BASE_TEMPERATURES } from '../constants/zones'
+import { getTBaseNfP52612 } from '../services/tBaseLookup'
 
 /**
  * Calculateur DIM-PAC : méthode G pondérée par poste d'isolation.
@@ -24,6 +25,7 @@ export function calculatePacSizing(input) {
     housingType, surface, ceilingHeight, zone, altitude, indoorTemp,
     construction, insulation,
     heatingSystem, emitters, includeEcs,
+    dept,
   } = input
 
   // ─── 1. Volume chauffé ─────────────────────────────────────
@@ -52,10 +54,27 @@ export function calculatePacSizing(input) {
   }
   gEffectif = Math.max(PAC_SIZING.G_MIN, gEffectif)
 
-  // ─── 5. T_base + altitude ─────────────────────────────────
-  const altitudeCorrection = Math.max(0, altitude) / 200 * PAC_SIZING.ALTITUDE_CORRECTION_PER_200M
-  const tBaseZone = ZONE_BASE_TEMPERATURES_DETAIL[zone] ?? ZONE_BASE_TEMPERATURES[zone] ?? -4
-  const tBaseCorrigee = tBaseZone - altitudeCorrection
+  // ─── 5. T_base NF P 52-612 (norme dimensionnement PAC) ────
+  let tBaseCorrigee
+  let altitudeCorrection
+  let tBaseSource
+  const nfInfo = dept ? getTBaseNfP52612(dept, altitude) : null
+  if (nfInfo) {
+    tBaseCorrigee = nfInfo.tBase
+    altitudeCorrection = -nfInfo.correction
+    tBaseSource = {
+      standard: 'NF P 52-612',
+      dept: nfInfo.deptCode,
+      deptName: nfInfo.deptName,
+      tBaseMer: nfInfo.tBaseMer,
+      bracket: nfInfo.bracketLabel,
+    }
+  } else {
+    altitudeCorrection = Math.max(0, altitude) / 200 * PAC_SIZING.ALTITUDE_CORRECTION_PER_200M
+    const tBaseZone = ZONE_BASE_TEMPERATURES_DETAIL[zone] ?? ZONE_BASE_TEMPERATURES[zone] ?? -4
+    tBaseCorrigee = tBaseZone - altitudeCorrection
+    tBaseSource = { standard: 'RT 2012 (fallback)', zone }
+  }
   const deltaT = Math.max(0, indoorTemp - tBaseCorrigee)
 
   // ─── 6. Déperditions totales ──────────────────────────────
@@ -118,6 +137,7 @@ export function calculatePacSizing(input) {
     volume,
     deltaT,
     tBaseCorrigee,
+    tBaseSource,
     altitudeCorrection,
     intermittenceCoeff,
     deperditionsW,

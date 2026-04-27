@@ -32,12 +32,19 @@ export const CATALOG = [
     ],
   },
   {
-    category: 'Financement & Aides',
+    category: 'Aides ANAH',
+    emoji: '🏛️',
+    items: [
+      { code: 'LOGEMENT-DECENT', title: 'Logement Décent — Habiter Sain / Serein', description: 'Mise en sécurité et réhabilitation du logement (ANAH)', route: '/simulateur/logement-decent', active: true },
+      { code: 'MaPrimeAdapt\'', title: 'Ma Prime Adapt\'', description: 'Adaptation du logement (perte d\'autonomie / handicap)', route: '/maprimeadapt', active: true },
+      { code: 'LOC-AVANTAGE', title: 'Loc\'Avantages — Convention ANAH', description: 'Subvention travaux, réduction d\'impôt, intermédiation', route: '/simulateur/loc-avantage', active: true },
+    ],
+  },
+  {
+    category: 'Financement',
     emoji: '💰',
     items: [
       { code: 'PTZ', title: 'Prêt à Taux Zéro (PTZ)', description: 'Éligibilité et montant du PTZ 2026', route: '/simulations/ptz', active: true },
-      { code: 'LOC-AVANTAGE', title: 'Loc\'Avantages — Convention ANAH', description: 'Subvention travaux, réduction d\'impôt, intermédiation', route: '/simulateur/loc-avantage', active: true },
-      { code: 'MaPrimeAdapt\'', title: 'Ma Prime Adapt\'', description: 'Adaptation du logement (perte d\'autonomie / handicap)', route: '/maprimeadapt', active: true },
     ],
   },
   {

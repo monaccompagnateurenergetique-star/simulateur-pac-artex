@@ -351,12 +351,12 @@ export default function WorkPostes({
           </div>
 
           {/* Alertes avant le récapitulatif */}
-          {isolationCount < isolationMin && (
+          {isolationGroup && isolationCount < isolationMin && (
             <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium">
               Minimum {isolationMin} gestes d'isolation requis — actuellement {isolationCount} sélectionné{isolationCount > 1 ? 's' : ''}
             </div>
           )}
-          {chauffageMissing && (
+          {chauffageGroup && chauffageMissing && (
             <div className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border border-orange-300 rounded-xl text-xs text-orange-700 font-medium">
               🔥 Chauffage fioul détecté — le remplacement du système de chauffage est obligatoire. Sélectionnez un poste de chauffage.
             </div>
@@ -403,12 +403,12 @@ export default function WorkPostes({
       )}
 
       {/* Alertes mode rapide */}
-      {mode === 'rapide' && isolationCount < isolationMin && (
+      {mode === 'rapide' && isolationGroup && isolationCount < isolationMin && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium">
           Minimum {isolationMin} gestes d'isolation requis — actuellement {isolationCount} sélectionné{isolationCount > 1 ? 's' : ''}
         </div>
       )}
-      {mode === 'rapide' && chauffageMissing && (
+      {mode === 'rapide' && chauffageGroup && chauffageMissing && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border border-orange-300 rounded-xl text-xs text-orange-700 font-medium">
           🔥 Chauffage fioul détecté — le remplacement du système de chauffage est obligatoire. Sélectionnez un poste de chauffage.
         </div>

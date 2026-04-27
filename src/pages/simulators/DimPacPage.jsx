@@ -10,10 +10,13 @@ import {
 import { PieChart, Pie, Cell, Tooltip as RTooltip, ResponsiveContainer } from 'recharts'
 import { PAC_SIZING, DEFAULT_INSULATION } from '../../lib/constants/dimPac'
 import {
-  ZONE_DETAIL_OPTIONS, ALTITUDE_RANGES, getZoneFromPostalCode,
+  ZONE_DETAIL_OPTIONS, getZoneFromPostalCode,
 } from '../../lib/constants/zones'
 import { calculatePacSizing } from '../../lib/calculators/dimPac'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
+import AddressAutocomplete from '../../components/ui/AddressAutocomplete'
+import { searchAddress, fetchAltitude } from '../../lib/services/geolocation'
+import { deptFromPostalCode } from '../../lib/services/tBaseLookup'
 
 /* ─── Icon mapping (Lucide) ─── */
 const LUCIDE_ICONS = {
@@ -166,6 +169,12 @@ export default function DimPacPage() {
   const [zone, setZone] = useState('H1b')
   const [altitudeRange, setAltitudeRange] = useState('0_200')
 
+  // Adresse + altitude auto-remplie (flux BAN → Open-Meteo)
+  const [addressLabel, setAddressLabel] = useState('')
+  const [altitudeM, setAltitudeM] = useState(100)
+  const [altitudeSource, setAltitudeSource] = useState('default') // 'default' | 'auto' | 'manual'
+  const [geoLoading, setGeoLoading] = useState(false)
+
   /** Met à jour le code postal + auto-détecte la zone climatique */
   const handlePostalCodeChange = (raw) => {
     const cleaned = raw.replace(/\D/g, '')
@@ -173,6 +182,25 @@ export default function DimPacPage() {
     if (cleaned.length === 5) {
       const detected = getZoneFromPostalCode(cleaned)
       if (detected) setZone(detected)
+    }
+  }
+
+  /** Sélection depuis l'autocomplete BAN : déclenche altitude auto + CP + zone */
+  const handleAddressSelected = async (addr) => {
+    setAddressLabel(addr.label || '')
+    if (addr.postalCode) handlePostalCodeChange(addr.postalCode)
+    try {
+      const results = await searchAddress(addr.label || `${addr.address} ${addr.postalCode} ${addr.city}`)
+      const match = results[0]
+      if (!match) return
+      setGeoLoading(true)
+      const alt = await fetchAltitude(match.lat, match.lon)
+      setAltitudeM(alt.altitude)
+      setAltitudeSource('auto')
+    } catch (e) {
+      console.warn('Altitude auto KO :', e)
+    } finally {
+      setGeoLoading(false)
     }
   }
 
@@ -195,20 +223,22 @@ export default function DimPacPage() {
     setInsulation(prev => ({ ...prev, [key]: value }))
   }
 
-  const altitudeMidpoint = ALTITUDE_RANGES.find(r => r.value === altitudeRange)?.midpoint ?? 100
   const effectiveInsulation = hasRenovation === 'oui' ? insulation : DEFAULT_INSULATION
+  const dept = deptFromPostalCode(postalCode)
 
   const result = useMemo(
     () => calculatePacSizing({
       housingType,
       surface: typeof surface === 'number' ? surface : 100,
       ceilingHeight: typeof ceilingHeight === 'number' ? ceilingHeight : 2.5,
-      nbEtages, zone, altitude: altitudeMidpoint,
+      nbEtages, zone,
+      altitude: altitudeM,
+      dept,
       indoorTemp: PAC_SIZING.DEFAULT_INDOOR_TEMP,
       construction, insulation: effectiveInsulation,
       heatingSystem, emitters, includeEcs,
     }),
-    [housingType, surface, ceilingHeight, nbEtages, zone, altitudeMidpoint, construction, effectiveInsulation, heatingSystem, emitters, includeEcs],
+    [housingType, surface, ceilingHeight, nbEtages, zone, altitudeM, dept, construction, effectiveInsulation, heatingSystem, emitters, includeEcs],
   )
 
   const zoneDetail = ZONE_DETAIL_OPTIONS.find(z => z.value === zone)
@@ -279,41 +309,88 @@ export default function DimPacPage() {
             </div>
           </div>
 
+          <div>
+            <FieldLabel>Adresse <span className="text-[11px] text-[var(--color-muted)] font-normal">(pré-remplit CP, altitude, T° base — optionnel)</span></FieldLabel>
+            <AddressAutocomplete
+              value={addressLabel}
+              placeholder="ex: 16 rue du Bourg, 57510 Ernestviller"
+              onChange={(a) => {
+                if (a && a.label) handleAddressSelected(a)
+                else { setAddressLabel(''); }
+              }}
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <FieldLabel>Code postal <span className="text-[11px] text-[var(--color-muted)] font-normal">(détermine la zone)</span></FieldLabel>
+              <FieldLabel>
+                Code postal
+                {postalCode.length === 5 && !getZoneFromPostalCode(postalCode) && (
+                  <span className="text-[11px] text-amber-600 font-normal ml-2">— CP non reconnu</span>
+                )}
+              </FieldLabel>
               <TextInput
                 value={postalCode}
                 onChange={handlePostalCodeChange}
                 maxLength={5}
-                placeholder="ex: 57730"
+                placeholder="ex: 57510"
                 suffixIcon={<MapPin className="w-4 h-4" />}
               />
-              {postalCode.length === 5 && !getZoneFromPostalCode(postalCode) && (
-                <p className="text-[11px] text-amber-600 mt-1">Code postal non reconnu — zone par défaut utilisée</p>
-              )}
             </div>
             <div>
-              <FieldLabel>Altitude</FieldLabel>
-              <SelectInput value={altitudeRange} onChange={setAltitudeRange} options={ALTITUDE_RANGES} />
+              <FieldLabel>
+                Altitude
+                {altitudeSource === 'auto' && !geoLoading && (
+                  <span className="text-[11px] text-green-700 font-normal ml-2">✓ auto</span>
+                )}
+                {geoLoading && (
+                  <span className="text-[11px] text-blue-600 font-normal ml-2">… récupération</span>
+                )}
+              </FieldLabel>
+              <NumberInput
+                value={altitudeM}
+                onChange={(v) => { setAltitudeM(typeof v === 'number' ? v : 0); setAltitudeSource('manual') }}
+                suffix="m"
+                min={0}
+                max={3000}
+                step={1}
+              />
             </div>
           </div>
 
-          {/* Badge T_base */}
+          {/* Badge T_base — source NF P 52-612 quand département connu */}
           <div className="flex flex-wrap items-center gap-4 p-3.5 rounded-[var(--radius-sm)] bg-blue-50 border border-blue-200">
             <ThermometerSnowflake className="w-6 h-6 text-blue-600 shrink-0" />
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-blue-700">Température extérieure de base</p>
+              <p className="text-[10px] uppercase tracking-wider text-blue-700">
+                Température extérieure de base
+                {result.tBaseSource?.standard && (
+                  <span className="ml-1 normal-case text-blue-600/70">· {result.tBaseSource.standard}</span>
+                )}
+              </p>
               <p className="text-lg font-bold text-blue-700">{result.tBaseCorrigee.toFixed(1)}°C</p>
             </div>
-            {zoneDetail && (
+
+            {result.tBaseSource?.standard === 'NF P 52-612' ? (
+              <div className="flex flex-col px-3 border-x border-blue-200">
+                <span className="text-[10px] uppercase tracking-wider text-blue-700">Département</span>
+                <strong className="text-blue-700 text-sm">{result.tBaseSource.dept}</strong>
+                <span className="text-[10px] text-blue-600/70 truncate max-w-[140px]">{result.tBaseSource.deptName}</span>
+              </div>
+            ) : zoneDetail && (
               <div className="flex flex-col items-center px-3 border-x border-blue-200">
                 <span className="text-[10px] uppercase tracking-wider text-blue-700">Zone</span>
                 <strong className="text-blue-700">{zoneDetail.value}</strong>
                 <span className="text-[10px] text-blue-600/70">{zoneDetail.label.split(' — ')[1] ?? ''}</span>
               </div>
             )}
-            {altitudeMidpoint > 0 && (
+
+            {result.tBaseSource?.standard === 'NF P 52-612' && altitudeM > 0 && (
+              <span className="text-[11px] text-blue-600/70 italic ml-auto">
+                Base mer {result.tBaseSource.tBaseMer}°C · {altitudeM} m ({result.tBaseSource.bracket}) · correction −{Math.abs(result.altitudeCorrection).toFixed(0)}°C
+              </span>
+            )}
+            {result.tBaseSource?.standard !== 'NF P 52-612' && altitudeM > 0 && (
               <span className="text-[11px] text-blue-600/70 italic ml-auto">
                 Base {zoneDetail?.tBase}°C − altitude {result.altitudeCorrection.toFixed(1)}°C
               </span>
@@ -535,7 +612,8 @@ export default function DimPacPage() {
                           key={level.value}
                           type="button"
                           onClick={() => setInsulationLevel(cat.key, level.value)}
-                          className={`flex-1 py-2 px-1.5 text-[11px] font-semibold whitespace-nowrap transition ${
+                          title={level.subLabel || ''}
+                          className={`flex-1 py-2 px-1.5 text-center transition ${
                             idx > 0 ? 'border-l border-[var(--color-border)]' : ''
                           } ${
                             currentValue === level.value
@@ -543,7 +621,14 @@ export default function DimPacPage() {
                               : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-brand-50)]'
                           }`}
                         >
-                          {level.label}
+                          <span className="block text-[11px] font-semibold leading-tight">{level.label}</span>
+                          {level.subLabel && (
+                            <span className={`block text-[9px] leading-tight mt-0.5 font-normal ${
+                              currentValue === level.value ? 'text-white/80' : 'text-[var(--color-muted)]'
+                            }`}>
+                              {level.subLabel}
+                            </span>
+                          )}
                         </button>
                       ))}
                     </div>

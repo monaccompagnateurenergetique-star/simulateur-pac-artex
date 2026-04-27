@@ -177,6 +177,12 @@ export function generateSimulationPDF({
   mprTaux = null,
   mprDepenseEligible = null,
   mprPlafond = null,
+  // ── Logement Décent / programmes ANAH génériques ──
+  programLabel = null,     // ex: "Ma Prime Logement Decent"
+  programBadge = null,     // ex: "Renovation globale — Logement tres degrade"
+  infoCards = null,        // ex: [{ label, value, color }]
+  advantages = null,       // ex: ["Avantage 1", "Avantage 2"]
+  aideLabel = null,        // ex: "AIDE ANAH" au lieu de "MAPRIMERENOV'"
 }) {
   const doc = new jsPDF('p', 'mm', 'a4')
   const W = doc.internal.pageSize.getWidth()
@@ -187,6 +193,7 @@ export function generateSimulationPDF({
   let y = 0
 
   const isAnah = mode === 'anah'
+  const isLogementDecent = ficheCode === 'LOGEMENT-DECENT'
   const cleanParams = params.map(p => ({ label: sanitize(p.label), value: sanitize(String(p.value ?? '')) }))
   const cleanResults = results.map(r => ({ label: sanitize(r.label), value: sanitize(String(r.value ?? '')) }))
 
@@ -251,18 +258,22 @@ export function generateSimulationPDF({
   y = 38
 
   // ════════════════════════════════════════════════════════════
-  //  TITRE CENTRAL + BADGE MPR
+  //  TITRE CENTRAL + BADGE
   // ════════════════════════════════════════════════════════════
+  const mainTitle = programLabel
+    ? sanitize(programLabel).toUpperCase()
+    : 'SIMULATION DE RENOVATION ENERGETIQUE'
+
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...C.primary)
-  doc.text('SIMULATION DE RENOVATION ENERGETIQUE', W / 2, y, { align: 'center' })
+  doc.text(mainTitle, W / 2, y, { align: 'center' })
   y += 5.5
 
   doc.setFontSize(8.5)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...C.brand)
-  doc.text(`${ficheCode} — ${ficheTitle || ''}`, W / 2, y, { align: 'center' })
+  doc.text(sanitize(`${ficheCode} — ${ficheTitle || ''}`), W / 2, y, { align: 'center' })
   y += 4
 
   // Séparateur fin centré
@@ -272,11 +283,10 @@ export function generateSimulationPDF({
   doc.setLineWidth(0.2)
   y += 5
 
-  // Badge MPR centré
+  // Badge MPR centré (profil revenus)
   const badgeInfo = MPR_BADGE[mprCategory]
   if (badgeInfo) {
     const bl = `${mprCategory} — ${badgeInfo.label}`
-    // Calculer la largeur sans dessiner
     doc.setFontSize(7)
     doc.setFont('helvetica', 'bold')
     const bw = doc.getTextWidth(bl) + 10
@@ -293,13 +303,17 @@ export function generateSimulationPDF({
     y += 5
   }
 
-  // Badge mode Anah
-  if (isAnah) {
-    const ml = "MaPrimeRenov' Parcours Accompagne"
+  // Badge programme (personnalisé ou MPR par défaut)
+  const badgeText = programBadge
+    ? sanitize(programBadge)
+    : (isAnah ? "MaPrimeRenov' Parcours Accompagne" : null)
+
+  if (badgeText) {
     doc.setFontSize(7)
     doc.setFont('helvetica', 'bold')
-    const mw = doc.getTextWidth(ml) + 10
-    drawBadge(doc, ml, W / 2 - mw / 2, y, C.brand, C.white)
+    const mw = doc.getTextWidth(badgeText) + 10
+    const badgeBg = isLogementDecent ? [22, 163, 74] : C.brand // vert émeraude pour LD
+    drawBadge(doc, badgeText, W / 2 - mw / 2, y, badgeBg, C.white)
     y += 11
   }
 
@@ -487,37 +501,48 @@ export function generateSimulationPDF({
 
     if (hasMpr) {
       const mprX = hasCee ? mx + cardW + gap : mx
+      const mprCardLabel = aideLabel ? sanitize(aideLabel) : "MAPRIMERENOV'"
+      const mprCardBg = isLogementDecent ? [236, 253, 245] : C.skyBg
+      const mprCardBorder = isLogementDecent ? [167, 243, 208] : [186, 230, 253]
+      const mprCardAccent = isLogementDecent ? [22, 163, 74] : C.sky
+      const mprCardTextColor = isLogementDecent ? [21, 128, 61] : C.skyDark
 
-      // Card MPR
-      drawCard(doc, mprX, y, cardW, cardH, { fill: C.skyBg, borderColor: [186, 230, 253] })
-      doc.setFillColor(...C.sky)
+      drawCard(doc, mprX, y, cardW, cardH, { fill: mprCardBg, borderColor: mprCardBorder })
+      doc.setFillColor(...mprCardAccent)
       doc.roundedRect(mprX, y, 1.2, cardH, 0.6, 0.6, 'F')
 
       doc.setFontSize(7.5)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(...C.textMuted)
-      doc.text("MAPRIMERENOV'", mprX + 6, y + 7)
+      doc.text(mprCardLabel, mprX + 6, y + 7)
       doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...C.skyDark)
+      doc.setTextColor(...mprCardTextColor)
       doc.text(fmt(mpr), mprX + 6, y + 16)
     }
 
     y += cardH + 5
   }
 
-  // ─── Anah detail ───
+  // ─── Anah / programme detail ───
   if (isAnah && mpr > 0) {
-    const infoCards = [
+    const defaultInfoCards = [
       { label: 'Sauts DPE', value: `${jumps} classes`, color: C.text },
       { label: 'Taux MPR', value: `${Math.round((mprTaux || 0) * 100)}%`, color: C.brand },
       { label: 'Depense eligible', value: fmt(mprDepenseEligible || 0), color: C.text },
     ]
+    const displayCards = (infoCards || defaultInfoCards).map(c => ({
+      label: sanitize(c.label),
+      value: sanitize(String(c.value ?? '')),
+      color: c.color || C.text,
+    }))
+
     const gap = 4
-    const infoW = (cw - gap * 2) / 3
+    const cols = displayCards.length
+    const infoW = (cw - gap * (cols - 1)) / cols
     const infoH = 15
 
-    infoCards.forEach((card, i) => {
+    displayCards.forEach((card, i) => {
       const cx = mx + i * (infoW + gap)
       drawCard(doc, cx, y, infoW, infoH)
       doc.setFontSize(6.5)
@@ -526,7 +551,7 @@ export function generateSimulationPDF({
       doc.text(card.label, cx + 4, y + 5.5)
       doc.setFontSize(9)
       doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...card.color)
+      doc.setTextColor(...(Array.isArray(card.color) ? card.color : C.text))
       doc.text(card.value, cx + 4, y + 11.5)
     })
     y += infoH + 5
@@ -592,7 +617,7 @@ export function generateSimulationPDF({
   const barH = 8
   const barSegments = []
   if (hasCee) barSegments.push({ label: 'CEE', value: cee, color: C.brandLight })
-  if (hasMpr) barSegments.push({ label: 'MPR', value: mpr, color: C.sky })
+  if (hasMpr) barSegments.push({ label: isLogementDecent ? 'ANAH' : 'MPR', value: mpr, color: isLogementDecent ? [22, 163, 74] : C.sky })
   if (rac > 0) barSegments.push({ label: 'RAC', value: rac, color: [180, 190, 210] })
 
   if (barSegments.length > 0 && cost > 0) {
@@ -687,7 +712,7 @@ export function generateSimulationPDF({
   y += 2
   y = drawSectionTitle(doc, 'VOS AVANTAGES', null, mx, y, C.brand)
 
-  const advantages = isAnah ? [
+  const defaultAdvantages = isAnah ? [
     "MaPrimeRenov' : jusqu'a 80% de prise en charge selon vos revenus",
     "Economies d'energie : reduisez vos factures de chauffage durablement",
     'Confort thermique ameliore ete comme hiver',
@@ -698,8 +723,9 @@ export function generateSimulationPDF({
     'Valorisation de votre bien immobilier grace a un meilleur DPE',
     "Prime CEE deduite directement — pas d'avance de tresorerie",
   ]
+  const displayAdvantages = (advantages || defaultAdvantages).map(sanitize)
 
-  advantages.forEach(text => {
+  displayAdvantages.forEach(text => {
     drawCheckmark(doc, mx + 4, y)
     doc.setFontSize(7.5)
     doc.setTextColor(...C.text)
