@@ -3,14 +3,17 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft, Edit3, Phone, Mail, MapPin, Home, Users as UsersIcon,
   Bell, Plus, Trash2, Check, ArrowRightCircle, MessageSquare, Calendar,
-  AlertTriangle, CheckCircle
+  AlertTriangle, CheckCircle, Thermometer, Search, Loader2, ChevronDown, ChevronUp, X
 } from 'lucide-react'
 import { useLeads, LEAD_STATUSES } from '../hooks/useLeads'
 import { useProjects } from '../hooks/useProjects'
 import { useRole } from '../contexts/RoleContext'
 import { useAllOrgData } from '../hooks/useAllOrgData'
 import CompletionGauge from '../components/ui/CompletionGauge'
+import DpeDetailCard from '../components/dpe/DpeDetailCard'
+import AddressAutocomplete from '../components/ui/AddressAutocomplete'
 import { getCompletion } from '../lib/completionGauge'
+import { searchDPE } from '../utils/dpeApi'
 
 const CATEGORY_BADGE = {
   Bleu: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -23,7 +26,7 @@ export default function LeadDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const {
-    leads: ownLeads, updateLeadStatus, addLeadNote, deleteLeadNote,
+    leads: ownLeads, updateLead, updateLeadStatus, addLeadNote, deleteLeadNote,
     addLeadReminder, toggleLeadReminder, deleteLeadReminder,
     convertToProject,
   } = useLeads()
@@ -38,6 +41,12 @@ export default function LeadDetailPage() {
   const [reminderText, setReminderText] = useState('')
   const [reminderDate, setReminderDate] = useState('')
   const [showConvertConfirm, setShowConvertConfirm] = useState(false)
+  const [dpeLoading, setDpeLoading] = useState(false)
+  const [dpeResults, setDpeResults] = useState(null)
+  const [dpeError, setDpeError] = useState(null)
+  const [showDpePanel, setShowDpePanel] = useState(false)
+  const [showDpeResults, setShowDpeResults] = useState(false)
+  const [auditResults, setAuditResults] = useState(null)
 
   const completion = useMemo(() => getCompletion(lead), [lead])
 
@@ -76,6 +85,54 @@ export default function LeadDetailPage() {
     addLeadReminder(lead.id, { text: reminderText.trim(), dueAt: reminderDate })
     setReminderText('')
     setReminderDate('')
+  }
+
+  async function handleSearchDpe(address, postalCode, city) {
+    const addr = address ?? lead.address ?? ''
+    const cp = postalCode ?? lead.postalCode ?? ''
+    const cty = city ?? lead.city ?? ''
+    if (!cp && !addr) return
+    setDpeLoading(true)
+    setDpeResults(null)
+    setDpeError(null)
+    setAuditResults(null)
+    setShowDpeResults(true)
+    try {
+      const { results, audits } = await searchDPE(addr, cp, cty)
+      setDpeResults(results)
+      setAuditResults(audits || [])
+      // Persister audits si DPE deja attache
+      if (lead.dpe && audits && audits.length > 0) {
+        updateLead(lead.id, { audits })
+      }
+    } catch (err) {
+      setDpeError(err.message || 'Erreur lors de la recherche')
+    } finally {
+      setDpeLoading(false)
+    }
+  }
+
+  function handleAddressSelect({ address, postalCode, city }) {
+    // Auto-remplir les champs du lead
+    const updates = {}
+    if (address) updates.address = address
+    if (postalCode) updates.postalCode = postalCode
+    if (city) updates.city = city
+    if (Object.keys(updates).length > 0) {
+      updateLead(lead.id, updates)
+    }
+    // Lancer la recherche DPE automatiquement
+    handleSearchDpe(address, postalCode, city)
+  }
+
+  function handleSelectDpe(d) {
+    updateLead(lead.id, { dpe: d, audits: auditResults || [] })
+    setShowDpeResults(false)
+    setShowDpePanel(false)
+  }
+
+  function handleDetachDpe() {
+    updateLead(lead.id, { dpe: null, audits: null })
   }
 
   return (
@@ -210,6 +267,124 @@ export default function LeadDetailPage() {
           )}
         </div>
       )}
+
+      {/* ─── DPE SECTION ─── */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+            <Thermometer className="w-4 h-4 text-orange-500" />
+            Diagnostic DPE
+          </h2>
+          {!isConverted && (
+            <button
+              onClick={() => setShowDpePanel(!showDpePanel)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition"
+            >
+              <Search className="w-3.5 h-3.5" />
+              {lead.dpe ? 'Actualiser' : 'Rechercher'}
+              {showDpePanel ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          )}
+        </div>
+
+        {/* Panneau de recherche avec autocomplete */}
+        {showDpePanel && (
+          <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100">
+            <p className="text-xs font-semibold text-indigo-700 mb-2 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5" />
+              Rechercher par adresse
+            </p>
+            <AddressAutocomplete
+              value={lead.address ? `${lead.address}${lead.postalCode ? ', ' + lead.postalCode : ''}${lead.city ? ' ' + lead.city : ''}` : ''}
+              onChange={handleAddressSelect}
+              placeholder="Saisissez l'adresse du logement..."
+            />
+            <p className="text-[10px] text-indigo-400 mt-1.5">
+              L'adresse, le code postal et la ville du lead seront mis a jour automatiquement.
+            </p>
+
+            {/* Bouton recherche manuelle si adresse deja remplie */}
+            {(lead.postalCode || lead.address) && (
+              <button
+                onClick={() => handleSearchDpe()}
+                disabled={dpeLoading}
+                className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-300 bg-white rounded-lg hover:bg-indigo-50 transition disabled:opacity-40"
+              >
+                {dpeLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                Rechercher avec l'adresse actuelle
+              </button>
+            )}
+
+            {/* Loader */}
+            {dpeLoading && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-indigo-600">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Recherche en cours...
+              </div>
+            )}
+
+            {/* Erreur */}
+            {dpeError && (
+              <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-700 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                {dpeError}
+              </div>
+            )}
+
+            {/* Resultats */}
+            {showDpeResults && dpeResults && dpeResults.length > 0 && (
+              <div className="mt-3 border border-indigo-200 rounded-xl overflow-hidden bg-white">
+                <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
+                  <p className="text-xs font-bold text-indigo-700">
+                    {dpeResults.length} DPE trouve{dpeResults.length > 1 ? 's' : ''}
+                  </p>
+                  <button onClick={() => setShowDpeResults(false)} className="text-indigo-400 hover:text-indigo-600">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+                  {dpeResults.slice(0, 8).map((d) => (
+                    <div key={d.numeroDpe} className="hover:bg-indigo-50/50 transition">
+                      <DpeDetailCard dpe={d} compact onAttach={() => handleSelectDpe(d)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {showDpeResults && dpeResults && dpeResults.length === 0 && !dpeLoading && (
+              <p className="mt-3 text-xs text-gray-400 text-center py-2">Aucun DPE trouve pour cette adresse.</p>
+            )}
+          </div>
+        )}
+
+        {/* DPE attache */}
+        <div className="px-6 py-4">
+          {lead.dpe ? (
+            <DpeDetailCard dpe={lead.dpe} audits={lead.audits || auditResults} onDetach={!isConverted ? handleDetachDpe : undefined} />
+          ) : (
+            <div className="text-center py-6">
+              <Thermometer className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-400 mb-1">Aucun DPE rattache</p>
+              <p className="text-xs text-gray-300">
+                {lead.postalCode || lead.address
+                  ? 'Cliquez sur "Rechercher" pour trouver le diagnostic energetique.'
+                  : 'Renseignez une adresse pour rechercher le DPE.'}
+              </p>
+              {!showDpePanel && (lead.postalCode || lead.address) && (
+                <button
+                  onClick={() => { setShowDpePanel(true); handleSearchDpe() }}
+                  disabled={dpeLoading}
+                  className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition disabled:opacity-40"
+                >
+                  {dpeLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                  Rechercher le DPE
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ─── NOTES ─── */}

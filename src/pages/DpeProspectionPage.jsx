@@ -1,11 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Search, Loader2, Thermometer, MapPin, Filter, ArrowUpDown,
   ChevronLeft, ChevronRight, ExternalLink, UserPlus, BarChart3,
-  Home, Building2, Flame, Droplets, Wind, ChevronDown, ChevronUp
+  Home, Building2, Flame, Droplets, Wind, ChevronDown, ChevronUp, FolderPlus, X
 } from 'lucide-react'
-import { searchDPE, prospectDPE, getDPEStats, getDpeColor, DPE_COLORS } from '../utils/dpeApi'
+import { searchDPE, prospectDPE, getDPEStats, getDpeColor, DPE_COLORS, geocodeAddress, searchAuditByBanId } from '../utils/dpeApi'
+import { useLeads } from '../hooks/useLeads'
+import AddressAutocomplete from '../components/ui/AddressAutocomplete'
+import DpeDetailCard from '../components/dpe/DpeDetailCard'
 
 const SORT_OPTIONS = [
   { value: '-date_etablissement_dpe', label: 'Plus recent' },
@@ -62,6 +65,8 @@ const ECS_INSTALL_FILTERS = [
 ]
 
 export default function DpeProspectionPage() {
+  const navigate = useNavigate()
+  const { addLead } = useLeads()
   const [mode, setMode] = useState('prospect')
   const [query, setQuery] = useState('')
 
@@ -81,6 +86,26 @@ export default function DpeProspectionPage() {
   const [error, setError] = useState(null)
   const [page, setPage] = useState(1)
   const [geocoding, setGeocoding] = useState(null)
+  const [selectedDpe, setSelectedDpe] = useState(null)
+  const [selectedAudits, setSelectedAudits] = useState([])
+  const [loadingAudits, setLoadingAudits] = useState(false)
+  const modalRef = useRef(null)
+
+  // Lock body scroll + scroll modal to top + Escape to close
+  useEffect(() => {
+    if (selectedDpe) {
+      document.body.style.overflow = 'hidden'
+      setTimeout(() => { if (modalRef.current) modalRef.current.scrollTop = 0 }, 0)
+    } else {
+      document.body.style.overflow = ''
+    }
+    const handleEsc = (e) => { if (e.key === 'Escape') setSelectedDpe(null) }
+    window.addEventListener('keydown', handleEsc)
+    return () => {
+      window.removeEventListener('keydown', handleEsc)
+      document.body.style.overflow = ''
+    }
+  }, [selectedDpe])
 
   const activeFilterCount = [installChauffageFilter, energieChauffageFilter, installEcsFilter].filter(Boolean).length
 
@@ -105,12 +130,15 @@ export default function DpeProspectionPage() {
     if (type) setTypeFilter(type)
     if (ecs) { setInstallEcsFilter(ecs); setShowAdvanced(true) }
 
-    // Trigger search after state updates
+    // Trigger search after state updates — geocode CP via BAN first
     setTimeout(async () => {
       try {
         setLoading(true)
+        const geo = await geocodeAddress(cp)
+        const cityName = geo?.city || ''
+        if (!cityName) throw new Error('Code postal introuvable')
         const params = {
-          postalCode: cp,
+          city: cityName,
           typeBatiment: type || '',
           installationChauffage: chauffage || '',
           energieChauffage: energie || '',
@@ -121,7 +149,7 @@ export default function DpeProspectionPage() {
         }
         const [data, statsData] = await Promise.all([
           prospectDPE(params),
-          getDPEStats(cp).catch(() => null),
+          getDPEStats({ city: cityName }).catch(() => null),
         ])
         setResults({ items: data.results, total: data.total })
         if (statsData) setStats(statsData)
@@ -147,9 +175,15 @@ export default function DpeProspectionPage() {
         setStats(null)
       } else {
         const isPostal = /^\d{5}$/.test(query.trim())
+        // Geocode postal code via BAN → city name (ADEME code_postal_ban returns 403)
+        let cityName = isPostal ? '' : query.trim()
+        if (isPostal) {
+          const geo = await geocodeAddress(query.trim())
+          cityName = geo?.city || ''
+          if (!cityName) throw new Error('Code postal introuvable. Essayez avec un nom de ville.')
+        }
         const params = {
-          postalCode: isPostal ? query.trim() : '',
-          city: isPostal ? '' : query.trim(),
+          city: cityName,
           etiquette: etiquetteFilter,
           typeBatiment: typeFilter,
           installationChauffage: installChauffageFilter,
@@ -161,7 +195,7 @@ export default function DpeProspectionPage() {
         }
         const [data, statsData] = await Promise.all([
           prospectDPE(params),
-          newPage === 1 && isPostal ? getDPEStats(query.trim()).catch(() => null) : Promise.resolve(stats),
+          newPage === 1 ? getDPEStats({ city: cityName }).catch(() => null) : Promise.resolve(stats),
         ])
         setResults({ items: data.results, total: data.total })
         if (statsData && statsData !== stats) setStats(statsData)
@@ -194,6 +228,50 @@ export default function DpeProspectionPage() {
     setInstallChauffageFilter('')
     setEnergieChauffageFilter('')
     setInstallEcsFilter('')
+  }
+
+  function handleCreateLead(dpe) {
+    const lead = addLead({
+      firstName: '',
+      lastName: '',
+      address: dpe.adresse || '',
+      postalCode: dpe.codePostal || '',
+      city: dpe.commune || '',
+      typeLogement: dpe.typeBatiment === 'maison' ? 'maison' : dpe.typeBatiment === 'appartement' ? 'appartement' : null,
+      surface: dpe.surface || null,
+      source: 'prospection_dpe',
+      dpe: dpe,
+    })
+    navigate(`/leads/${lead.id}/modifier`)
+  }
+
+  async function handleAddressSearch(address, postalCode, city) {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await searchDPE(address, postalCode, city)
+      setResults({ items: data.results, total: data.results.length })
+      setGeocoding(data.geocoding)
+      setStats(null)
+    } catch (err) {
+      setError(err.message)
+      setResults(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSelectDpe(dpe) {
+    setSelectedDpe(dpe)
+    setSelectedAudits([])
+    if (dpe.identifiantBan) {
+      setLoadingAudits(true)
+      try {
+        const audits = await searchAuditByBanId(dpe.identifiantBan)
+        setSelectedAudits(audits)
+      } catch {}
+      setLoadingAudits(false)
+    }
   }
 
   const totalPages = results ? Math.ceil(results.total / 50) : 0
@@ -238,31 +316,43 @@ export default function DpeProspectionPage() {
       </div>
 
       {/* Search bar */}
-      <form onSubmit={handleSubmit} className="mb-6">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={mode === 'address'
-                ? 'Entrez une adresse complete (ex: 16 rue du bourg 57510 Ernesviller)'
-                : 'Entrez un code postal (ex: 57510) ou une ville (ex: Metz)'
+      {mode === 'address' ? (
+        <div className="mb-6">
+          <AddressAutocomplete
+            value={query}
+            onChange={({ address, postalCode, city, label }) => {
+              setQuery(label || '')
+              if (address || postalCode) {
+                handleAddressSearch(address, postalCode, city)
               }
-              className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading || !query.trim()}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition disabled:opacity-40"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            Rechercher
-          </button>
+            }}
+            placeholder="Saisissez une adresse (ex: 16 rue du bourg 57510 Ernesviller)"
+          />
         </div>
-      </form>
+      ) : (
+        <form onSubmit={handleSubmit} className="mb-6">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Entrez un code postal (ex: 57510) ou une ville (ex: Metz)"
+                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !query.trim()}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition disabled:opacity-40"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              Rechercher
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Filters (prospect mode only) */}
       {mode === 'prospect' && (
@@ -506,7 +596,8 @@ export default function DpeProspectionPage() {
             return (
               <div
                 key={dpe.numeroDpe || idx}
-                className={`flex items-start gap-3 p-4 bg-white rounded-xl border transition group ${
+                onClick={() => handleSelectDpe(dpe)}
+                className={`flex items-start gap-3 p-4 bg-white rounded-xl border transition group cursor-pointer ${
                   isCollectif || isImmeuble
                     ? 'border-orange-200 hover:border-orange-300 hover:shadow-sm'
                     : 'border-gray-200 hover:border-indigo-200 hover:shadow-sm'
@@ -617,17 +708,26 @@ export default function DpeProspectionPage() {
                       href={dpe.observatoireUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition"
                     >
                       <ExternalLink className="w-3 h-3" />
                       ADEME
                     </a>
                   )}
-                  <Link
-                    to={`/projets/nouveau?address=${encodeURIComponent(dpe.adresse || '')}&postalCode=${dpe.codePostal || ''}&city=${encodeURIComponent(dpe.commune || '')}`}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition"
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleCreateLead(dpe) }}
+                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition"
                   >
                     <UserPlus className="w-3 h-3" />
+                    Lead
+                  </button>
+                  <Link
+                    to={`/projets/nouveau?address=${encodeURIComponent(dpe.adresse || '')}&postalCode=${dpe.codePostal || ''}&city=${encodeURIComponent(dpe.commune || '')}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+                  >
+                    <FolderPlus className="w-3 h-3" />
                     Projet
                   </Link>
                 </div>
@@ -673,6 +773,58 @@ export default function DpeProspectionPage() {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        </div>
+      )}
+
+      {/* ═══ DPE Detail Modal ═══ */}
+      {selectedDpe && (
+        <div
+          ref={modalRef}
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm overflow-y-auto"
+          onClick={() => setSelectedDpe(null)}
+        >
+          <div
+            className="w-full max-w-4xl my-8 mx-4 animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { handleCreateLead(selectedDpe); setSelectedDpe(null) }}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Creer un lead
+                </button>
+                <Link
+                  to={`/projets/nouveau?address=${encodeURIComponent(selectedDpe.adresse || '')}&postalCode=${selectedDpe.codePostal || ''}&city=${encodeURIComponent(selectedDpe.commune || '')}`}
+                  onClick={() => setSelectedDpe(null)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition"
+                >
+                  <FolderPlus className="w-4 h-4" />
+                  Creer un projet
+                </Link>
+              </div>
+              <button
+                onClick={() => setSelectedDpe(null)}
+                className="p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Full DPE Detail Card */}
+            <DpeDetailCard dpe={selectedDpe} audits={selectedAudits} />
+
+            {/* Loading audits indicator */}
+            {loadingAudits && (
+              <div className="flex items-center justify-center gap-2 mt-3 p-3 bg-white rounded-xl border border-gray-200">
+                <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
+                <span className="text-sm text-gray-500">Chargement des audits energetiques...</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  Save, ArrowLeft, Check, AlertTriangle,
+  Save, ArrowLeft, Check, AlertTriangle, Zap,
   Loader2, X, Upload, FileText, User, Home, MapPin, Edit3, Trash2, Users as UsersIcon
 } from 'lucide-react'
 import InputField from '../components/ui/InputField'
 import SelectField from '../components/ui/SelectField'
 import AddressAutocomplete from '../components/ui/AddressAutocomplete'
 import CompletionGauge from '../components/ui/CompletionGauge'
-import { useProjects } from '../hooks/useProjects'
+import { useProjects, TYPES_TRAVAUX, PROJECT_STATUSES } from '../hooks/useProjects'
 import { getRevenueCategory } from '../lib/revenueCategory'
 import { getLocationInfo } from '../utils/postalCode'
 import { getCompletion } from '../lib/completionGauge'
@@ -65,6 +65,7 @@ export default function ClientFormPage() {
     postalCode: searchParams.get('postalCode') || '',
     personnes: '', rfr: '', typeLogement: '', surface: '', surfaceHabitable: '',
     ageBatiment: '', chauffageActuel: '',
+    typeTravaux: '', status: 'en_etude',
   }))
   const [validationError, setValidationError] = useState('')
 
@@ -102,6 +103,7 @@ export default function ClientFormPage() {
         rfr: existing.rfr || '', typeLogement: existing.typeLogement || '',
         surface: existing.surface || '', surfaceHabitable: existing.surfaceHabitable || '',
         ageBatiment: existing.ageBatiment || '', chauffageActuel: existing.chauffageActuel || '',
+        typeTravaux: existing.typeTravaux || '', status: existing.status || 'en_etude',
       })
       if (existing.dpe) setSelectedDpe(existing.dpe)
       if (existing.avisImposition) {
@@ -220,6 +222,7 @@ export default function ClientFormPage() {
       isIDF: locationInfo?.isIDF || false,
       category: categoryInfo?.category || null, categoryLabel: categoryInfo?.label || null,
       dpe: selectedDpe || null, avisImposition: avisList.length > 0 ? avisList : null,
+      typeTravaux: form.typeTravaux || null, status: form.status || 'en_etude',
     }
     if (isEdit) { updateProject(id, data); navigate(`/projets/${id}`) }
     else { const p = addProject(data); navigate(`/projets/${p.id}`) }
@@ -455,6 +458,52 @@ export default function ClientFormPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* ═══ SECTION 4 : Type de travaux ═══ */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
+          <Zap className="w-4 h-4 text-indigo-500" /> Type de travaux
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {TYPES_TRAVAUX.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setField('typeTravaux', t.value)}
+              className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition ${
+                form.typeTravaux === t.value
+                  ? `${t.color} ring-2 ring-offset-1 ring-current border-transparent`
+                  : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-300'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══ SECTION 5 : Suivi du dossier ═══ */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
+          <FileText className="w-4 h-4 text-indigo-500" /> Suivi du dossier
+        </h2>
+        <div className="flex flex-wrap gap-1.5">
+          {PROJECT_STATUSES.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => setField('status', s.value)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                form.status === s.value
+                  ? `${s.color} ring-2 ring-offset-1 ring-current`
+                  : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Bouton Enregistrer bas de page */}

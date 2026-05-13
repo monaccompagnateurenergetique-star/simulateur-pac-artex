@@ -24,8 +24,9 @@ export default function LeadsPage() {
   const [filterOrg, setFilterOrg] = useState('all')
   const [sortBy, setSortBy] = useState('date_desc')
 
-  // Super admin voit les leads de toutes les orgs
-  const leads = isSuperAdmin() && allOrgLeads.length > 0 ? allOrgLeads : ownLeads
+  // Super admin voit les leads de toutes les orgs — exclure les convertis (rétrocompatibilité)
+  const allLeads = isSuperAdmin() && allOrgLeads.length > 0 ? allOrgLeads : ownLeads
+  const leads = allLeads.filter((l) => l.status !== 'converti')
   const counts = getLeadStatusCounts()
 
   const activeStatuses = LEAD_STATUSES.filter((s) => s.value !== 'perdu' && s.value !== 'converti')
@@ -234,18 +235,30 @@ export default function LeadsPage() {
                 {/* DPE badge */}
                 {lead.dpe?.etiquetteDpe && (() => {
                   const dpeColor = getDpeColor(lead.dpe.etiquetteDpe)
+                  const gesColor = lead.dpe.etiquetteGes ? getDpeColor(lead.dpe.etiquetteGes) : null
                   return (
                     <div className="flex items-center gap-2">
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center text-base font-black shrink-0 flex-col"
-                        style={{ backgroundColor: dpeColor?.bg, color: dpeColor?.text }}
-                      >
-                        <span className="leading-tight">{lead.dpe.etiquetteDpe}</span>
-                        <span className="text-[7px] leading-none">DPE</span>
+                      <div className="flex flex-col items-center gap-0.5 shrink-0">
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center text-base font-black flex-col"
+                          style={{ backgroundColor: dpeColor?.bg, color: dpeColor?.text }}
+                        >
+                          <span className="leading-tight">{lead.dpe.etiquetteDpe}</span>
+                          <span className="text-[7px] leading-none">DPE</span>
+                        </div>
+                        {gesColor && (
+                          <div className="w-7 h-4 rounded flex items-center justify-center"
+                            style={{ backgroundColor: gesColor.bg, color: gesColor.text }}>
+                            <span className="text-[8px] font-black">{lead.dpe.etiquetteGes}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="text-xs text-gray-600">
-                        <span className="font-semibold block">{lead.dpe.consoM2 ? `${lead.dpe.consoM2} kWh/m²` : 'Enregistré'}</span>
+                        <span className="font-semibold block">{lead.dpe.consoM2 ? `${lead.dpe.consoM2} kWh/m²` : 'Enregistre'}</span>
                         {lead.dpe.surface && <span className="text-gray-400">{lead.dpe.surface} m²</span>}
+                        {lead.dpe.energieChauffage && (
+                          <span className="block text-[10px] text-gray-400 truncate max-w-[120px]">{lead.dpe.energieChauffage}</span>
+                        )}
                       </div>
                     </div>
                   )

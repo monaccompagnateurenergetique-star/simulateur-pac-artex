@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Users, Plus, Search, Phone, MapPin, Trash2, Filter, X, ArrowRightCircle, Thermometer, Building2 } from 'lucide-react'
-import { useProjects, PROJECT_STATUSES } from '../hooks/useProjects'
+import { useProjects, PROJECT_STATUSES, getTypeTravauxInfo } from '../hooks/useProjects'
 import { useSimulationHistory } from '../hooks/useSimulationHistory'
 import { useRole } from '../contexts/RoleContext'
 import { useAllOrgData } from '../hooks/useAllOrgData'
@@ -140,7 +140,7 @@ export default function ClientsPage() {
     return result
   }, [projects, search, filterStatus, filterCategory, filterWorkType, filterOrg, sortBy, clientSimTypes])
 
-  const activeStatuses = PROJECT_STATUSES.filter((s) => s.value !== 'perdu')
+  const activeStatuses = PROJECT_STATUSES
 
   function clearAllFilters() {
     setFilterCategory('all')
@@ -413,6 +413,14 @@ export default function ClientsPage() {
                           {project.category}
                         </span>
                       )}
+                      {project.typeTravaux && (() => {
+                        const tt = getTypeTravauxInfo(project.typeTravaux)
+                        return tt ? (
+                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${tt.color}`}>
+                            {tt.label}
+                          </span>
+                        ) : null
+                      })()}
                       {project._orgName && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center gap-1">
                           <Building2 className="w-3 h-3" />
@@ -558,6 +566,14 @@ export default function ClientsPage() {
                               {project.category}
                             </span>
                           )}
+                          {project.typeTravaux && (() => {
+                            const tt = getTypeTravauxInfo(project.typeTravaux)
+                            return tt ? (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${tt.color}`}>
+                                {tt.label}
+                              </span>
+                            ) : null
+                          })()}
                           {project._orgName && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-bold">
                               {project._orgName}

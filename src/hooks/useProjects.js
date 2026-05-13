@@ -2,16 +2,27 @@ import { useMemo } from 'react'
 import { useOrgCollection } from './useOrgCollection'
 import { getCompletion } from '../lib/completionGauge'
 
+export const TYPES_TRAVAUX = [
+  { value: 'pompe_a_chaleur', label: 'Pompe à chaleur', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
+  { value: 'reno_globale', label: 'Réno globale', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
+  { value: 'logement_decent', label: 'Logement décent', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
+]
+
+export function getTypeTravauxInfo(value) {
+  return TYPES_TRAVAUX.find((t) => t.value === value) || null
+}
+
 export const PROJECT_STATUSES = [
-  { value: 'etude', label: 'En étude', color: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
-  { value: 'visite', label: 'Visite technique', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
-  { value: 'devis_envoye', label: 'Devis envoyé', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
-  { value: 'devis_signe', label: 'Devis signé', color: 'bg-indigo-100 text-indigo-700', dot: 'bg-indigo-500' },
-  { value: 'dossier_depose', label: 'Dossier CEE déposé', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
-  { value: 'travaux_cours', label: 'Travaux en cours', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
-  { value: 'travaux_termines', label: 'Travaux terminés', color: 'bg-lime-100 text-lime-700', dot: 'bg-lime-500' },
-  { value: 'prime_versee', label: 'Prime versée', color: 'bg-green-100 text-green-700', dot: 'bg-green-600' },
-  { value: 'perdu', label: 'Perdu', color: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
+  { value: 'en_etude', label: 'En étude', color: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
+  { value: 'visite_technique', label: 'Visite technique', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
+  { value: 'devis_a_faire', label: 'Devis à faire', color: 'bg-cyan-100 text-cyan-700', dot: 'bg-cyan-500' },
+  { value: 'devis_envoye', label: 'Devis envoyé', color: 'bg-indigo-100 text-indigo-700', dot: 'bg-indigo-500' },
+  { value: 'en_attente', label: 'En attente', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
+  { value: 'devis_signe', label: 'Devis signé', color: 'bg-violet-100 text-violet-700', dot: 'bg-violet-500' },
+  { value: 'en_attente_document', label: 'En attente de document', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
+  { value: 'a_installer', label: 'À installer', color: 'bg-sky-100 text-sky-700', dot: 'bg-sky-500' },
+  { value: 'a_deposer', label: 'À déposer', color: 'bg-teal-100 text-teal-700', dot: 'bg-teal-500' },
+  { value: 'cloture', label: 'Clôturé', color: 'bg-green-100 text-green-800', dot: 'bg-green-600' },
 ]
 
 /**
@@ -39,9 +50,19 @@ function migrateProject(project) {
     changed = true
   }
 
-  // Migrer status 'prospect' → 'etude'
-  if (migrated.status === 'prospect') {
-    migrated.status = 'etude'
+  // Migrer anciens statuts vers les nouveaux
+  const STATUS_MIGRATION = {
+    prospect: 'en_etude',
+    etude: 'en_etude',
+    visite: 'visite_technique',
+    dossier_depose: 'a_deposer',
+    travaux_cours: 'a_installer',
+    travaux_termines: 'cloture',
+    prime_versee: 'cloture',
+    perdu: 'cloture',
+  }
+  if (STATUS_MIGRATION[migrated.status]) {
+    migrated.status = STATUS_MIGRATION[migrated.status]
     changed = true
   }
 
@@ -141,7 +162,8 @@ export function useProjects() {
       leadId: null,
       dpe: null,
       ...data,
-      status: 'etude',
+      status: data.status || 'en_etude',
+      typeTravaux: data.typeTravaux || null,
       notes: [],
       simulations: [],
       scenarios: [],

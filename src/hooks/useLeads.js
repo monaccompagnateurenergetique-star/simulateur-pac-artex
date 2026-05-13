@@ -58,6 +58,7 @@ export function useLeads() {
       categoryLabel: null,
       source: 'manuel',
       status: 'a_contacter',
+      dpe: null,
       notes: [],
       reminders: [],
       convertedToProjectId: null,
@@ -177,16 +178,14 @@ export function useLeads() {
       isIDF: lead.isIDF,
       category: lead.category,
       categoryLabel: lead.categoryLabel,
+      dpe: lead.dpe || null,
       leadId: lead.id,
     }
 
     const project = addProject(projectData)
 
-    // Marquer le lead comme converti
-    updateLead(leadId, {
-      status: 'converti',
-      convertedToProjectId: project.id,
-    })
+    // Supprimer le lead de la liste (les données sont copiées dans le projet)
+    deleteLead(leadId)
 
     return project
   }
