@@ -88,3 +88,115 @@
 .animate-fade-in { animation: fade-in 0.4s ease-out; }
 .animate-slide-up { animation: slide-up 0.5s ease-out; }
 .animate-result-pop { animation: result-pop 0.35s ease-out; }
+
+/* ════════════════════════════════════════════════════════════
+   NOTE DE DIMENSIONNEMENT IMPRIMABLE (.dim-pac__note)
+   Masquée à l'écran, révélée uniquement à l'impression.
+   ════════════════════════════════════════════════════════════ */
+.dim-pac__note { display: none; }
+
+@media print {
+  body * { visibility: hidden !important; }
+  .dim-pac__note,
+  .dim-pac__note * { visibility: visible !important; }
+  .dim-pac__note {
+    display: block !important;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    width: 100%;
+    padding: 0;
+    background: #fff;
+    color: #111827;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  @page { size: A4; margin: 14mm; }
+}
+
+.dpn__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #74bf16;
+}
+.dpn__title { font-size: 17px; font-weight: 800; margin: 0; color: #2c4a00; }
+.dpn__subtitle { font-size: 10px; color: #6b7280; margin: 3px 0 0; }
+.dpn__meta { text-align: right; font-size: 10px; }
+.dpn__meta div { margin-bottom: 2px; }
+.dpn__meta span { color: #6b7280; margin-right: 6px; }
+.dpn__meta strong { color: #111827; }
+
+.dpn__parties {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 14px;
+}
+.dpn__party h2 {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #74bf16;
+  margin: 0 0 4px;
+}
+.dpn__party p { margin: 1px 0; font-size: 11px; color: #374151; }
+.dpn__party-name { font-weight: 700 !important; color: #111827 !important; font-size: 12px !important; }
+.dpn__muted { color: #9ca3af; }
+
+.dpn__section { margin-top: 16px; }
+.dpn__h2 {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2c4a00;
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dpn__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 24px;
+}
+.dpn__grid div { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
+.dpn__grid span { color: #6b7280; }
+.dpn__grid strong { color: #111827; }
+
+.dpn__reco {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1.5px solid #74bf16;
+  border-radius: 8px;
+  background: #f3fbe8;
+}
+.dpn__reco-main { display: flex; flex-direction: column; gap: 2px; min-width: 160px; }
+.dpn__reco-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #5a9400; }
+.dpn__reco-value { font-size: 30px; font-weight: 800; color: #2c4a00; line-height: 1; }
+.dpn__reco-range { font-size: 10px; color: #5a9400; }
+.dpn__reco-rules { display: flex; gap: 16px; flex: 1; }
+.dpn__reco-rules > div { display: flex; flex-direction: column; gap: 1px; }
+.dpn__reco-rules span { font-size: 9.5px; color: #6b7280; }
+.dpn__reco-rules strong { font-size: 12px; color: #111827; }
+.dpn__reco-rules small { font-size: 9px; color: #9ca3af; }
+
+.dpn__table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.dpn__table td { padding: 4px 0; border-bottom: 1px solid #f3f4f6; }
+.dpn__table td:last-child { text-align: right; font-weight: 600; color: #111827; }
+.dpn__table td:first-child { color: #4b5563; }
+.dpn__table-strong td { font-weight: 700; color: #2c4a00; border-bottom: 1px solid #dcefc4; }
+
+.dpn__posts { list-style: none; margin: 0; padding: 0; }
+.dpn__posts li { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; border-bottom: 1px solid #f3f4f6; }
+.dpn__posts span { color: #4b5563; }
+.dpn__posts strong { color: #111827; }
+
+.dpn__footer { margin-top: 20px; }
+.dpn__disclaimer { font-size: 9px; color: #9ca3af; line-height: 1.4; margin: 0 0 16px; font-style: italic; }
+.dpn__signature { display: flex; gap: 40px; }
+.dpn__signature > div { flex: 1; }
+.dpn__signature span { font-size: 9.5px; color: #6b7280; }
+.dpn__sign-line { margin-top: 28px; border-bottom: 1px solid #9ca3af; }

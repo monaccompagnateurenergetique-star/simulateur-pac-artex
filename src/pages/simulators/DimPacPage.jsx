@@ -5,7 +5,7 @@ import {
   Check, X, CheckCircle2, XCircle, AlertTriangle, Info, Bolt, Gauge,
   Leaf, Sprout, Castle, Warehouse, Factory, Building2, HousePlus,
   Triangle, Square, Layers, RectangleVertical, DoorClosed, ArrowDownUp, Fan,
-  Minus, Grid3x3, SquareDashed, FlaskConical,
+  Minus, Grid3x3, SquareDashed, FlaskConical, FileDown,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip as RTooltip, ResponsiveContainer } from 'recharts'
 import { PAC_SIZING, DEFAULT_INSULATION } from '../../lib/constants/dimPac'
@@ -14,6 +14,7 @@ import {
 } from '../../lib/constants/zones'
 import { calculatePacSizing } from '../../lib/calculators/dimPac'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
+import DimPacNote from '../../components/simulator/DimPacNote'
 import AddressAutocomplete from '../../components/ui/AddressAutocomplete'
 import { searchAddress, fetchAltitude } from '../../lib/services/geolocation'
 import { deptFromPostalCode } from '../../lib/services/tBaseLookup'
@@ -216,6 +217,10 @@ export default function DimPacPage() {
   const [hasRenovation, setHasRenovation] = useState(null)
   const [insulation, setInsulation] = useState(DEFAULT_INSULATION)
 
+  // ─── Note de dimensionnement (champs libres) ────────────
+  const [clientName, setClientName] = useState('')
+  const [conseillerName, setConseillerName] = useState('')
+
   const toggleEmitter = (e) => {
     setEmitters(prev => prev.includes(e) ? prev.filter(x => x !== e) : [...prev, e])
   }
@@ -251,6 +256,33 @@ export default function DimPacPage() {
     value: +(c.watts / 1000).toFixed(2),
     color: c.color,
   }))
+
+  // ─── Données de la note imprimable ──────────────────────
+  const today = new Date()
+  const dateLabel = today.toLocaleDateString('fr-FR')
+  const reference = `DIM-${postalCode || 'PAC'}-${dateLabel.replace(/\//g, '')}`
+  const noteData = {
+    conseillerName: conseillerName.trim(),
+    clientName: clientName.trim(),
+    address: addressLabel,
+    postalCode,
+    deptName: result.tBaseSource?.deptName,
+    dept: result.tBaseSource?.dept,
+    zone: zoneDetail?.value,
+    dateLabel,
+    reference,
+    housingType,
+    surface: typeof surface === 'number' ? surface : 100,
+    ceilingHeight: typeof ceilingHeight === 'number' ? ceilingHeight : 2.5,
+    nbEtages,
+    periodLabel: periodDef?.label ?? '',
+    heatingLabel: heatingDef?.label ?? '',
+    includeEcs,
+    result,
+    topDeperditions: result.deperditionsByCategory.slice(0, 3).map(c => ({
+      key: c.key, label: c.label, percentage: c.percentage,
+    })),
+  }
 
   return (
     <SimulatorLayout
@@ -671,6 +703,13 @@ export default function DimPacPage() {
         <div className="flex items-center gap-2.5 px-6 py-4 border-b border-white/10">
           <Bolt className="w-5 h-5 text-[var(--color-artex-green,#84cc16)]" />
           <h2 className="text-lg font-bold text-gray-200">Résultat du dimensionnement</h2>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="ml-auto inline-flex items-center gap-2 px-3.5 py-2 rounded-[var(--radius-sm)] border border-white/25 bg-white/10 text-white text-sm font-semibold hover:bg-white/20 transition"
+          >
+            <FileDown className="w-4 h-4" /> Télécharger la note (PDF)
+          </button>
         </div>
 
         <div className="p-6 space-y-6">
@@ -888,8 +927,45 @@ export default function DimPacPage() {
               subtitle={`BAR-TH-171 : ${Math.round(PAC_SIZING.MIN_COVERAGE * 100)}-${Math.round(PAC_SIZING.MAX_COVERAGE * 100)}%`}
             />
           </div>
+
+          {/* ═══ Note de dimensionnement (PDF) ═══ */}
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-[11px] uppercase tracking-wider text-gray-400 mb-3">Note de dimensionnement (PDF)</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] text-gray-400 mb-1">Nom du client / chantier</label>
+                <input
+                  type="text"
+                  value={clientName}
+                  onChange={e => setClientName(e.target.value)}
+                  placeholder="ex: M. et Mme Durand"
+                  className="w-full px-3 py-2 rounded-[var(--radius-sm)] bg-white/5 border border-white/15 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[var(--color-artex-green,#84cc16)]/60"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-gray-400 mb-1">Établi par (conseiller)</label>
+                <input
+                  type="text"
+                  value={conseillerName}
+                  onChange={e => setConseillerName(e.target.value)}
+                  placeholder="ex: Jean Martin — Artex360"
+                  className="w-full px-3 py-2 rounded-[var(--radius-sm)] bg-white/5 border border-white/15 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[var(--color-artex-green,#84cc16)]/60"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)] bg-[var(--color-artex-green,#84cc16)] text-[var(--color-artex-dark,#121212)] text-sm font-bold hover:brightness-95 transition"
+            >
+              <FileDown className="w-4 h-4" /> Télécharger la note (PDF)
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Note imprimable (masquée à l'écran, révélée à l'impression) */}
+      <DimPacNote data={noteData} />
 
     </SimulatorLayout>
   )
