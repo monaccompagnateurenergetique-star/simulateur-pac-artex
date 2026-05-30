@@ -1,0 +1,92 @@
+/* ── InfoHint : infobulle « ? » accessible, 100% CSS ── */
+.info-hint {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.info-hint__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted, #9ca3af);
+  cursor: help;
+  font-size: 12px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.info-hint__btn:hover,
+.info-hint__btn:focus-visible {
+  color: var(--artex-green, #10b981);
+  outline: none;
+}
+
+.info-hint__bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  z-index: 50;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  background: var(--artex-primary, #1f2937);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  white-space: normal;
+  text-align: left;
+}
+
+/* Flèche */
+.info-hint__bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--artex-primary, #1f2937);
+}
+
+.info-hint__btn:hover + .info-hint__bubble,
+.info-hint__btn:focus-visible + .info-hint__bubble,
+.info-hint:hover .info-hint__bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Sur petits écrans : ancrer à gauche pour éviter le débordement */
+@media (max-width: 520px) {
+  .info-hint__bubble {
+    left: 0;
+    transform: translateX(0) translateY(4px);
+    max-width: 200px;
+  }
+  .info-hint__bubble::after { left: 8px; }
+  .info-hint__btn:hover + .info-hint__bubble,
+  .info-hint__btn:focus-visible + .info-hint__bubble,
+  .info-hint:hover .info-hint__bubble {
+    transform: translateX(0) translateY(0);
+  }
+}
+
+/* Masquer les infobulles à l'impression */
+@media print {
+  .info-hint { display: none !important; }
+}

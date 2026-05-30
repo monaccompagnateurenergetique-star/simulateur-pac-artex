@@ -1,7 +1,8 @@
 /* ════════════════════════════════════════════════════════
    DIM-PAC — Dimensionnement puissance PAC air/eau
    Méthode G pondérée par poste d'isolation
-   Conforme Guide CEE BAR-TH-171 (10/2025)
+   Conforme Guide CEE BAR-TH-171 + DTU 68.16 (intersection)
+   Icônes FontAwesome (identiques au CRM Artex360)
    ════════════════════════════════════════════════════════ */
 
 export const PAC_SIZING = {
@@ -20,41 +21,38 @@ export const PAC_SIZING = {
   /** Puissance ECS moyenne pour PAC air/eau (kW) */
   ECS_POWER_KW: 3.5,
 
-  /** Marge de sécurité (15%) */
+  /** Marge de sécurité CEE (15%) */
   SAFETY_MARGIN: 0.15,
 
   /** G effectif minimum (plancher physique RE2020) */
   G_MIN: 0.45,
 
-  /** Seuils de couverture BAR-TH-171 */
-  MIN_COVERAGE: 0.60,    // < 60% → sous-dimensionnée
-  MAX_COVERAGE: 1.30,    // > 130% → surdimensionnée
+  /** Seuils de couverture BAR-TH-171 (CEE — appoint électrique implicite) */
+  MIN_COVERAGE: 0.60,
+  MAX_COVERAGE: 1.30,
+  CEE_MIN_COVERAGE: 0.60,
+  CEE_MAX_COVERAGE: 1.30,
 
-  /**
-   * DTU 65.16 — Règle de dimensionnement PAC
-   * Le ratio P_PAC / P_déperditions doit être compris entre 80% et 120%.
-   *  - < 80% : sous-dimensionnée → appoint obligatoire, confort non garanti
-   *  - 80-120% : conforme DTU → dimensionnement correct
-   *  - > 120% : surdimensionnée → cycles courts, usure prématurée, COP dégradé
-   */
-  DTU_MIN_RATIO: 0.80,
-  DTU_MAX_RATIO: 1.20,
+  /** Seuils DTU 68.16 (PAC seule, SANS appoint électrique) */
+  DTU_MIN_COVERAGE: 0.70,
+  DTU_MAX_COVERAGE: 1.00,
+  DTU_SAFETY_FACTOR: 1.20,
 
   /** ETAS mini requis selon application */
   ETAS_BT_REQUIRED: 1.26,  // Basse T° (35°C)
   ETAS_HT_REQUIRED: 1.11,  // Moyenne/Haute T° (55°C)
 
-  /** G de base par période de construction (W/m³·K) — icônes Lucide */
+  /** G de base par période de construction (W/m³·K) — icônes FontAwesome */
   CONSTRUCTION_PERIODS: [
-    { value: 'avant_1975', label: 'Avant 1975',     subLabel: 'Construction ancienne',         gBase: 1.8, intermittence: 1.20, iconName: 'HousePlus' },
-    { value: '1975_1982',  label: '1975 – 1982',    subLabel: 'RT 1974 (1ère réglementation)',  gBase: 1.6, intermittence: 1.20, iconName: 'Home' },
-    { value: '1983_1988',  label: '1983 – 1988',    subLabel: 'RT 1982',                       gBase: 1.4, intermittence: 1.15, iconName: 'Castle' },
-    { value: '1989_2000',  label: '1989 – 2000',    subLabel: 'RT 1988',                       gBase: 1.2, intermittence: 1.15, iconName: 'Warehouse' },
-    { value: '2001_2005',  label: '2001 – 2005',    subLabel: 'RT 2000',                       gBase: 1.0, intermittence: 1.15, iconName: 'Factory' },
-    { value: '2006_2009',  label: '2006 – 2009',    subLabel: 'RT 2005',                       gBase: 0.9, intermittence: 1.10, iconName: 'Building' },
-    { value: '2010_2012',  label: '2010 – 2012',    subLabel: 'RT 2005 renforcée',             gBase: 0.8, intermittence: 1.10, iconName: 'Building2' },
-    { value: 'apres_2013', label: 'Après 2013',     subLabel: 'RT 2012',                       gBase: 0.6, intermittence: 1.10, iconName: 'Leaf' },
-    { value: 'neuf',       label: 'Moins de 2 ans', subLabel: 'RE 2020',                       gBase: 0.5, intermittence: 1.10, iconName: 'Sprout' },
+    { value: 'avant_1975', label: 'Avant 1975',    subLabel: 'Construction ancienne',        gBase: 1.8, intermittence: 1.20, icon: 'fa-solid fa-house-crack' },
+    { value: '1975_1982',  label: '1975 – 1982',   subLabel: 'RT 1974 (1ère réglementation)', gBase: 1.6, intermittence: 1.20, icon: 'fa-solid fa-house' },
+    { value: '1983_1988',  label: '1983 – 1988',   subLabel: 'RT 1982',                      gBase: 1.4, intermittence: 1.15, icon: 'fa-solid fa-house-user' },
+    { value: '1989_2000',  label: '1989 – 2000',   subLabel: 'RT 1988',                      gBase: 1.2, intermittence: 1.15, icon: 'fa-solid fa-house-chimney' },
+    { value: '2001_2005',  label: '2001 – 2005',   subLabel: 'RT 2000',                      gBase: 1.0, intermittence: 1.15, icon: 'fa-solid fa-house-chimney-window' },
+    { value: '2006_2009',  label: '2006 – 2009',   subLabel: 'RT 2005',                      gBase: 0.9, intermittence: 1.10, icon: 'fa-solid fa-building' },
+    { value: '2010_2012',  label: '2010 – 2012',   subLabel: 'RT 2005 renforcée',            gBase: 0.8, intermittence: 1.10, icon: 'fa-solid fa-building-shield' },
+    { value: 'apres_2013', label: 'Après 2013',    subLabel: 'RT 2012',                      gBase: 0.6, intermittence: 1.10, icon: 'fa-solid fa-leaf' },
+    { value: 'neuf',       label: 'Moins de 2 ans', subLabel: 'RE 2020',                     gBase: 0.5, intermittence: 1.10, icon: 'fa-solid fa-seedling' },
   ],
 
   /** Catégories d'isolation avec parts des déperditions et niveaux */
@@ -62,7 +60,7 @@ export const PAC_SIZING = {
     {
       key: 'toiture',
       label: 'Toiture / Combles',
-      iconName: 'Triangle',
+      icon: 'fa-solid fa-house-chimney',
       color: '#ef4444',
       share: 0.25,
       defaultValue: 'moyenne',
@@ -77,7 +75,7 @@ export const PAC_SIZING = {
     {
       key: 'murs',
       label: 'Murs extérieurs',
-      iconName: 'Square',
+      icon: 'fa-solid fa-border-all',
       color: '#f97316',
       share: 0.20,
       defaultValue: 'moyenne',
@@ -92,7 +90,7 @@ export const PAC_SIZING = {
     {
       key: 'plancher',
       label: 'Plancher bas',
-      iconName: 'Layers',
+      icon: 'fa-solid fa-layer-group',
       color: '#a16207',
       share: 0.10,
       defaultValue: 'bonne',
@@ -106,7 +104,7 @@ export const PAC_SIZING = {
     {
       key: 'fenetres',
       label: 'Fenêtres',
-      iconName: 'RectangleVertical',
+      icon: 'fa-solid fa-window-maximize',
       color: '#3b82f6',
       share: 0.18,
       defaultValue: 'double_recent',
@@ -120,7 +118,7 @@ export const PAC_SIZING = {
     {
       key: 'portes',
       label: 'Portes',
-      iconName: 'DoorClosed',
+      icon: 'fa-solid fa-door-closed',
       color: '#8b5cf6',
       share: 0.03,
       defaultValue: 'isole',
@@ -132,7 +130,7 @@ export const PAC_SIZING = {
     {
       key: 'ponts',
       label: 'Ponts thermiques',
-      iconName: 'ArrowDownUp',
+      icon: 'fa-solid fa-arrow-down-up-across-line',
       color: '#ec4899',
       share: 0.07,
       defaultValue: 'recent',
@@ -146,35 +144,35 @@ export const PAC_SIZING = {
     {
       key: 'ventilation',
       label: 'Ventilation',
-      iconName: 'Fan',
+      icon: 'fa-solid fa-fan',
       color: '#06b6d4',
       share: 0.17,
       defaultValue: 'simple_flux',
       levels: [
-        { value: 'naturelle',   label: 'Naturelle',      subLabel: 'Grilles / courants d’air',         ratio: 1.3 },
-        { value: 'simple_flux', label: 'Simple flux',    subLabel: 'VMC extraction continue',          ratio: 1.1 },
-        { value: 'hydro',       label: 'Hydro-réglable', subLabel: 'Débit variable selon humidité',    ratio: 1.0 },
-        { value: 'double_flux', label: 'Double flux',    subLabel: 'Échangeur récup. chaleur ≥ 80 %',  ratio: 0.7 },
+        { value: 'naturelle',    label: 'Naturelle',      subLabel: 'Grilles / courants d’air',         ratio: 1.3 },
+        { value: 'simple_flux',  label: 'Simple flux',    subLabel: 'VMC extraction continue',          ratio: 1.1 },
+        { value: 'hydro',        label: 'Hydro-réglable', subLabel: 'Débit variable selon humidité',    ratio: 1.0 },
+        { value: 'double_flux',  label: 'Double flux',    subLabel: 'Échangeur récup. chaleur ≥ 80 %',  ratio: 0.7 },
       ],
     },
   ],
 
   /** Types d'émetteurs */
   EMITTERS: [
-    { value: 'radiateur_fonte',     label: 'Radiateur fonte',      iconName: 'Flame',     mode: 'MT_HT' },
-    { value: 'radiateur_acier_alu', label: 'Radiateur acier/alu',  iconName: 'Minus',     mode: 'MT_HT' },
-    { value: 'plancher_chauffant',  label: 'Plancher chauffant',   iconName: 'Square',    mode: 'BT' },
-    { value: 'mur_chauffant',       label: 'Mur chauffant',        iconName: 'Grid3x3',   mode: 'BT' },
-    { value: 'plafond_chauffant',   label: 'Plafond chauffant',    iconName: 'SquareDashed', mode: 'BT' },
+    { value: 'radiateur_fonte',     label: 'Radiateur fonte',      icon: 'fa-solid fa-fire-burner', mode: 'MT_HT' },
+    { value: 'radiateur_acier_alu', label: 'Radiateur acier/alu',  icon: 'fa-solid fa-grip-lines',  mode: 'MT_HT' },
+    { value: 'plancher_chauffant',  label: 'Plancher chauffant',   icon: 'fa-solid fa-square',      mode: 'BT' },
+    { value: 'mur_chauffant',       label: 'Mur chauffant',        icon: 'fa-solid fa-border-all',  mode: 'BT' },
+    { value: 'plafond_chauffant',   label: 'Plafond chauffant',    icon: 'fa-solid fa-square-full', mode: 'BT' },
   ],
 
   /** Options chauffage principal à déposer */
   HEATING_SYSTEMS: [
-    { value: 'gaz',        label: 'Chaudière gaz',          subLabel: 'Ville ou propane',      iconName: 'Flame',     eligibleBarTh171: true  },
-    { value: 'fioul',      label: 'Chaudière fioul',        subLabel: 'Tank fioul domestique', iconName: 'Droplet',   eligibleBarTh171: true  },
-    { value: 'charbon',    label: 'Chaudière charbon',      subLabel: 'Ancienne chaudière',    iconName: 'Cog',       eligibleBarTh171: true  },
-    { value: 'electrique', label: 'Radiateurs électriques', subLabel: 'Convecteurs, panneaux', iconName: 'Zap',       eligibleBarTh171: false },
-    { value: 'autre',      label: 'Autre / Aucun',          subLabel: 'À préciser',            iconName: 'HelpCircle', eligibleBarTh171: false },
+    { value: 'gaz',        label: 'Chaudière gaz',          subLabel: 'Ville ou propane',      icon: 'fa-solid fa-fire',     eligibleBarTh171: true  },
+    { value: 'fioul',      label: 'Chaudière fioul',        subLabel: 'Tank fioul domestique', icon: 'fa-solid fa-oil-can',  eligibleBarTh171: true  },
+    { value: 'charbon',    label: 'Chaudière charbon',      subLabel: 'Ancienne chaudière',    icon: 'fa-solid fa-gears',    eligibleBarTh171: true  },
+    { value: 'electrique', label: 'Radiateurs électriques', subLabel: 'Convecteurs, panneaux', icon: 'fa-solid fa-bolt',     eligibleBarTh171: false },
+    { value: 'autre',      label: 'Autre / Aucun',          subLabel: 'À préciser',            icon: 'fa-solid fa-question', eligibleBarTh171: false },
   ],
 }
 
@@ -187,4 +185,26 @@ export const DEFAULT_INSULATION = {
   portes: 'isole',
   ponts: 'recent',
   ventilation: 'simple_flux',
+}
+
+/**
+ * État d'isolation "d'origine" typique selon la période de construction.
+ * Pré-remplit les sliders quand on choisit une période.
+ */
+export const DEFAULT_INSULATION_BY_PERIOD = {
+  avant_1975: { toiture: 'aucune',  murs: 'non',     plancher: 'aucune',    fenetres: 'simple',        portes: 'ancien', ponts: 'ancien',     ventilation: 'naturelle'   },
+  '1975_1982': { toiture: 'faible',  murs: 'faible',  plancher: 'mauvaise',  fenetres: 'simple',        portes: 'ancien', ponts: 'ancien',     ventilation: 'naturelle'   },
+  '1983_1988': { toiture: 'faible',  murs: 'faible',  plancher: 'mauvaise',  fenetres: 'double_ancien', portes: 'ancien', ponts: 'ancien',     ventilation: 'simple_flux' },
+  '1989_2000': { toiture: 'moyenne', murs: 'moyenne', plancher: 'bonne',     fenetres: 'double_ancien', portes: 'isole',  ponts: 'moyen',      ventilation: 'simple_flux' },
+  '2001_2005': { toiture: 'moyenne', murs: 'moyenne', plancher: 'bonne',     fenetres: 'double_recent', portes: 'isole',  ponts: 'moyen',      ventilation: 'simple_flux' },
+  '2006_2009': { toiture: 'forte',   murs: 'moyenne', plancher: 'bonne',     fenetres: 'double_recent', portes: 'isole',  ponts: 'recent',     ventilation: 'hydro'       },
+  '2010_2012': { toiture: 'forte',   murs: 'forte',   plancher: 'bonne',     fenetres: 'double_recent', portes: 'isole',  ponts: 'recent',     ventilation: 'hydro'       },
+  apres_2013:  { toiture: 'forte',   murs: 'forte',   plancher: 'tres_bonne', fenetres: 'double_recent', portes: 'isole', ponts: 'performant', ventilation: 'double_flux' },
+  neuf:        { toiture: 'tres_perf', murs: 'tres_forte', plancher: 'tres_bonne', fenetres: 'triple',  portes: 'isole',  ponts: 'performant', ventilation: 'double_flux' },
+}
+
+/** Preset "rénovation complète récente" — pré-remplit tous les postes au mieux. */
+export const INSULATION_RENO_FULL = {
+  toiture: 'tres_perf', murs: 'tres_forte', plancher: 'tres_bonne',
+  fenetres: 'triple', portes: 'isole', ponts: 'performant', ventilation: 'double_flux',
 }

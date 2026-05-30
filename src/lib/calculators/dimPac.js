@@ -3,32 +3,50 @@ import { ZONE_BASE_TEMPERATURES_DETAIL, ZONE_BASE_TEMPERATURES } from '../consta
 import { getTBaseNfP52612 } from '../services/tBaseLookup'
 
 /**
- * Calculateur DIM-PAC : méthode G pondérée par poste d'isolation.
- * Conforme Guide CEE BAR-TH-171 (10/2025)
+ * Calculateur DIM-PAC — méthode G pondérée par poste d'isolation.
+ * Modèle Artex360 : intersection CEE BAR-TH-171 ∩ DTU 68.16.
  *
- * @param {Object} input
- * @param {'Maison'|'Appartement'} input.housingType
- * @param {number} input.surface              - m²
- * @param {number} input.ceilingHeight        - m
- * @param {number} input.nbEtages             - 1..5+
- * @param {string} input.zone                 - H1a/H1b/H1c/H2a/H2b/H2c/H2d/H3
- * @param {number} input.altitude             - m
- * @param {number} input.indoorTemp           - °C (défaut 19)
- * @param {string} input.construction         - période construction
- * @param {Object} input.insulation           - config par poste
- * @param {string} input.heatingSystem        - gaz/fioul/charbon/electrique/autre
- * @param {string[]} input.emitters           - types d'émetteurs (multi)
- * @param {boolean} input.includeEcs
+ *   CEE   : 60 à 130 % de la cible (déperditions+intermittence+ECS) — appoint élec. implicite
+ *   DTU   : 70 à 100 % des déperditions × marge 1,2 — PAC seule
+ *   PAC idéale = centre de l'intersection des deux plages, arrondi au kW.
  */
+
+/** Arrondi au kW entier le plus proche. */
+function roundToNearestKw(value) {
+  if (value <= 0) return 0
+  return Math.round(value)
+}
+
+/** Résout le T_base selon zone (sous-zone précise ou zone principale). */
+function resolveTBase(zone) {
+  if (zone in ZONE_BASE_TEMPERATURES_DETAIL) return ZONE_BASE_TEMPERATURES_DETAIL[zone]
+  if (zone in ZONE_BASE_TEMPERATURES) return ZONE_BASE_TEMPERATURES[zone]
+  return -4 // fallback H2
+}
+
+/** Détermine le mode émetteur (BT / MT_HT / mixte) à partir de la sélection. */
+function detectEmitterMode(emitters) {
+  if (!emitters || emitters.length === 0) return 'none'
+  const hasBT = emitters.some(e =>
+    e === 'plancher_chauffant' || e === 'mur_chauffant' || e === 'plafond_chauffant',
+  )
+  const hasHT = emitters.some(e =>
+    e === 'radiateur_fonte' || e === 'radiateur_acier_alu',
+  )
+  if (hasBT && hasHT) return 'mixte'
+  if (hasBT) return 'BT'
+  return 'MT_HT'
+}
+
 export function calculatePacSizing(input) {
   const {
-    housingType, surface, ceilingHeight, zone, altitude, indoorTemp,
+    housingType, surface, ceilingHeight, altitude, indoorTemp,
     construction, insulation,
-    heatingSystem, emitters, includeEcs,
+    heatingSystem, emitters, includeEcs, zone,
     dept,
   } = input
 
-  // ─── 1. Volume chauffé ─────────────────────────────────────
+  // ─── 1. Volume ─────────────────────────────────────────────
   const volume = Math.max(0, surface) * Math.max(2, ceilingHeight)
 
   // ─── 2. G de base (période construction) ──────────────────
@@ -49,12 +67,10 @@ export function calculatePacSizing(input) {
 
   // ─── 4. G effectif ─────────────────────────────────────────
   let gEffectif = gBase * ratioGlobal
-  if (housingType === 'Appartement') {
-    gEffectif *= PAC_SIZING.APARTMENT_G_REDUCTION
-  }
+  if (housingType === 'Appartement') gEffectif *= PAC_SIZING.APARTMENT_G_REDUCTION
   gEffectif = Math.max(PAC_SIZING.G_MIN, gEffectif)
 
-  // ─── 5. T_base NF P 52-612 (norme dimensionnement PAC) ────
+  // ─── 5. T_base NF P 52-612 ─────────────────────────────────
   let tBaseCorrigee
   let altitudeCorrection
   let tBaseSource
@@ -71,8 +87,7 @@ export function calculatePacSizing(input) {
     }
   } else {
     altitudeCorrection = Math.max(0, altitude) / 200 * PAC_SIZING.ALTITUDE_CORRECTION_PER_200M
-    const tBaseZone = ZONE_BASE_TEMPERATURES_DETAIL[zone] ?? ZONE_BASE_TEMPERATURES[zone] ?? -4
-    tBaseCorrigee = tBaseZone - altitudeCorrection
+    tBaseCorrigee = resolveTBase(zone) - altitudeCorrection
     tBaseSource = { standard: 'RT 2012 (fallback)', zone }
   }
   const deltaT = Math.max(0, indoorTemp - tBaseCorrigee)
@@ -81,7 +96,7 @@ export function calculatePacSizing(input) {
   const deperditionsW = gEffectif * volume * deltaT
   const deperditionsKw = deperditionsW / 1000
 
-  // ─── 7. Répartition par poste (pour pie chart) ────────────
+  // ─── 7. Répartition par poste ─────────────────────────────
   const deperditionsByCategory = []
   if (ratioGlobal > 0 && deperditionsW > 0) {
     for (const cat of PAC_SIZING.INSULATION_CATEGORIES) {
@@ -105,15 +120,35 @@ export function calculatePacSizing(input) {
   // ─── 8. Intermittence + ECS ───────────────────────────────
   const deperditionsWithIntermittence = deperditionsKw * intermittenceCoeff
   const ecsKw = includeEcs ? PAC_SIZING.ECS_POWER_KW : 0
+
+  // ─── 9. Plage CEE BAR-TH-171 (60-130 %) ───────────────────
   const puissanceCibleKw = deperditionsWithIntermittence + ecsKw
-
-  // ─── 9. Marges & plage BAR-TH-171 (60-130%) ──────────────
   const safetyMarginKw = puissanceCibleKw * PAC_SIZING.SAFETY_MARGIN
-  const puissanceMinKw = puissanceCibleKw * PAC_SIZING.MIN_COVERAGE
-  const puissanceMaxKw = puissanceCibleKw * PAC_SIZING.MAX_COVERAGE
-  const puissanceRecommandeeKw = roundToEvenKw(puissanceCibleKw + safetyMarginKw)
+  const puissanceMinKw = puissanceCibleKw * PAC_SIZING.CEE_MIN_COVERAGE
+  const puissanceMaxKw = puissanceCibleKw * PAC_SIZING.CEE_MAX_COVERAGE
+  const ceePlage = { minKw: puissanceMinKw, maxKw: puissanceMaxKw }
 
-  // ─── 10. Eligibilité BAR-TH-171 ───────────────────────────
+  // ─── 10. Plage DTU 68.16 (PAC seule, marge ×1.2) ──────────
+  const dtuBaseKw = deperditionsWithIntermittence
+  const dtuPlage = {
+    minKw: dtuBaseKw * PAC_SIZING.DTU_MIN_COVERAGE * PAC_SIZING.DTU_SAFETY_FACTOR,
+    maxKw: dtuBaseKw * PAC_SIZING.DTU_MAX_COVERAGE * PAC_SIZING.DTU_SAFETY_FACTOR,
+    coverageMinKw: dtuBaseKw * PAC_SIZING.DTU_MIN_COVERAGE,
+    coverageMaxKw: dtuBaseKw * PAC_SIZING.DTU_MAX_COVERAGE,
+  }
+
+  // ─── 11. Intersection CEE ∩ DTU ───────────────────────────
+  const interMin = Math.max(ceePlage.minKw, dtuPlage.minKw)
+  const interMax = Math.min(ceePlage.maxKw, dtuPlage.maxKw)
+  const intersection = { minKw: interMin, maxKw: interMax, valid: interMin <= interMax }
+
+  // ─── 12. Puissance finale recommandée = centre intersection ─
+  const recommandeeRaw = intersection.valid
+    ? (intersection.minKw + intersection.maxKw) / 2
+    : Math.min(dtuBaseKw * PAC_SIZING.DTU_SAFETY_FACTOR, ceePlage.maxKw)
+  const puissanceRecommandeeKw = roundToNearestKw(recommandeeRaw)
+
+  // ─── 13. Eligibilité BAR-TH-171 ───────────────────────────
   const heatingDef = PAC_SIZING.HEATING_SYSTEMS.find(h => h.value === heatingSystem)
   const eligibleBarTh171 = heatingDef?.eligibleBarTh171 ?? false
   const barTh171Reason = eligibleBarTh171
@@ -122,38 +157,13 @@ export function calculatePacSizing(input) {
       ? 'Dépose de radiateurs électriques — NON éligible BAR-TH-171 (nécessite dépose chaudière fossile)'
       : 'Vérifier la nature du chauffage à déposer (fossile requis)'
 
-  // ─── 11. ETAS requise selon émetteurs ─────────────────────
+  // ─── 14. ETAS requise selon émetteurs ─────────────────────
   const emitterMode = detectEmitterMode(emitters)
   const forceHT = includeEcs
   const etasRequired = (emitterMode === 'BT' && !forceHT)
     ? PAC_SIZING.ETAS_BT_REQUIRED
     : PAC_SIZING.ETAS_HT_REQUIRED
   const etasTempRef = (emitterMode === 'BT' && !forceHT) ? 35 : 55
-
-  // ─── 12. DTU 65.16 — Vérification dimensionnement ─────────
-  // Ratio = P_PAC_recommandée / P_déperditions (hors ECS pour le ratio DTU)
-  const deperditionsHorsEcs = deperditionsWithIntermittence
-  const dtuRatio = deperditionsHorsEcs > 0
-    ? puissanceRecommandeeKw / deperditionsHorsEcs
-    : 0
-  const dtuMinKw = +(deperditionsHorsEcs * PAC_SIZING.DTU_MIN_RATIO).toFixed(1)
-  const dtuMaxKw = +(deperditionsHorsEcs * PAC_SIZING.DTU_MAX_RATIO).toFixed(1)
-  const dtuConforme = dtuRatio >= PAC_SIZING.DTU_MIN_RATIO && dtuRatio <= PAC_SIZING.DTU_MAX_RATIO
-
-  let dtuVerdict, dtuDetail
-  if (deperditionsHorsEcs <= 0) {
-    dtuVerdict = 'indéterminé'
-    dtuDetail = 'Déperditions nulles — vérifier les données.'
-  } else if (dtuRatio < PAC_SIZING.DTU_MIN_RATIO) {
-    dtuVerdict = 'sous-dimensionnée'
-    dtuDetail = `Ratio ${(dtuRatio * 100).toFixed(0)}% < 80% — appoint obligatoire, confort non garanti. PAC min DTU : ${dtuMinKw} kW.`
-  } else if (dtuRatio > PAC_SIZING.DTU_MAX_RATIO) {
-    dtuVerdict = 'surdimensionnée'
-    dtuDetail = `Ratio ${(dtuRatio * 100).toFixed(0)}% > 120% — cycles courts, usure prématurée, COP dégradé. PAC max DTU : ${dtuMaxKw} kW.`
-  } else {
-    dtuVerdict = 'conforme'
-    dtuDetail = `Ratio ${(dtuRatio * 100).toFixed(0)}% — dimensionnement correct (plage DTU 80-120%).`
-  }
 
   return {
     gBase,
@@ -165,47 +175,27 @@ export function calculatePacSizing(input) {
     tBaseSource,
     altitudeCorrection,
     intermittenceCoeff,
+
     deperditionsW,
     deperditionsKw,
     deperditionsWithIntermittence,
     deperditionsByCategory,
+
     ecsKw,
     safetyMarginKw,
+
     puissanceMinKw,
     puissanceCibleKw,
     puissanceMaxKw,
+    ceePlage,
+    dtuPlage,
+    intersection,
     puissanceRecommandeeKw,
+
     eligibleBarTh171,
     barTh171Reason,
     emitterMode,
     etasRequired,
     etasTempRef,
-    // DTU 65.16
-    dtuRatio,
-    dtuMinKw,
-    dtuMaxKw,
-    dtuConforme,
-    dtuVerdict,
-    dtuDetail,
   }
-}
-
-/** Arrondi au kW pair supérieur (aligne les gammes commerciales PAC) */
-function roundToEvenKw(value) {
-  if (value <= 0) return 0
-  return Math.ceil(value / 2) * 2
-}
-
-/** Détermine le mode émetteur (BT / MT_HT / mixte) à partir de la sélection */
-function detectEmitterMode(emitters) {
-  if (!emitters || emitters.length === 0) return 'none'
-  const hasBT = emitters.some(e =>
-    e === 'plancher_chauffant' || e === 'mur_chauffant' || e === 'plafond_chauffant'
-  )
-  const hasHT = emitters.some(e =>
-    e === 'radiateur_fonte' || e === 'radiateur_acier_alu'
-  )
-  if (hasBT && hasHT) return 'mixte'
-  if (hasBT) return 'BT'
-  return 'MT_HT'
 }

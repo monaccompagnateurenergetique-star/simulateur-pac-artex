@@ -3,10 +3,9 @@ const kw = (v) => `${Number(v).toFixed(1)} kW`
 /**
  * Note de dimensionnement imprimable (A4).
  * Masquée à l'écran (display:none) — révélée uniquement à l'impression via
- * le bloc @media print de index.css.
+ * le bloc @media print de SimDimensionnementPac.css.
  *
- * Adaptée au calculateur du simulateur public (modèle BAR-TH-171 60-130 %
- * + DTU 65.16 80-120 %). Aucune dépendance externe.
+ * Modèle Artex360 : intersection CEE BAR-TH-171 ∩ DTU 68.16.
  */
 export default function DimPacNote({ data }) {
   const { result } = data
@@ -22,7 +21,7 @@ export default function DimPacNote({ data }) {
       <header className="dpn__header">
         <div>
           <h1 className="dpn__title">Note de dimensionnement — Pompe à chaleur air/eau</h1>
-          <p className="dpn__subtitle">Méthode G améliorée · NF P 52-612 · BAR-TH-171 &amp; DTU 65.16</p>
+          <p className="dpn__subtitle">Méthode G pondérée · NF P 52-612 · BAR-TH-171 &amp; DTU 68.16</p>
         </div>
         <div className="dpn__meta">
           <div><span>Référence</span><strong>{data.reference}</strong></div>
@@ -64,18 +63,22 @@ export default function DimPacNote({ data }) {
         <div className="dpn__reco-main">
           <span className="dpn__reco-label">Puissance PAC recommandée</span>
           <span className="dpn__reco-value">{result.puissanceRecommandeeKw} kW</span>
-          <span className="dpn__reco-range">DTU 65.16 : {result.dtuVerdict}</span>
+          {result.intersection.valid && (
+            <span className="dpn__reco-range">
+              Plage acceptable : {kw(result.intersection.minKw)} à {kw(result.intersection.maxKw)}
+            </span>
+          )}
         </div>
         <div className="dpn__reco-rules">
           <div>
             <span>Plage CEE BAR-TH-171</span>
-            <strong>{kw(result.puissanceMinKw)} – {kw(result.puissanceMaxKw)}</strong>
-            <small>60 à 130 % de la cible (appoint élec. implicite)</small>
+            <strong>{kw(result.ceePlage.minKw)} – {kw(result.ceePlage.maxKw)}</strong>
+            <small>60 à 130 % des déperditions (appoint élec. implicite)</small>
           </div>
           <div>
-            <span>Plage DTU 65.16</span>
-            <strong>{kw(result.dtuMinKw)} – {kw(result.dtuMaxKw)}</strong>
-            <small>80 à 120 % des déperditions · ratio {(result.dtuRatio * 100).toFixed(0)} %</small>
+            <span>Plage DTU 68.16</span>
+            <strong>{kw(result.dtuPlage.minKw)} – {kw(result.dtuPlage.maxKw)}</strong>
+            <small>70 à 100 % × marge 1,2 (PAC seule)</small>
           </div>
         </div>
       </section>
@@ -120,10 +123,6 @@ export default function DimPacNote({ data }) {
               <td>{result.eligibleBarTh171 ? 'Oui — dépose chauffage fossile' : 'Non — dépose fossile requise'}</td>
             </tr>
             <tr>
-              <td>Dimensionnement DTU 65.16</td>
-              <td>{result.dtuVerdict} (ratio {(result.dtuRatio * 100).toFixed(0)} %)</td>
-            </tr>
-            <tr>
               <td>ETAS minimale requise</td>
               <td>≥ {Math.round(result.etasRequired * 100)} % @ {result.etasTempRef} °C</td>
             </tr>
@@ -138,8 +137,8 @@ export default function DimPacNote({ data }) {
       {/* Pied */}
       <footer className="dpn__footer">
         <p className="dpn__disclaimer">
-          Note indicative établie selon la méthode G améliorée et les barèmes en vigueur (NF P 52-612,
-          Guide CEE BAR-TH-171, DTU 65.16). La puissance définitive doit être confirmée par une étude
+          Note indicative établie selon la méthode G pondérée et les barèmes en vigueur (NF P 52-612,
+          Guide CEE BAR-TH-171, DTU 68.16). La puissance définitive doit être confirmée par une étude
           thermique sur site. Document non contractuel.
         </p>
         <div className="dpn__signature">
