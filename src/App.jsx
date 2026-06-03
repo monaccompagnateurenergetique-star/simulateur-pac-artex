@@ -29,6 +29,7 @@ import SimulationsPage from './pages/SimulationsPage'
 import PtzPage from './pages/simulators/PtzPage'
 import LocAvantagePage from './pages/simulators/LocAvantagePage'
 import DimPacPage from './pages/simulators/DimPacPage'
+import PhotovoltaiquePage from './pages/simulators/PhotovoltaiquePage'
 import LogementDecentPage from './pages/simulators/LogementDecentPage'
 import LoginPage from './pages/LoginPage'
 import ProfilPage from './pages/ProfilPage'
@@ -85,6 +86,7 @@ export default function App() {
           <Route path="/simulations/ptz" element={<PtzPage />} />
           <Route path="/simulateur/loc-avantage" element={<LocAvantagePage />} />
           <Route path="/simulateur/dim-pac" element={<DimPacPage />} />
+          <Route path="/simulateur/photovoltaique" element={<PhotovoltaiquePage />} />
           <Route path="/simulateur/logement-decent" element={<LogementDecentPage />} />
 
           {/* Outils (boîte à outils + actualités = public, le reste = protégé) */}

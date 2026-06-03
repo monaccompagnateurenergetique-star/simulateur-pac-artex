@@ -13,6 +13,13 @@ export const CATALOG = [
     ],
   },
   {
+    category: 'Énergie solaire',
+    emoji: '🔆',
+    items: [
+      { code: 'PHOTOVOLTAIQUE', title: 'Photovoltaïque — Autoconsommation', description: 'Production, économies & rentabilité', route: '/simulateur/photovoltaique', active: true, badge: 'Bêta' },
+    ],
+  },
+  {
     category: 'Rénovation Globale',
     emoji: '🏠',
     items: [

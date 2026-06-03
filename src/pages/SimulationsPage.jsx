@@ -49,7 +49,12 @@ export default function SimulationsPage() {
                     className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md transition group"
                   >
                     <div className="min-w-0">
-                      <p className="font-bold text-gray-800 group-hover:text-indigo-700 transition">{item.title}</p>
+                      <p className="font-bold text-gray-800 group-hover:text-indigo-700 transition flex items-center gap-2 flex-wrap">
+                        {item.title}
+                        {item.badge && (
+                          <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">{item.badge}</span>
+                        )}
+                      </p>
                       <p className="text-xs text-gray-400 mt-0.5">{item.description || item.code}</p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition shrink-0 ml-2" />
