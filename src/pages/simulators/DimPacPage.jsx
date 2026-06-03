@@ -7,8 +7,8 @@ import {
 import { ZONE_DETAIL_OPTIONS, getZoneFromPostalCode } from '../../lib/constants/zones'
 import { calculatePacSizing } from '../../lib/calculators/dimPac'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
-import DimPacNote from '../../components/simulator/DimPacNote'
 import InfoHint from '../../components/common/InfoHint'
+import { generateDimPacNotePdf } from '../../lib/dimPacNotePdf'
 import AddressAutocomplete from '../../components/ui/AddressAutocomplete'
 import { searchAddress, fetchAltitude } from '../../lib/services/geolocation'
 import { deptFromPostalCode } from '../../lib/services/tBaseLookup'
@@ -525,7 +525,7 @@ export default function DimPacPage() {
         <div className="dim-pac__results-head">
           <i className="fa-solid fa-bolt" />
           <h3>Résultat du dimensionnement</h3>
-          <button type="button" className="dim-pac__export-btn" onClick={() => window.print()}>
+          <button type="button" className="dim-pac__export-btn" onClick={() => generateDimPacNotePdf(noteData)}>
             <i className="fa-solid fa-file-pdf" /> Télécharger la note (PDF)
           </button>
         </div>
@@ -725,15 +725,12 @@ export default function DimPacPage() {
               <span className="sim-label">Établi par <span className="dim-pac__helper">(conseiller)</span></span>
               <input className="sim-input" type="text" placeholder="ex: Jean Martin — Artex360" value={conseillerName} onChange={e => setConseillerName(e.target.value)} />
             </div>
-            <button type="button" className="dim-pac__export-btn dim-pac__export-btn--solid" onClick={() => window.print()}>
+            <button type="button" className="dim-pac__export-btn dim-pac__export-btn--solid" onClick={() => generateDimPacNotePdf(noteData)}>
               <i className="fa-solid fa-file-pdf" /> Télécharger la note
             </button>
           </div>
         </div>
       </div>
-
-      {/* Note imprimable (masquée à l'écran, révélée à l'impression) */}
-      <DimPacNote data={noteData} />
 
     </SimulatorLayout>
   )

@@ -898,8 +898,8 @@
 }
 
 .dim-pac__rule--dtu .dim-pac__rule-step {
-  background: color-mix(in srgb, var(--mpr-bleu) 20%, transparent);
-  color: var(--slate-300);
+  background: color-mix(in srgb, var(--mpr-bleu) 28%, transparent);
+  color: #93c5fd;
 }
 
 .dim-pac__rule-step--final {
@@ -977,7 +977,7 @@
 }
 
 .dim-pac__rule--dtu .dim-pac__rule-range strong {
-  color: var(--slate-300);
+  color: #93c5fd;
 }
 
 .dim-pac__rule-formula {
