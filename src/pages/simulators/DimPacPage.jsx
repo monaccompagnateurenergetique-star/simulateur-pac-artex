@@ -20,6 +20,7 @@ export default function DimPacPage() {
   // ─── Carte 1 : Localisation & Logement ──────────────────
   const [housingType, setHousingType] = useState('Maison')
   const [surface, setSurface] = useState(100)
+  const [surfaceFocused, setSurfaceFocused] = useState(false)
   const [ceilingHeight, setCeilingHeight] = useState(2.5)
   const [nbEtages, setNbEtages] = useState(1)
   const [postalCode, setPostalCode] = useState('')
@@ -109,7 +110,9 @@ export default function DimPacPage() {
   const heatingDef = PAC_SIZING.HEATING_SYSTEMS.find(h => h.value === heatingSystem)
 
   const topDeperditions = result.deperditionsByCategory.slice(0, 3)
-  const surfaceWarn = surface < 15 || surface > 400
+  const numSurface = typeof surface === 'number' ? surface : (parseFloat(surface) || 0)
+  // Alerte uniquement hors saisie (champ non focus) et pour des valeurs vraiment aberrantes.
+  const surfaceWarn = !surfaceFocused && numSurface > 0 && (numSurface < 10 || numSurface > 1000)
 
   const summarySentence = result.intersection.valid
     ? `Pour couvrir les ~${result.deperditionsKw.toFixed(1)} kW de déperditions de ce logement tout en respectant la prime CEE (BAR-TH-171) et la norme DTU 68.16, une pompe à chaleur de ${result.puissanceRecommandeeKw} kW est idéale (plage acceptable : ${result.intersection.minKw.toFixed(1)} à ${result.intersection.maxKw.toFixed(1)} kW).`
@@ -173,7 +176,15 @@ export default function DimPacPage() {
             <div className="sim-field">
               <span className="sim-label">Surface chauffée</span>
               <div className="sim-input-wrap">
-                <input className="sim-input" type="number" min={10} value={surface} onChange={e => setSurface(Math.max(10, parseFloat(e.target.value) || 10))} />
+                <input
+                  className="sim-input"
+                  type="number"
+                  min={0}
+                  value={surface}
+                  onFocus={() => setSurfaceFocused(true)}
+                  onBlur={() => { setSurfaceFocused(false); if (surface === '' || numSurface < 1) setSurface(100) }}
+                  onChange={e => { const v = e.target.value; setSurface(v === '' ? '' : (parseFloat(v) || 0)) }}
+                />
                 <span className="sim-input-suffix">m²</span>
               </div>
               {surfaceWarn && (
