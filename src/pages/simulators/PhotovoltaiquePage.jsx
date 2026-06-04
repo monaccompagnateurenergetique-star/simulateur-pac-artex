@@ -1,59 +1,112 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Sun, MapPin, Zap, Home as HomeIcon, Users, Target, Euro, TrendingUp,
   Battery, Leaf, ChevronLeft, ChevronRight, RefreshCw, Sliders, PiggyBank,
-  CalendarClock, Gauge, BadgePercent,
+  CalendarClock, Gauge, BadgePercent, Wallet, BatteryCharging, Ruler,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as RTooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts'
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import SimulatorLayout from '../../components/simulator/SimulatorLayout'
 import InputField from '../../components/ui/InputField'
 import Slider from '../../components/ui/Slider'
 import ToggleGroup from '../../components/ui/ToggleGroup'
 import AlertBox from '../../components/ui/AlertBox'
 import Button from '../../components/ui/Button'
+import AddressAutocomplete from '../../components/ui/AddressAutocomplete'
 import {
   PV_REGIONS, PV_ORIENTATIONS, PV_DEFAULTS, PV_PANEL,
   PV_PRESENCE_OPTIONS, PV_MOTIVATIONS, coutParKwc,
+  PV_BATTERY_SIZES, PV_BATTERY_DEFAULTS, regionFromLatitude,
 } from '../../lib/constants/photovoltaique'
 import { estimateAnnualProduction, monthlyProduction } from '../../lib/services/pvProduction'
 import { recommendSizing, selfConsumptionRate, computeFinancials } from '../../lib/calculators/photovoltaique'
+import { geocodeAddress } from '../../utils/dpeApi'
+
+/* ── Fix Leaflet default marker icon (Vite breaks asset paths) ── */
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+})
 
 const eur = (v) => `${Math.round(Number(v) || 0).toLocaleString('fr-FR')} €`
 const kwh = (v) => `${Math.round(Number(v) || 0).toLocaleString('fr-FR')} kWh`
 const STEPS = ['Localisation', 'Consommation', 'Toiture', 'Profil', 'Objectif']
-
 const MOTIV_ICON = { Euro, Battery, Leaf, TrendingUp }
 
+/* ── Map recenter helper ── */
+function FlyTo({ center, zoom }) {
+  const map = useMap()
+  useEffect(() => { if (center) map.flyTo(center, zoom || 18, { duration: 1.2 }) }, [center, zoom, map])
+  return null
+}
+
 export default function PhotovoltaiquePage() {
-  const [view, setView] = useState('wizard')   // 'wizard' | 'results'
+  const [view, setView] = useState('wizard')
   const [step, setStep] = useState(1)
 
-  // ── Réponses ──
+  // ── Localisation ──
+  const [addressLabel, setAddressLabel] = useState('')
+  const [coordinates, setCoordinates] = useState(null) // [lat, lon]
   const [region, setRegion] = useState('centre')
-  const [consoMode, setConsoMode] = useState('facture') // 'facture' | 'kwh'
+  const [geocoding, setGeocoding] = useState(false)
+
+  // ── Consommation ──
+  const [consoMode, setConsoMode] = useState('facture')
   const [factureMensuelle, setFactureMensuelle] = useState(120)
   const [consoKwh, setConsoKwh] = useState(6000)
+
+  // ── Toiture ──
   const [orientation, setOrientation] = useState('sud')
   const [inclinaison, setInclinaison] = useState(30)
+  const [toitMode, setToitMode] = useState('surface') // 'surface' | 'kwc'
   const [surfaceToit, setSurfaceToit] = useState(30)
+  const [kwcDirect, setKwcDirect] = useState(6)
+
+  // ── Profil ──
   const [presence, setPresence] = useState('partiel')
   const [ballonEcs, setBallonEcs] = useState(true)
   const [voitureElec, setVoitureElec] = useState(false)
   const [motivation, setMotivation] = useState('facture')
 
+  // ── Batterie ──
+  const [batteryKwh, setBatteryKwh] = useState(0)
+
+  // ── Coût projet ──
+  const [coutProjet, setCoutProjet] = useState('')
+
   // ── Ajustements ──
   const [kwcOverride, setKwcOverride] = useState(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [autoconsoOverride, setAutoconsoOverride] = useState(null) // %
+  const [autoconsoOverride, setAutoconsoOverride] = useState(null)
   const [coutKwcOverride, setCoutKwcOverride] = useState(null)
   const [a, setA] = useState({ ...PV_DEFAULTS })
 
   const num = (v, d = 0) => (typeof v === 'number' && !Number.isNaN(v) ? v : d)
 
-  // ── Dérivés ──
+  // ── Handle address selection ──
+  async function handleAddressSelect({ address, postalCode, city, label }) {
+    setAddressLabel(label || '')
+    if (!label) { setCoordinates(null); return }
+    setGeocoding(true)
+    try {
+      const geo = await geocodeAddress(label)
+      if (geo?.coordinates) {
+        const [lon, lat] = geo.coordinates
+        setCoordinates([lat, lon])
+        setRegion(regionFromLatitude(lat))
+      }
+    } catch { /* silent */ }
+    setGeocoding(false)
+  }
+
+  // ── Derived ──
   const consoAnnuelle = useMemo(() => {
     if (consoMode === 'kwh') return Math.max(0, num(consoKwh))
     return Math.round((num(factureMensuelle) * 12) / Math.max(0.05, a.prixElecKwh))
@@ -65,11 +118,11 @@ export default function PhotovoltaiquePage() {
   )
 
   const reco = useMemo(
-    () => recommendSizing({ consoAnnuelle, surfaceToit: num(surfaceToit), productiblePerKwc: prodPerKwc }),
-    [consoAnnuelle, surfaceToit, prodPerKwc],
+    () => recommendSizing({ consoAnnuelle, surfaceToit: toitMode === 'surface' ? num(surfaceToit) : 999, productiblePerKwc: prodPerKwc }),
+    [consoAnnuelle, surfaceToit, prodPerKwc, toitMode],
   )
 
-  const kwc = kwcOverride ?? reco.kwc
+  const kwc = kwcOverride ?? (toitMode === 'kwc' ? kwcDirect : reco.kwc)
   const nbPanneaux = Math.round((kwc * 1000) / PV_PANEL.puissanceWc)
 
   const production = useMemo(
@@ -83,13 +136,17 @@ export default function PhotovoltaiquePage() {
   )
   const autoconsoRate = autoconsoOverride != null ? autoconsoOverride / 100 : autoconsoRateAuto
 
+  const coutProjetNum = coutProjet !== '' ? Number(coutProjet) : null
+
   const fin = useMemo(() => computeFinancials({
     kwc,
     productionAnnuelle: production.annualKwh,
     consoAnnuelle,
     autoconsoRate,
     params: { ...a, coutParKwc: coutKwcOverride ?? coutParKwc(kwc) },
-  }), [kwc, production.annualKwh, consoAnnuelle, autoconsoRate, a, coutKwcOverride])
+    batteryKwh,
+    coutProjetOverride: coutProjetNum && coutProjetNum > 0 ? coutProjetNum : null,
+  }), [kwc, production.annualKwh, consoAnnuelle, autoconsoRate, a, coutKwcOverride, batteryKwh, coutProjetNum])
 
   const cashflowData = useMemo(
     () => [{ annee: 0, cumul: -fin.coutNet }, ...fin.projection.map(r => ({ annee: r.annee, cumul: r.cumul }))],
@@ -97,11 +154,13 @@ export default function PhotovoltaiquePage() {
   )
   const monthly = useMemo(() => monthlyProduction(production.annualKwh), [production.annualKwh])
 
-  // ── Navigation wizard ──
+  // ── Navigation ──
   const next = () => (step < STEPS.length ? setStep(step + 1) : setView('results'))
   const prev = () => setStep(Math.max(1, step - 1))
 
-  /* ════════ VUE WIZARD ════════ */
+  const regionLabel = PV_REGIONS.find(r => r.value === region)?.label || region
+
+  /* ════════ WIZARD ════════ */
   if (view === 'wizard') {
     return (
       <SimulatorLayout code="PHOTOVOLTAÏQUE" title="Simulateur photovoltaïque" description="Production, économies & rentabilité — comprendre votre investissement">
@@ -116,26 +175,66 @@ export default function PhotovoltaiquePage() {
           </div>
         </div>
 
-        {/* ÉTAPE 1 — Localisation */}
+        {/* STEP 1 — Localisation */}
         {step === 1 && (
           <div className="space-y-4">
-            <StepHeader icon={MapPin} title="Où se situe le logement ?" subtitle="La région détermine l'ensoleillement (productible kWh/kWc)." />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {PV_REGIONS.map(r => (
-                <button key={r.value} type="button" onClick={() => setRegion(r.value)}
-                  className={`text-left p-4 rounded-xl border-2 transition ${region === r.value ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'}`}>
-                  <div className="flex items-center justify-between">
-                    <p className="font-bold text-gray-800">{r.label}</p>
-                    <span className="text-xs font-bold text-indigo-600">{r.productible} kWh/kWc</span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">{r.examples}</p>
-                </button>
-              ))}
+            <StepHeader icon={MapPin} title="Où se situe le logement ?" subtitle="L'adresse détermine l'ensoleillement et affiche la vue satellite." />
+
+            <AddressAutocomplete
+              value={addressLabel}
+              onChange={handleAddressSelect}
+              placeholder="Saisissez l'adresse du projet..."
+            />
+
+            {geocoding && (
+              <p className="text-xs text-indigo-500 animate-pulse">Géolocalisation en cours...</p>
+            )}
+
+            {/* Satellite map */}
+            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 280 }}>
+              <MapContainer
+                center={coordinates || [46.6, 2.5]}
+                zoom={coordinates ? 18 : 6}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={true}
+                zoomControl={false}
+              >
+                <TileLayer
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                  attribution="Esri World Imagery"
+                  maxZoom={19}
+                />
+                {coordinates && (
+                  <>
+                    <FlyTo center={coordinates} zoom={18} />
+                    <Marker position={coordinates} />
+                  </>
+                )}
+              </MapContainer>
+            </div>
+
+            {/* Detected region + manual override */}
+            <div className="bg-indigo-50 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-bold text-indigo-700">
+                  <Sun className="w-4 h-4 inline mr-1" />
+                  Région détectée : {regionLabel}
+                </p>
+                <span className="text-xs text-indigo-500">{PV_REGIONS.find(r => r.value === region)?.productible} kWh/kWc/an</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {PV_REGIONS.map(r => (
+                  <button key={r.value} type="button" onClick={() => setRegion(r.value)}
+                    className={`text-center py-2 px-2 rounded-lg border text-xs font-bold transition ${region === r.value ? 'border-indigo-600 bg-white text-indigo-700 shadow-sm' : 'border-transparent text-indigo-400 hover:bg-white/60'}`}>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* ÉTAPE 2 — Consommation */}
+        {/* STEP 2 — Consommation */}
         {step === 2 && (
           <div className="space-y-4">
             <StepHeader icon={Zap} title="Quelle est votre consommation d'électricité ?" subtitle="Pour dimensionner l'installation au plus juste." />
@@ -159,10 +258,12 @@ export default function PhotovoltaiquePage() {
           </div>
         )}
 
-        {/* ÉTAPE 3 — Toiture */}
+        {/* STEP 3 — Toiture */}
         {step === 3 && (
           <div className="space-y-4">
-            <StepHeader icon={HomeIcon} title="Caractéristiques de la toiture" subtitle="Orientation, inclinaison et surface disponible." />
+            <StepHeader icon={HomeIcon} title="Caractéristiques de la toiture" subtitle="Orientation, inclinaison et dimensionnement." />
+
+            {/* Orientation */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Orientation de la toiture</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -175,18 +276,52 @@ export default function PhotovoltaiquePage() {
                 ))}
               </div>
             </div>
+
             <Slider label="Inclinaison du toit" id="tilt" value={inclinaison} onChange={setInclinaison}
               min={0} max={60} step={5} unit="°" leftLabel="Plat (0°)" rightLabel="Pentu (60°)" />
-            <InputField label="Surface de toiture disponible" id="surface" type="number" suffix="m²"
-              value={surfaceToit} onChange={setSurfaceToit} min={0}
-              helper={`≈ ${PV_PANEL.surfaceM2} m² par panneau (${PV_PANEL.puissanceWc} Wc)`} />
+
+            {/* Surface vs kWc toggle */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Dimensionnement</label>
+              <ToggleGroup
+                options={[
+                  { value: 'surface', label: 'Surface disponible' },
+                  { value: 'kwc', label: 'Puissance souhaitée' },
+                ]}
+                value={toitMode} onChange={setToitMode}
+              />
+            </div>
+
+            {toitMode === 'surface' ? (
+              <InputField label="Surface de toiture disponible" id="surface" type="number" suffix="m²"
+                value={surfaceToit} onChange={setSurfaceToit} min={0}
+                helper={`≈ ${PV_PANEL.surfaceM2} m² par panneau (${PV_PANEL.puissanceWc} Wc) → recommandation : ${reco.kwc} kWc`} />
+            ) : (
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 flex justify-between">
+                  <span>Puissance à installer</span>
+                  <span className="text-xl font-extrabold text-indigo-600">{kwcDirect} kWc</span>
+                </label>
+                <input type="range" min={3} max={9} step={1} value={kwcDirect}
+                  onChange={(e) => setKwcDirect(parseInt(e.target.value))}
+                  className="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>3 kWc ({Math.round((3000 / PV_PANEL.puissanceWc) * PV_PANEL.surfaceM2)} m²)</span>
+                  <span>6 kWc</span>
+                  <span>9 kWc ({Math.round((9000 / PV_PANEL.puissanceWc) * PV_PANEL.surfaceM2)} m²)</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  {kwcDirect} kWc = {Math.round((kwcDirect * 1000) / PV_PANEL.puissanceWc)} panneaux • {Math.round((kwcDirect * 1000) / PV_PANEL.puissanceWc * PV_PANEL.surfaceM2)} m² de toiture nécessaire
+                </p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* ÉTAPE 4 — Profil */}
+        {/* STEP 4 — Profil */}
         {step === 4 && (
           <div className="space-y-4">
-            <StepHeader icon={Users} title="Votre profil de consommation" subtitle="Détermine le taux d'autoconsommation (ce que vous consommez vous-même)." />
+            <StepHeader icon={Users} title="Votre profil de consommation" subtitle="Détermine le taux d'autoconsommation." />
             <ToggleGroup label="Présence au domicile en journée"
               options={PV_PRESENCE_OPTIONS} value={presence} onChange={setPresence} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -197,16 +332,46 @@ export default function PhotovoltaiquePage() {
                 options={[{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }]}
                 value={voitureElec ? 'oui' : 'non'} onChange={(v) => setVoitureElec(v === 'oui')} />
             </div>
-            <AlertBox type="success" title={`Autoconsommation estimée : ${Math.round(autoconsoRateAuto * 100)} %`}>
+
+            {/* Battery */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
+              <div className="flex items-center gap-2 mb-3">
+                <BatteryCharging className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-gray-800">Batterie de stockage</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Une batterie capte le surplus solaire en journée et le restitue le soir. Augmente l'autoconsommation.
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {PV_BATTERY_SIZES.map(size => (
+                  <button key={size} type="button" onClick={() => setBatteryKwh(size)}
+                    className={`py-3 rounded-lg border-2 text-center transition ${batteryKwh === size
+                      ? 'border-emerald-600 bg-white text-emerald-700 shadow-sm'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'}`}>
+                    <div className="font-extrabold text-lg">{size === 0 ? 'Sans' : `${size}`}</div>
+                    {size > 0 && <div className="text-[10px] text-gray-400">kWh</div>}
+                    {size > 0 && <div className="text-[10px] font-bold text-emerald-600 mt-0.5">{eur(size * PV_BATTERY_DEFAULTS.coutParKwh)}</div>}
+                  </button>
+                ))}
+              </div>
+              {batteryKwh > 0 && (
+                <div className="mt-3 bg-white/70 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+                  <p><strong>Capacité :</strong> {batteryKwh} kWh • <strong>Coût :</strong> {eur(batteryKwh * PV_BATTERY_DEFAULTS.coutParKwh)}</p>
+                  <p><strong>Durée de vie :</strong> {PV_BATTERY_DEFAULTS.dureeVieAnnees} ans • <strong>Rendement :</strong> {Math.round(PV_BATTERY_DEFAULTS.efficienceRoundTrip * 100)}%</p>
+                </div>
+              )}
+            </div>
+
+            <AlertBox type="success" title={`Autoconsommation estimée : ${Math.round(autoconsoRateAuto * 100)} %${batteryKwh > 0 ? ' (+ bonus batterie)' : ''}`}>
               Plus vous consommez l'électricité au moment où elle est produite (journée), plus le solaire est rentable.
             </AlertBox>
           </div>
         )}
 
-        {/* ÉTAPE 5 — Objectif */}
+        {/* STEP 5 — Objectif + Coût */}
         {step === 5 && (
           <div className="space-y-4">
-            <StepHeader icon={Target} title="Votre objectif principal" subtitle="Pour adapter notre recommandation." />
+            <StepHeader icon={Target} title="Objectif & budget" subtitle="Pour adapter notre recommandation et intégrer votre devis." />
             <div className="grid grid-cols-2 gap-3">
               {PV_MOTIVATIONS.map(m => {
                 const Ic = MOTIV_ICON[m.icon] || Target
@@ -219,8 +384,29 @@ export default function PhotovoltaiquePage() {
                 )
               })}
             </div>
+
+            {/* Coût projet */}
+            <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="w-5 h-5 text-amber-600" />
+                <h3 className="font-bold text-gray-800">Coût du projet (optionnel)</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Si vous avez un devis, renseignez le montant TTC. Sinon, le simulateur utilisera un coût estimé.
+              </p>
+              <InputField id="coutProjet" type="number" suffix="€ TTC"
+                placeholder={`Estimé : ${eur(coutParKwc(toitMode === 'kwc' ? kwcDirect : reco.kwc) * (toitMode === 'kwc' ? kwcDirect : reco.kwc) + batteryKwh * PV_BATTERY_DEFAULTS.coutParKwh)}`}
+                value={coutProjet} onChange={setCoutProjet} min={0} />
+              <div className="mt-2 text-xs text-gray-400 space-y-0.5">
+                <p>Coût estimé PV : {eur(coutParKwc(toitMode === 'kwc' ? kwcDirect : reco.kwc) * (toitMode === 'kwc' ? kwcDirect : reco.kwc))} ({toitMode === 'kwc' ? kwcDirect : reco.kwc} kWc × {eur(coutParKwc(toitMode === 'kwc' ? kwcDirect : reco.kwc))}/kWc)</p>
+                {batteryKwh > 0 && <p>Coût batterie : {eur(batteryKwh * PV_BATTERY_DEFAULTS.coutParKwh)} ({batteryKwh} kWh × {eur(PV_BATTERY_DEFAULTS.coutParKwh)}/kWh)</p>}
+              </div>
+            </div>
+
             <AlertBox type="info">
-              Sur la base de vos réponses, nous recommandons une installation de <strong>{reco.kwc} kWc</strong> ({reco.nbPanneaux} panneaux).
+              Sur la base de vos réponses, nous recommandons <strong>{toitMode === 'kwc' ? kwcDirect : reco.kwc} kWc</strong>
+              {' '}({toitMode === 'kwc' ? Math.round((kwcDirect * 1000) / PV_PANEL.puissanceWc) : reco.nbPanneaux} panneaux)
+              {batteryKwh > 0 && <> + batterie <strong>{batteryKwh} kWh</strong></>}.
             </AlertBox>
           </div>
         )}
@@ -238,7 +424,7 @@ export default function PhotovoltaiquePage() {
     )
   }
 
-  /* ════════ VUE RÉSULTATS ════════ */
+  /* ════════ RESULTS ════════ */
   const payback = fin.paybackAnnee
   return (
     <SimulatorLayout code="PHOTOVOLTAÏQUE" title="Votre projet photovoltaïque" description="Production, économies & rentabilité estimées">
@@ -247,13 +433,23 @@ export default function PhotovoltaiquePage() {
         <ChevronLeft className="w-4 h-4" /> Modifier mes réponses
       </button>
 
-      {/* ── Hero : dimensionnement + production ── */}
+      {/* Hero */}
       <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white">
+        {/* Address if available */}
+        {addressLabel && (
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/20">
+            <MapPin className="w-4 h-4 text-indigo-200" />
+            <span className="text-sm text-indigo-100">{addressLabel}</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-center">
           <div>
-            <p className="text-indigo-200 text-xs uppercase tracking-wider">Installation recommandée</p>
+            <p className="text-indigo-200 text-xs uppercase tracking-wider">Installation</p>
             <p className="text-4xl font-extrabold mt-1">{kwc} kWc</p>
-            <p className="text-indigo-200 text-sm mt-1">{nbPanneaux} panneaux · ≈ {reco.surfaceNecessaire} m²</p>
+            <p className="text-indigo-200 text-sm mt-1">
+              {nbPanneaux} panneaux · ≈ {Math.round(nbPanneaux * PV_PANEL.surfaceM2)} m²
+              {batteryKwh > 0 && <> · batterie {batteryKwh} kWh</>}
+            </p>
           </div>
           <div>
             <p className="text-indigo-200 text-xs uppercase tracking-wider">Production estimée</p>
@@ -261,9 +457,9 @@ export default function PhotovoltaiquePage() {
             <p className="text-indigo-200 text-sm mt-1">par an · {production.regionLabel}</p>
           </div>
           <div>
-            <p className="text-indigo-200 text-xs uppercase tracking-wider">Couverture de vos besoins</p>
+            <p className="text-indigo-200 text-xs uppercase tracking-wider">Couverture besoins</p>
             <p className="text-4xl font-extrabold mt-1">{fin.tauxCouvertureProd} %</p>
-            <p className="text-indigo-200 text-sm mt-1">de votre conso annuelle</p>
+            <p className="text-indigo-200 text-sm mt-1">autoconso {fin.autoconsoEffective}%{batteryKwh > 0 && ' (avec batterie)'}</p>
           </div>
         </div>
         <div className="mt-5 pt-4 border-t border-white/20">
@@ -275,15 +471,55 @@ export default function PhotovoltaiquePage() {
         </div>
       </div>
 
-      {/* ── KPI principaux ── */}
+      {/* Satellite mini-map (if coordinates available) */}
+      {coordinates && (
+        <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 200 }}>
+          <MapContainer center={coordinates} zoom={18} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false} zoomControl={false} dragging={false}>
+            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} />
+            <Marker position={coordinates} />
+          </MapContainer>
+        </div>
+      )}
+
+      {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard icon={PiggyBank} color="indigo" label="Coût net (après prime)" value={eur(fin.coutNet)} sub={`${eur(fin.coutBrut)} − ${eur(fin.prime)} prime`} />
+        <KpiCard icon={PiggyBank} color="indigo" label="Coût net (après prime)"
+          value={eur(fin.coutNet)}
+          sub={coutProjetNum ? `Devis : ${eur(coutProjetNum)} − ${eur(fin.prime)} prime` : `${eur(fin.coutBrut)} − ${eur(fin.prime)} prime`} />
         <KpiCard icon={Euro} color="green" label="Économie 1ʳᵉ année" value={eur(fin.economieAn1)} sub={`${fin.tauxAutoproduction}% d'autoproduction`} />
         <KpiCard icon={CalendarClock} color="amber" label="Amortissement" value={payback != null ? `${payback.toFixed(1)} ans` : '> durée de vie'} sub="Retour sur investissement" />
         <KpiCard icon={TrendingUp} color="indigo" label={`Gain net sur ${a.dureeVieAnnees} ans`} value={eur(fin.gainNetFinal)} sub={`ROI ${fin.roi} %`} />
       </div>
 
-      {/* ── Graphique : trésorerie cumulée (amortissement) ── */}
+      {/* Battery impact summary */}
+      {batteryKwh > 0 && (
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <BatteryCharging className="w-5 h-5 text-emerald-600" />
+            <h3 className="font-bold text-gray-800">Impact de la batterie {batteryKwh} kWh</h3>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="bg-white rounded-lg p-3">
+              <p className="text-xs text-gray-400">Coût batterie</p>
+              <p className="text-lg font-extrabold text-gray-800">{eur(fin.coutBatterie)}</p>
+            </div>
+            <div className="bg-white rounded-lg p-3">
+              <p className="text-xs text-gray-400">Autoconso effective</p>
+              <p className="text-lg font-extrabold text-emerald-600">{fin.autoconsoEffective}%</p>
+            </div>
+            <div className="bg-white rounded-lg p-3">
+              <p className="text-xs text-gray-400">Durée de vie</p>
+              <p className="text-lg font-extrabold text-gray-800">{PV_BATTERY_DEFAULTS.dureeVieAnnees} ans</p>
+            </div>
+            <div className="bg-white rounded-lg p-3">
+              <p className="text-xs text-gray-400">Rendement</p>
+              <p className="text-lg font-extrabold text-gray-800">{Math.round(PV_BATTERY_DEFAULTS.efficienceRoundTrip * 100)}%</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cashflow chart */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <div className="flex items-center gap-2 mb-1">
           <Gauge className="w-5 h-5 text-indigo-600" />
@@ -309,7 +545,7 @@ export default function PhotovoltaiquePage() {
         </ResponsiveContainer>
       </div>
 
-      {/* ── Production mensuelle + Autoconso/Surplus ── */}
+      {/* Monthly production + Split */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <div className="flex items-center gap-2 mb-4"><Sun className="w-5 h-5 text-amber-500" /><h3 className="font-bold text-gray-800">Production mensuelle estimée</h3></div>
@@ -337,16 +573,18 @@ export default function PhotovoltaiquePage() {
         </div>
       </div>
 
-      {/* ── Synthèse narrative ── */}
+      {/* Narrative */}
       <AlertBox type="success" title="Ce que cela signifie pour vous">
-        Pour un investissement net de <strong>{eur(fin.coutNet)}</strong>, votre installation de {kwc} kWc produit
-        <strong> {kwh(production.annualKwh)}/an</strong>, couvre <strong>{fin.tauxAutoproduction}%</strong> de votre
+        Pour un investissement net de <strong>{eur(fin.coutNet)}</strong>
+        {coutProjetNum ? ' (devis renseigné)' : ''}, votre installation de {kwc} kWc
+        {batteryKwh > 0 && <> + batterie {batteryKwh} kWh</>}
+        {' '}produit <strong>{kwh(production.annualKwh)}/an</strong>, couvre <strong>{fin.tauxAutoproduction}%</strong> de votre
         consommation et vous fait économiser <strong>{eur(fin.economieAn1)}</strong> dès la 1ʳᵉ année.
         {payback != null && <> Elle est <strong>remboursée en {payback.toFixed(1)} ans</strong>, puis génère du gain net</>}
         {' '}— soit <strong>{eur(fin.gainNetFinal)}</strong> sur {a.dureeVieAnnees} ans.
       </AlertBox>
 
-      {/* ── Hypothèses éditables ── */}
+      {/* Advanced parameters */}
       <div className="bg-white rounded-xl border border-gray-200">
         <button onClick={() => setShowAdvanced(!showAdvanced)} className="w-full flex items-center justify-between p-4">
           <span className="flex items-center gap-2 font-bold text-gray-700"><Sliders className="w-4 h-4 text-indigo-600" /> Ajuster les hypothèses</span>
@@ -378,7 +616,7 @@ export default function PhotovoltaiquePage() {
   )
 }
 
-/* ── Sous-composants ── */
+/* ── Sub-components ── */
 function StepHeader({ icon: Icon, title, subtitle }) {
   return (
     <div className="flex items-start gap-3">

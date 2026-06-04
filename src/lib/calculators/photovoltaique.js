@@ -1,4 +1,4 @@
-import { PV_PANEL, PV_SIZES, PV_AUTOCONSO } from '../constants/photovoltaique'
+import { PV_PANEL, PV_SIZES, PV_AUTOCONSO, PV_BATTERY_DEFAULTS, batteryAutoconsoBonus } from '../constants/photovoltaique'
 
 /** Arrondit une puissance kWc vers la taille standard la plus proche (3..9). */
 function snapToStandard(kwc) {
@@ -66,13 +66,29 @@ export function irr(cashflows) {
 
 /**
  * Analyse financière complète sur la durée de vie.
+ * Supporte batterie optionnelle et coût projet personnalisé.
  * @returns projection année par année + KPI (payback, ROI, TRI, LCOE, etc.)
  */
-export function computeFinancials({ kwc, productionAnnuelle, consoAnnuelle, autoconsoRate, params }) {
+export function computeFinancials({ kwc, productionAnnuelle, consoAnnuelle, autoconsoRate, params, batteryKwh = 0, coutProjetOverride = null }) {
   const p = params
-  const coutBrut = Math.round(kwc * p.coutParKwc)
+
+  // Coût PV
+  const coutBrutPV = Math.round(kwc * p.coutParKwc)
   const prime = Math.round(Math.min(kwc, 9) * p.primeParKwc)
+
+  // Coût batterie
+  const coutBatterie = batteryKwh > 0
+    ? Math.round(batteryKwh * PV_BATTERY_DEFAULTS.coutParKwh)
+    : 0
+
+  // Si coût projet renseigné manuellement, on l'utilise tel quel
+  const coutBrut = coutProjetOverride != null ? coutProjetOverride : (coutBrutPV + coutBatterie)
   const coutNet = Math.max(0, coutBrut - prime)
+
+  // Bonus autoconsommation batterie
+  const dailyProd = productionAnnuelle / 365
+  const battBonus = batteryAutoconsoBonus(batteryKwh, dailyProd, autoconsoRate)
+  const autoconsoEffective = Math.min(0.95, autoconsoRate + battBonus)
 
   const projection = []
   const cashflows = [-coutNet]
@@ -87,14 +103,24 @@ export function computeFinancials({ kwc, productionAnnuelle, consoAnnuelle, auto
 
   for (let y = 1; y <= p.dureeVieAnnees; y++) {
     const prodY = productionAnnuelle * Math.pow(1 - p.degradationAnnuelle, y - 1)
-    const autoconsoY = Math.min(prodY * autoconsoRate, consoAnnuelle)
+    // Batterie : dégradation capacité au fil du temps
+    const battCapY = batteryKwh > 0
+      ? batteryKwh * Math.pow(1 - PV_BATTERY_DEFAULTS.degradationAnnuelle, y - 1)
+      : 0
+    const battBonusY = batteryKwh > 0
+      ? batteryAutoconsoBonus(battCapY, prodY / 365, autoconsoRate)
+      : 0
+    const autoconsoRateY = Math.min(0.95, autoconsoRate + battBonusY)
+    const autoconsoY = Math.min(prodY * autoconsoRateY, consoAnnuelle)
     const surplusY = Math.max(0, prodY - autoconsoY)
     const prixElecY = p.prixElecKwh * Math.pow(1 + p.inflationElec, y - 1)
     const ecoAutoconso = autoconsoY * prixElecY
     const tarifSurplus = y <= p.dureeContratOA ? p.tarifOAKwh : 0.06
     const revenuSurplus = surplusY * tarifSurplus
     const remplacement = y === p.anneeRemplacementOnduleur ? p.coutRemplacementOnduleur : 0
-    const gainY = ecoAutoconso + revenuSurplus - remplacement
+    // Remplacement batterie à mi-vie si > 0
+    const remplacementBatt = (batteryKwh > 0 && y === PV_BATTERY_DEFAULTS.dureeVieAnnees) ? coutBatterie : 0
+    const gainY = ecoAutoconso + revenuSurplus - remplacement - remplacementBatt
 
     const cumulPrev = cumul
     cumul += gainY
@@ -107,7 +133,7 @@ export function computeFinancials({ kwc, productionAnnuelle, consoAnnuelle, auto
       paybackAnnee = (y - 1) + Math.max(0, Math.min(1, frac))
     }
 
-    if (y === 1) { gainAn1 = gainY; autoconsoKwhAn1 = autoconsoY; surplusKwhAn1 = surplusY }
+    if (y === 1) { gainAn1 = gainY; autoconsoKwhAn1 = autoconsoY; surplusKwhAn1 = surplusY; }
     if (y === 25) economie25 = cumul
     if (y === 30) economie30 = cumul
 
@@ -129,6 +155,8 @@ export function computeFinancials({ kwc, productionAnnuelle, consoAnnuelle, auto
 
   return {
     coutBrut,
+    coutBrutPV,
+    coutBatterie,
     prime,
     coutNet,
     economieAn1: Math.round(gainAn1),
@@ -141,6 +169,7 @@ export function computeFinancials({ kwc, productionAnnuelle, consoAnnuelle, auto
     lcoe: +lcoe.toFixed(3),
     autoconsoKwhAn1: Math.round(autoconsoKwhAn1),
     surplusKwhAn1: Math.round(surplusKwhAn1),
+    autoconsoEffective: Math.round(autoconsoEffective * 100),
     tauxAutoproduction: consoAnnuelle > 0 ? Math.round((autoconsoKwhAn1 / consoAnnuelle) * 100) : 0,
     tauxCouvertureProd: consoAnnuelle > 0 ? Math.round((productionAnnuelle / consoAnnuelle) * 100) : 0,
     projection,

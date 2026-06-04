@@ -84,6 +84,40 @@ export const PV_AUTOCONSO = {
   max: 0.75,
 }
 
+/* ── Batterie : options de stockage résidentiel ── */
+export const PV_BATTERY_SIZES = [0, 5, 10, 15] // kWh
+export const PV_BATTERY_DEFAULTS = {
+  coutParKwh: 600,           // €/kWh installé (tendance 2024-2025)
+  efficienceRoundTrip: 0.90, // rendement charge/décharge
+  cyclesJournaliers: 1,      // 1 cycle/jour typique
+  dureeVieAnnees: 15,        // garantie constructeur
+  degradationAnnuelle: 0.02, // -2%/an capacité
+}
+
+/**
+ * Bonus d'autoconsommation apporté par une batterie.
+ * Modèle simplifié : la batterie capte le surplus diurne et le restitue
+ * la nuit. Le gain dépend du ratio stockage/production quotidienne.
+ */
+export function batteryAutoconsoBonus(batteryKwh, dailyProductionKwh, currentAutoconsoRate) {
+  if (!batteryKwh || batteryKwh <= 0) return 0
+  const surplusJour = dailyProductionKwh * (1 - currentAutoconsoRate)
+  if (surplusJour <= 0) return 0
+  const captured = Math.min(
+    batteryKwh * PV_BATTERY_DEFAULTS.efficienceRoundTrip,
+    surplusJour,
+  )
+  return dailyProductionKwh > 0 ? captured / dailyProductionKwh : 0
+}
+
+/* ── Détection automatique de la région par latitude ── */
+export function regionFromLatitude(lat) {
+  if (lat >= 47.5) return 'nord'
+  if (lat >= 45.5) return 'centre'
+  if (lat >= 43.5) return 'sudouest'
+  return 'sud'
+}
+
 /* ── Options du wizard ── */
 export const PV_PRESENCE_OPTIONS = [
   { value: 'absent', label: 'Absent en journée' },
