@@ -3,6 +3,7 @@ import {
   Sun, MapPin, Zap, Home as HomeIcon, Users, Target, Euro, TrendingUp,
   Battery, Leaf, ChevronLeft, ChevronRight, RefreshCw, Sliders, PiggyBank,
   CalendarClock, Gauge, BadgePercent, Wallet, BatteryCharging, Ruler,
+  Star, Check, AlertTriangle, ArrowRight,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -21,7 +22,7 @@ import AddressAutocomplete from '../../components/ui/AddressAutocomplete'
 import {
   PV_REGIONS, PV_ORIENTATIONS, PV_DEFAULTS, PV_PANEL,
   PV_PRESENCE_OPTIONS, PV_MOTIVATIONS, coutParKwc,
-  PV_BATTERY_SIZES, PV_BATTERY_DEFAULTS, regionFromLatitude,
+  PV_BATTERY_SIZES, PV_BATTERY_DEFAULTS, regionFromLatitude, optimizeBattery,
 } from '../../lib/constants/photovoltaique'
 import { estimateAnnualProduction, monthlyProduction } from '../../lib/services/pvProduction'
 import { recommendSizing, selfConsumptionRate, computeFinancials } from '../../lib/calculators/photovoltaique'
@@ -91,9 +92,19 @@ export default function PhotovoltaiquePage() {
   const num = (v, d = 0) => (typeof v === 'number' && !Number.isNaN(v) ? v : d)
 
   // ── Handle address selection ──
-  async function handleAddressSelect({ address, postalCode, city, label }) {
+  async function handleAddressSelect({ address, postalCode, city, label, coordinates: coords }) {
     setAddressLabel(label || '')
     if (!label) { setCoordinates(null); return }
+
+    // Use coordinates directly from autocomplete (BAN already provides them)
+    if (coords && coords.length === 2) {
+      const [lon, lat] = coords
+      setCoordinates([lat, lon])
+      setRegion(regionFromLatitude(lat))
+      return
+    }
+
+    // Fallback: geocode if no coordinates from autocomplete
     setGeocoding(true)
     try {
       const geo = await geocodeAddress(label)
@@ -135,6 +146,17 @@ export default function PhotovoltaiquePage() {
     [presence, ballonEcs, voitureElec],
   )
   const autoconsoRate = autoconsoOverride != null ? autoconsoOverride / 100 : autoconsoRateAuto
+
+  // ── Battery optimizer ──
+  const batteryAnalysis = useMemo(() => optimizeBattery({
+    annualProductionKwh: production.annualKwh,
+    consoAnnuelle,
+    autoconsoRate,
+    prixElecKwh: a.prixElecKwh,
+    inflationElec: a.inflationElec,
+  }), [production.annualKwh, consoAnnuelle, autoconsoRate, a.prixElecKwh, a.inflationElec])
+
+  const optimalBattery = batteryAnalysis.find(b => b.optimal)
 
   const coutProjetNum = coutProjet !== '' ? Number(coutProjet) : null
 
@@ -333,36 +355,117 @@ export default function PhotovoltaiquePage() {
                 value={voitureElec ? 'oui' : 'non'} onChange={(v) => setVoitureElec(v === 'oui')} />
             </div>
 
-            {/* Battery */}
+            {/* Battery optimizer */}
             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-1">
                 <BatteryCharging className="w-5 h-5 text-emerald-600" />
                 <h3 className="font-bold text-gray-800">Batterie de stockage</h3>
               </div>
               <p className="text-xs text-gray-500 mb-3">
-                Une batterie capte le surplus solaire en journée et le restitue le soir. Augmente l'autoconsommation.
+                Le simulateur analyse votre surplus solaire et recommande la batterie optimale.
               </p>
-              <div className="grid grid-cols-4 gap-2">
-                {PV_BATTERY_SIZES.map(size => (
-                  <button key={size} type="button" onClick={() => setBatteryKwh(size)}
-                    className={`py-3 rounded-lg border-2 text-center transition ${batteryKwh === size
-                      ? 'border-emerald-600 bg-white text-emerald-700 shadow-sm'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'}`}>
-                    <div className="font-extrabold text-lg">{size === 0 ? 'Sans' : `${size}`}</div>
-                    {size > 0 && <div className="text-[10px] text-gray-400">kWh</div>}
-                    {size > 0 && <div className="text-[10px] font-bold text-emerald-600 mt-0.5">{eur(size * PV_BATTERY_DEFAULTS.coutParKwh)}</div>}
+
+              {/* Choix sans batterie */}
+              <button type="button" onClick={() => setBatteryKwh(0)}
+                className={`w-full mb-3 p-3 rounded-lg border-2 text-left transition ${batteryKwh === 0
+                  ? 'border-emerald-600 bg-white shadow-sm' : 'border-gray-200 bg-white hover:border-emerald-300'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-700">Sans batterie</span>
+                  <span className="text-xs text-gray-400">Autoconso {Math.round(autoconsoRateAuto * 100)}%</span>
+                </div>
+              </button>
+
+              {/* Battery options with optimizer */}
+              <div className="space-y-2">
+                {batteryAnalysis.map(ba => (
+                  <button key={ba.size} type="button" onClick={() => setBatteryKwh(ba.size)}
+                    className={`w-full p-3 rounded-xl border-2 text-left transition relative ${
+                      batteryKwh === ba.size
+                        ? 'border-emerald-600 bg-white shadow-md ring-1 ring-emerald-200'
+                        : ba.optimal
+                          ? 'border-emerald-300 bg-white hover:border-emerald-500'
+                          : 'border-gray-200 bg-white hover:border-emerald-300'
+                    }`}>
+                    {/* Badge recommandé */}
+                    {ba.optimal && (
+                      <div className="absolute -top-2.5 right-3 px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-extrabold rounded-full flex items-center gap-1 shadow-sm">
+                        <Star className="w-3 h-3" /> RECOMMANDÉ
+                      </div>
+                    )}
+                    {ba.surdimensionne && !ba.optimal && (
+                      <div className="absolute -top-2.5 right-3 px-2 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" /> Surdimensionné
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl font-extrabold text-gray-800">{ba.size} kWh</span>
+                        <span className="text-xs text-gray-400">{eur(ba.cout)}</span>
+                      </div>
+                      <span className={`text-sm font-extrabold ${ba.gainNet > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {ba.gainNet > 0 ? '+' : ''}{eur(ba.gainNet)}
+                        <span className="text-[10px] font-normal text-gray-400 ml-1">/{PV_BATTERY_DEFAULTS.dureeVieAnnees} ans</span>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      <div>
+                        <p className="text-[10px] text-gray-400">Autoconso</p>
+                        <p className="text-sm font-extrabold text-gray-700">{ba.autoconsoAvec}%</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400">Capté/jour</p>
+                        <p className="text-sm font-extrabold text-gray-700">{ba.capturedKwhJour} kWh</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400">Capture surplus</p>
+                        <p className="text-sm font-extrabold text-gray-700">{ba.captureRate}%</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400">Amorti</p>
+                        <p className="text-sm font-extrabold text-gray-700">{ba.payback ? `${ba.payback} ans` : '—'}</p>
+                      </div>
+                    </div>
+
+                    {/* Visual surplus bar */}
+                    <div className="mt-2">
+                      <div className="flex items-center gap-1 text-[10px] text-gray-400 mb-0.5">
+                        <span>Surplus capté</span>
+                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-400 rounded-full transition-all" style={{ width: `${ba.captureRate}%` }} />
+                        </div>
+                        <span className="font-bold">{ba.captureRate}%</span>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
-              {batteryKwh > 0 && (
-                <div className="mt-3 bg-white/70 rounded-lg p-3 text-xs text-gray-600 space-y-1">
-                  <p><strong>Capacité :</strong> {batteryKwh} kWh • <strong>Coût :</strong> {eur(batteryKwh * PV_BATTERY_DEFAULTS.coutParKwh)}</p>
-                  <p><strong>Durée de vie :</strong> {PV_BATTERY_DEFAULTS.dureeVieAnnees} ans • <strong>Rendement :</strong> {Math.round(PV_BATTERY_DEFAULTS.efficienceRoundTrip * 100)}%</p>
+
+              {/* Recommendation insight */}
+              {optimalBattery && (
+                <div className="mt-3 bg-emerald-600/10 rounded-lg p-3 text-xs text-emerald-800">
+                  <strong className="flex items-center gap-1 mb-1"><Star className="w-3 h-3" /> Pourquoi {optimalBattery.size} kWh ?</strong>
+                  <p>
+                    Votre surplus quotidien est d'environ {Math.round((production.annualKwh / 365) * (1 - autoconsoRate) * 10) / 10} kWh.
+                    {' '}La batterie de {optimalBattery.size} kWh en capte <strong>{optimalBattery.captureRate}%</strong> (soit {optimalBattery.capturedKwhJour} kWh/jour).
+                    {optimalBattery.surdimensionne
+                      ? " C'est déjà au-delà de votre surplus — une plus petite suffirait."
+                      : ` C'est le meilleur ratio investissement/gain : ROI de ${optimalBattery.roi}% sur ${PV_BATTERY_DEFAULTS.dureeVieAnnees} ans.`}
+                    {batteryAnalysis.find(b => b.size > optimalBattery.size && b.surdimensionne) &&
+                      ' Une batterie plus grande serait surdimensionnée par rapport à votre surplus.'}
+                  </p>
+                </div>
+              )}
+              {!optimalBattery && (
+                <div className="mt-3 bg-amber-100 rounded-lg p-3 text-xs text-amber-800">
+                  <strong className="flex items-center gap-1 mb-1"><AlertTriangle className="w-3 h-3" /> Batterie non rentable</strong>
+                  <p>Avec votre profil actuel, aucune taille de batterie ne s'amortit sur {PV_BATTERY_DEFAULTS.dureeVieAnnees} ans. Privilégiez l'autoconsommation directe.</p>
                 </div>
               )}
             </div>
 
-            <AlertBox type="success" title={`Autoconsommation estimée : ${Math.round(autoconsoRateAuto * 100)} %${batteryKwh > 0 ? ' (+ bonus batterie)' : ''}`}>
+            <AlertBox type="success" title={`Autoconsommation estimée : ${Math.round(autoconsoRateAuto * 100)}%${batteryKwh > 0 ? ` → ${batteryAnalysis.find(b => b.size === batteryKwh)?.autoconsoAvec || '?'}% avec batterie` : ''}`}>
               Plus vous consommez l'électricité au moment où elle est produite (journée), plus le solaire est rentable.
             </AlertBox>
           </div>
@@ -492,32 +595,57 @@ export default function PhotovoltaiquePage() {
       </div>
 
       {/* Battery impact summary */}
-      {batteryKwh > 0 && (
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <BatteryCharging className="w-5 h-5 text-emerald-600" />
-            <h3 className="font-bold text-gray-800">Impact de la batterie {batteryKwh} kWh</h3>
+      {batteryKwh > 0 && (() => {
+        const selectedBa = batteryAnalysis.find(b => b.size === batteryKwh)
+        return (
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <BatteryCharging className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-gray-800">Batterie {batteryKwh} kWh</h3>
+                {selectedBa?.optimal && (
+                  <span className="px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-extrabold rounded-full flex items-center gap-1">
+                    <Star className="w-3 h-3" /> Optimal
+                  </span>
+                )}
+              </div>
+              {selectedBa && (
+                <span className={`text-sm font-extrabold ${selectedBa.gainNet > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {selectedBa.gainNet > 0 ? '+' : ''}{eur(selectedBa.gainNet)} net
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+              <div className="bg-white rounded-lg p-3">
+                <p className="text-xs text-gray-400">Coût</p>
+                <p className="text-lg font-extrabold text-gray-800">{eur(fin.coutBatterie)}</p>
+              </div>
+              <div className="bg-white rounded-lg p-3">
+                <p className="text-xs text-gray-400">Autoconso</p>
+                <p className="text-lg font-extrabold text-emerald-600">{fin.autoconsoEffective}%</p>
+              </div>
+              <div className="bg-white rounded-lg p-3">
+                <p className="text-xs text-gray-400">Capture surplus</p>
+                <p className="text-lg font-extrabold text-gray-800">{selectedBa?.captureRate || 0}%</p>
+              </div>
+              <div className="bg-white rounded-lg p-3">
+                <p className="text-xs text-gray-400">Amorti en</p>
+                <p className="text-lg font-extrabold text-gray-800">{selectedBa?.payback ? `${selectedBa.payback} ans` : '—'}</p>
+              </div>
+              <div className="bg-white rounded-lg p-3">
+                <p className="text-xs text-gray-400">ROI batterie</p>
+                <p className={`text-lg font-extrabold ${(selectedBa?.roi || 0) > 0 ? 'text-emerald-600' : 'text-red-500'}`}>{selectedBa?.roi || 0}%</p>
+              </div>
+            </div>
+            {selectedBa?.surdimensionne && (
+              <div className="mt-3 flex items-start gap-2 bg-amber-50 rounded-lg p-2.5 text-xs text-amber-700">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Cette batterie est surdimensionnée par rapport à votre surplus. {optimalBattery && <>La taille optimale est <strong>{optimalBattery.size} kWh</strong>.</>}</span>
+              </div>
+            )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-400">Coût batterie</p>
-              <p className="text-lg font-extrabold text-gray-800">{eur(fin.coutBatterie)}</p>
-            </div>
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-400">Autoconso effective</p>
-              <p className="text-lg font-extrabold text-emerald-600">{fin.autoconsoEffective}%</p>
-            </div>
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-400">Durée de vie</p>
-              <p className="text-lg font-extrabold text-gray-800">{PV_BATTERY_DEFAULTS.dureeVieAnnees} ans</p>
-            </div>
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-400">Rendement</p>
-              <p className="text-lg font-extrabold text-gray-800">{Math.round(PV_BATTERY_DEFAULTS.efficienceRoundTrip * 100)}%</p>
-            </div>
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Cashflow chart */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">

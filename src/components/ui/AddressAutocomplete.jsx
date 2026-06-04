@@ -60,6 +60,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder }) {
           address: `${f.properties.housenumber || ''} ${f.properties.street || f.properties.name || ''}`.trim(),
           postalCode: f.properties.postcode || '',
           city: f.properties.city || '',
+          coordinates: f.geometry?.coordinates || null, // [lon, lat]
         })))
         setShowDropdown(true)
       } else {
@@ -97,6 +98,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder }) {
       postalCode: suggestion.postalCode,
       city: suggestion.city,
       label: suggestion.label,
+      coordinates: suggestion.coordinates || null,
     })
   }
 

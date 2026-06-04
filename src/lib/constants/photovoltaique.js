@@ -110,6 +110,73 @@ export function batteryAutoconsoBonus(batteryKwh, dailyProductionKwh, currentAut
   return dailyProductionKwh > 0 ? captured / dailyProductionKwh : 0
 }
 
+/**
+ * Optimiseur de batterie : compare chaque taille et recommande la meilleure.
+ * Critère : gain net maximal sur la durée de vie de la batterie.
+ * Retourne un tableau d'analyses triées par pertinence, avec un flag `optimal`.
+ */
+export function optimizeBattery({ annualProductionKwh, consoAnnuelle, autoconsoRate, prixElecKwh, inflationElec }) {
+  const dailyProd = annualProductionKwh / 365
+  const surplusJour = dailyProd * (1 - autoconsoRate)
+  const duree = PV_BATTERY_DEFAULTS.dureeVieAnnees
+
+  const analyses = PV_BATTERY_SIZES.filter(s => s > 0).map(size => {
+    const cout = size * PV_BATTERY_DEFAULTS.coutParKwh
+    // Énergie captée par jour (limitée par le surplus réel)
+    const captured = Math.min(size * PV_BATTERY_DEFAULTS.efficienceRoundTrip, surplusJour)
+    // Surplus restant après batterie
+    const surplusRestant = Math.max(0, surplusJour - captured)
+    // % du surplus capté
+    const captureRate = surplusJour > 0 ? Math.round((captured / surplusJour) * 100) : 0
+    // Taux d'autoconsommation avec batterie
+    const autoconsoAvec = Math.min(0.95, autoconsoRate + (dailyProd > 0 ? captured / dailyProd : 0))
+    // Gains cumulés sur la durée de vie (avec inflation élec + dégradation batterie)
+    let gainCumule = 0
+    for (let y = 1; y <= duree; y++) {
+      const prixY = prixElecKwh * Math.pow(1 + inflationElec, y - 1)
+      const capDeg = captured * Math.pow(1 - PV_BATTERY_DEFAULTS.degradationAnnuelle, y - 1)
+      gainCumule += capDeg * 365 * prixY
+    }
+    const gainNet = Math.round(gainCumule - cout)
+    const payback = gainCumule > 0 ? +(cout / (gainCumule / duree)).toFixed(1) : null
+    const roi = cout > 0 ? Math.round((gainNet / cout) * 100) : 0
+
+    return {
+      size,
+      cout,
+      capturedKwhJour: Math.round(captured * 10) / 10,
+      captureRate,
+      autoconsoAvec: Math.round(autoconsoAvec * 100),
+      gainAnnuelMoyen: Math.round(gainCumule / duree),
+      gainNet,
+      payback,
+      roi,
+      surplusRestant: Math.round(surplusRestant * 10) / 10,
+      surdimensionne: captured < size * PV_BATTERY_DEFAULTS.efficienceRoundTrip * 0.6,
+    }
+  })
+
+  // Trouver l'optimal : meilleur gain net, en excluant les surdimensionnées
+  const viable = analyses.filter(a => a.gainNet > 0)
+  let bestIdx = -1
+  if (viable.length > 0) {
+    // Parmi les viables, prendre le meilleur ROI
+    let bestRoi = -Infinity
+    for (const v of viable) {
+      if (v.roi > bestRoi && !v.surdimensionne) { bestRoi = v.roi; bestIdx = analyses.indexOf(v) }
+    }
+    // Fallback si toutes surdimensionnées mais rentables
+    if (bestIdx === -1) {
+      bestRoi = -Infinity
+      for (const v of viable) {
+        if (v.roi > bestRoi) { bestRoi = v.roi; bestIdx = analyses.indexOf(v) }
+      }
+    }
+  }
+
+  return analyses.map((a, i) => ({ ...a, optimal: i === bestIdx }))
+}
+
 /* ── Détection automatique de la région par latitude ── */
 export function regionFromLatitude(lat) {
   if (lat >= 47.5) return 'nord'
