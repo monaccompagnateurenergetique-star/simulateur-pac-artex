@@ -111,7 +111,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder }) {
   }
 
   return (
-    <div ref={wrapperRef} className="relative">
+    <div ref={wrapperRef} className="relative" style={{ zIndex: 9999 }}>
       <div className="relative">
         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
@@ -131,7 +131,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder }) {
       </div>
 
       {showDropdown && suggestions.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <ul className="absolute w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto" style={{ zIndex: 99999 }}>
           {suggestions.map((s, i) => (
             <li key={i}>
               <button

@@ -213,7 +213,7 @@ export default function PhotovoltaiquePage() {
             )}
 
             {/* Satellite map */}
-            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 280 }}>
+            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 280, position: 'relative', zIndex: 0 }}>
               <MapContainer
                 center={coordinates || [46.6, 2.5]}
                 zoom={coordinates ? 18 : 6}

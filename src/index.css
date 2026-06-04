@@ -89,6 +89,14 @@
 .animate-slide-up { animation: slide-up 0.5s ease-out; }
 .animate-result-pop { animation: result-pop 0.35s ease-out; }
 
+/* ── Leaflet z-index containment ──
+   Leaflet uses z-index 400+ internally. This constrains the map
+   container so its internal layers don't overlap page elements
+   like autocomplete dropdowns. */
+.leaflet-container {
+  z-index: 0 !important;
+}
+
 /* ════════════════════════════════════════════════════════════
    NOTE DE DIMENSIONNEMENT IMPRIMABLE (.dim-pac__note)
    Masquée à l'écran, révélée uniquement à l'impression.
