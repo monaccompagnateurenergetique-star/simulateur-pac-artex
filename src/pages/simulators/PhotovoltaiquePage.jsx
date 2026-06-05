@@ -28,6 +28,7 @@ import {
 import { estimateAnnualProduction, monthlyProduction, monthlyProductionVsConso, computeFinancing } from '../../lib/services/pvProduction'
 import { recommendSizing, selfConsumptionRate, computeFinancials } from '../../lib/calculators/photovoltaique'
 import { geocodeAddress } from '../../utils/dpeApi'
+import { generatePvPdf } from '../../lib/pvPdfGenerator'
 
 /* ── Fix Leaflet default marker icon (Vite breaks asset paths) ── */
 delete L.Icon.Default.prototype._getIconUrl
@@ -568,9 +569,25 @@ export default function PhotovoltaiquePage() {
   return (
     <SimulatorLayout code="PHOTOVOLTAÏQUE" title="Votre projet photovoltaïque" description="Production, économies & rentabilité estimées">
 
-      <button onClick={() => setView('wizard')} className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-semibold">
-        <ChevronLeft className="w-4 h-4" /> Modifier mes réponses
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => setView('wizard')} className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-semibold">
+          <ChevronLeft className="w-4 h-4" /> Modifier mes réponses
+        </button>
+        <button
+          onClick={() => {
+            const orientLabel = PV_ORIENTATIONS.find(o => o.value === orientation)?.label || orientation
+            const doc = generatePvPdf({
+              kwc, nbPanneaux, production, consoAnnuelle, fin, batteryKwh, autoconsoRate,
+              addressLabel, regionLabel, orientation: orientLabel, inclinaison,
+              scenarios, financing, loanRate, loanDuration, monthlyVsConso,
+            })
+            doc.save(`etude-pv-${kwc}kwc${batteryKwh ? `-${batteryKwh}kwh` : ''}.pdf`)
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow-sm"
+        >
+          <Download className="w-4 h-4" /> Exporter PDF
+        </button>
+      </div>
 
       {/* Hero */}
       <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white">
