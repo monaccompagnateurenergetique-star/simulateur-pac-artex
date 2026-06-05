@@ -3,10 +3,11 @@ import {
   Sun, MapPin, Zap, Home as HomeIcon, Users, Target, Euro, TrendingUp,
   Battery, Leaf, ChevronLeft, ChevronRight, RefreshCw, Sliders, PiggyBank,
   CalendarClock, Gauge, BadgePercent, Wallet, BatteryCharging, Ruler,
-  Star, Check, AlertTriangle, ArrowRight,
+  Star, Check, AlertTriangle, ArrowRight, Download, CreditCard, BarChart3, Layers,
 } from 'lucide-react'
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, BarChart, Bar, ComposedChart, Line,
+  XAxis, YAxis, CartesianGrid, Legend,
   Tooltip as RTooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts'
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet'
@@ -24,7 +25,7 @@ import {
   PV_PRESENCE_OPTIONS, PV_MOTIVATIONS, coutParKwc,
   PV_BATTERY_SIZES, PV_BATTERY_DEFAULTS, regionFromLatitude, optimizeBattery,
 } from '../../lib/constants/photovoltaique'
-import { estimateAnnualProduction, monthlyProduction } from '../../lib/services/pvProduction'
+import { estimateAnnualProduction, monthlyProduction, monthlyProductionVsConso, computeFinancing } from '../../lib/services/pvProduction'
 import { recommendSizing, selfConsumptionRate, computeFinancials } from '../../lib/calculators/photovoltaique'
 import { geocodeAddress } from '../../utils/dpeApi'
 
@@ -81,6 +82,11 @@ export default function PhotovoltaiquePage() {
 
   // ── Coût projet ──
   const [coutProjet, setCoutProjet] = useState('')
+
+  // ── Financement ──
+  const [showFinancing, setShowFinancing] = useState(false)
+  const [loanRate, setLoanRate] = useState(3.5)
+  const [loanDuration, setLoanDuration] = useState(15)
 
   // ── Ajustements ──
   const [kwcOverride, setKwcOverride] = useState(null)
@@ -175,6 +181,36 @@ export default function PhotovoltaiquePage() {
     [fin],
   )
   const monthly = useMemo(() => monthlyProduction(production.annualKwh), [production.annualKwh])
+
+  // ── Conso vs Production mensuelle ──
+  const monthlyVsConso = useMemo(
+    () => monthlyProductionVsConso(production.annualKwh, consoAnnuelle, autoconsoRate),
+    [production.annualKwh, consoAnnuelle, autoconsoRate],
+  )
+
+  // ── Comparateur de scénarios ──
+  const scenarios = useMemo(() => {
+    const base = { ...a, coutParKwc: coutKwcOverride ?? coutParKwc(kwc) }
+    const s1 = computeFinancials({ kwc, productionAnnuelle: production.annualKwh, consoAnnuelle, autoconsoRate, params: base, batteryKwh: 0 })
+    const optBatt = optimalBattery?.size || 0
+    const s2 = optBatt > 0
+      ? computeFinancials({ kwc, productionAnnuelle: production.annualKwh, consoAnnuelle, autoconsoRate, params: base, batteryKwh: optBatt })
+      : null
+    const altKwc = kwc <= 6 ? 9 : 6
+    const altProd = estimateAnnualProduction({ kwc: altKwc, region, orientation, tilt: inclinaison })
+    const s3 = computeFinancials({ kwc: altKwc, productionAnnuelle: altProd.annualKwh, consoAnnuelle, autoconsoRate, params: { ...a, coutParKwc: coutParKwc(altKwc) }, batteryKwh: batteryKwh })
+    return [
+      { label: `${kwc} kWc sans batterie`, kwc, batt: 0, fin: s1 },
+      ...(s2 ? [{ label: `${kwc} kWc + ${optBatt} kWh`, kwc, batt: optBatt, fin: s2 }] : []),
+      { label: `${altKwc} kWc${batteryKwh ? ` + ${batteryKwh} kWh` : ''}`, kwc: altKwc, batt: batteryKwh, fin: s3 },
+    ]
+  }, [kwc, production.annualKwh, consoAnnuelle, autoconsoRate, a, coutKwcOverride, batteryKwh, optimalBattery, region, orientation, inclinaison])
+
+  // ── Financement ──
+  const financing = useMemo(
+    () => computeFinancing({ montant: fin.coutNet, tauxAnnuel: loanRate / 100, dureeAnnees: loanDuration, economieAn1: fin.economieAn1, inflationElec: a.inflationElec }),
+    [fin.coutNet, loanRate, loanDuration, fin.economieAn1, a.inflationElec],
+  )
 
   // ── Navigation ──
   const next = () => (step < STEPS.length ? setStep(step + 1) : setView('results'))
@@ -673,31 +709,127 @@ export default function PhotovoltaiquePage() {
         </ResponsiveContainer>
       </div>
 
-      {/* Monthly production + Split */}
+      {/* ── Production vs Consommation mensuelle ── */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <BarChart3 className="w-5 h-5 text-amber-500" />
+          <h3 className="font-bold text-gray-800">Production vs Consommation mensuelle</h3>
+        </div>
+        <p className="text-xs text-gray-400 mb-4">Le surplus estival est revendu ou stocké. Le déficit hivernal est acheté au réseau.</p>
+        <ResponsiveContainer width="100%" height={280}>
+          <ComposedChart data={monthlyVsConso} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+            <XAxis dataKey="mois" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} unit=" kWh" />
+            <RTooltip formatter={(v, name) => [kwh(v), name === 'prod' ? 'Production' : name === 'conso' ? 'Consommation' : name === 'autoconso' ? 'Autoconsommé' : name]} />
+            <Legend formatter={(v) => v === 'prod' ? 'Production' : v === 'conso' ? 'Consommation' : 'Autoconsommé'} wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="prod" fill="#f59e0b" radius={[4, 4, 0, 0]} opacity={0.8} />
+            <Bar dataKey="autoconso" fill="#6366f1" radius={[4, 4, 0, 0]} opacity={0.7} />
+            <Line type="monotone" dataKey="conso" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 3 }} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* ── Répartition production + KPIs ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-2 mb-4"><Sun className="w-5 h-5 text-amber-500" /><h3 className="font-bold text-gray-800">Production mensuelle estimée</h3></div>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={monthly} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-              <XAxis dataKey="mois" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <RTooltip formatter={(v) => [kwh(v), 'Production']} />
-              <Bar dataKey="kwh" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="flex items-center gap-2 mb-4"><BadgePercent className="w-5 h-5 text-indigo-600" /><h3 className="font-bold text-gray-800">Répartition (an 1)</h3></div>
+          <div className="space-y-4">
+            <SplitBar label="Autoconsommée" sub="économie directe" value={fin.autoconsoKwhAn1} total={production.annualKwh} color="bg-indigo-500" />
+            <SplitBar label="Surplus revendu" sub={`${a.tarifOAKwh} €/kWh`} value={fin.surplusKwhAn1} total={production.annualKwh} color="bg-lime-500" />
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-3 text-center">
+            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400">TRI</p><p className="text-lg font-extrabold text-gray-800">{fin.tri != null ? `${fin.tri} %` : '—'}</p></div>
+            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400">LCOE</p><p className="text-lg font-extrabold text-gray-800">{fin.lcoe.toFixed(2).replace('.', ',')} €/kWh</p></div>
+          </div>
         </div>
 
+        {/* ── Simulation de financement ── */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-2 mb-4"><BadgePercent className="w-5 h-5 text-indigo-600" /><h3 className="font-bold text-gray-800">Répartition de la production (an 1)</h3></div>
-          <div className="space-y-4 mt-6">
-            <SplitBar label="Autoconsommée" sub="économie directe sur la facture" value={fin.autoconsoKwhAn1} total={production.annualKwh} color="bg-indigo-500" />
-            <SplitBar label="Surplus revendu" sub={`rachat ${a.tarifOAKwh} €/kWh`} value={fin.surplusKwhAn1} total={production.annualKwh} color="bg-lime-500" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-indigo-600" /><h3 className="font-bold text-gray-800">Financement</h3></div>
+            <button onClick={() => setShowFinancing(!showFinancing)} className="text-xs text-indigo-600 font-bold hover:underline">
+              {showFinancing ? 'Masquer' : 'Simuler un prêt'}
+            </button>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-3 text-center">
-            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400">TRI (rendement)</p><p className="text-lg font-extrabold text-gray-800">{fin.tri != null ? `${fin.tri} %` : '—'}</p></div>
-            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400">Coût du kWh produit</p><p className="text-lg font-extrabold text-gray-800">{fin.lcoe.toFixed(2).replace('.', ',')} €</p></div>
-          </div>
+          {!showFinancing ? (
+            <div className="text-center py-6">
+              <CreditCard className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Simulez un prêt solaire pour voir si l'installation se paie toute seule.</p>
+              <button onClick={() => setShowFinancing(true)} className="mt-3 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition">
+                Simuler le financement
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <InputField label="Taux" id="loanRate" type="number" suffix="%" step={0.1} value={loanRate} onChange={(v) => setLoanRate(num(v, 3.5))} />
+                <InputField label="Durée" id="loanDur" type="number" suffix="ans" step={1} value={loanDuration} onChange={(v) => setLoanDuration(Math.max(1, Math.min(25, num(v, 15))))} />
+              </div>
+              {financing && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-center">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-[10px] text-gray-400">Mensualité prêt</p>
+                      <p className="text-lg font-extrabold text-gray-800">{eur(financing.mensualite)}/mois</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-[10px] text-gray-400">Économie moyenne</p>
+                      <p className="text-lg font-extrabold text-emerald-600">{eur(financing.ecoMoyenneMensuelle)}/mois</p>
+                    </div>
+                  </div>
+                  <div className={`rounded-lg p-3 text-center ${financing.autoFinance ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'}`}>
+                    {financing.autoFinance ? (
+                      <p className="text-sm font-bold text-emerald-700"><Check className="w-4 h-4 inline mr-1" />Le solaire se paie tout seul ! Reste <strong>{eur(Math.abs(financing.resteACharge))}/mois</strong> de gain</p>
+                    ) : (
+                      <p className="text-sm font-bold text-amber-700">Reste à charge : <strong>{eur(financing.resteACharge)}/mois</strong> pendant {loanDuration} ans</p>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-400 text-center">Coût total crédit : {eur(financing.coutTotal)} (dont {eur(financing.interets)} d'intérêts)</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Comparateur de scénarios ── */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Layers className="w-5 h-5 text-indigo-600" />
+          <h3 className="font-bold text-gray-800">Comparateur de scénarios</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 text-xs text-gray-400 font-semibold">Scénario</th>
+                <th className="text-right py-2 text-xs text-gray-400 font-semibold">Coût net</th>
+                <th className="text-right py-2 text-xs text-gray-400 font-semibold">Éco. an 1</th>
+                <th className="text-right py-2 text-xs text-gray-400 font-semibold">Amorti</th>
+                <th className="text-right py-2 text-xs text-gray-400 font-semibold">Gain {a.dureeVieAnnees}a</th>
+                <th className="text-right py-2 text-xs text-gray-400 font-semibold">ROI</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scenarios.map((s, i) => {
+                const isCurrent = s.kwc === kwc && s.batt === batteryKwh
+                return (
+                  <tr key={i} className={`border-b border-gray-100 ${isCurrent ? 'bg-indigo-50' : ''}`}>
+                    <td className="py-3 font-bold text-gray-700">
+                      {s.label}
+                      {isCurrent && <span className="ml-1 text-[10px] px-1.5 py-0.5 bg-indigo-600 text-white rounded-full">Actuel</span>}
+                    </td>
+                    <td className="py-3 text-right font-semibold">{eur(s.fin.coutNet)}</td>
+                    <td className="py-3 text-right font-semibold text-emerald-600">{eur(s.fin.economieAn1)}</td>
+                    <td className="py-3 text-right font-semibold">{s.fin.paybackAnnee ? `${s.fin.paybackAnnee.toFixed(1)} ans` : '—'}</td>
+                    <td className="py-3 text-right font-extrabold text-emerald-600">{eur(s.fin.gainNetFinal)}</td>
+                    <td className="py-3 text-right font-extrabold">{s.fin.roi}%</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -731,8 +863,7 @@ export default function PhotovoltaiquePage() {
       </div>
 
       <p className="text-center text-xs text-gray-400 border-t border-gray-100 pt-4">
-        Estimation indicative (modèle de productible régional — PVGIS non appelable depuis le navigateur).
-        Tarifs et coûts par défaut, à ajuster selon le devis réel. Document non contractuel.
+        Estimation indicative (modèle de productible régional). Tarifs et coûts par défaut, à ajuster selon le devis réel. Document non contractuel.
       </p>
 
       <div className="flex justify-center pt-2">

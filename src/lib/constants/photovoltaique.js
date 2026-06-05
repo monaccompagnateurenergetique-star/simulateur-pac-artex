@@ -45,6 +45,13 @@ export const PV_MONTHLY_PROFILE = [
 ]
 export const PV_MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
 
+/* ── Répartition mensuelle de la consommation (France résidentiel, somme = 1) ──
+   Profil typique : chauffage + ECS élevé en hiver, faible en été */
+export const PV_CONSO_MONTHLY_PROFILE = [
+  0.120, 0.105, 0.095, 0.075, 0.065, 0.055,
+  0.050, 0.050, 0.065, 0.080, 0.110, 0.130,
+]
+
 /* ── Panneau standard ── */
 export const PV_PANEL = {
   puissanceWc: 500,   // panneau moderne ~500 Wc

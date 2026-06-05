@@ -1,6 +1,6 @@
 import {
   PV_REGIONS, PV_ORIENTATIONS, tiltFactor,
-  PV_MONTHLY_PROFILE, PV_MONTHS,
+  PV_MONTHLY_PROFILE, PV_MONTHS, PV_CONSO_MONTHLY_PROFILE,
 } from '../constants/photovoltaique'
 
 /**
@@ -33,6 +33,53 @@ export function monthlyProduction(annualKwh) {
     mois: PV_MONTHS[i],
     kwh: Math.round(annualKwh * p),
   }))
+}
+
+/** Production + consommation mensuelle combinée pour graphique overlay. */
+export function monthlyProductionVsConso(annualProdKwh, annualConsoKwh, autoconsoRate) {
+  return PV_MONTHS.map((mois, i) => {
+    const prod = Math.round(annualProdKwh * PV_MONTHLY_PROFILE[i])
+    const conso = Math.round(annualConsoKwh * PV_CONSO_MONTHLY_PROFILE[i])
+    const autoconso = Math.round(Math.min(prod * autoconsoRate, conso))
+    const surplus = Math.max(0, prod - autoconso)
+    const achatReseau = Math.max(0, conso - autoconso)
+    return { mois, prod, conso, autoconso, surplus, achatReseau }
+  })
+}
+
+/** Simulation de financement : prêt solaire. */
+export function computeFinancing({ montant, tauxAnnuel, dureeAnnees, economieAn1, inflationElec = 0.03 }) {
+  if (!montant || montant <= 0 || !dureeAnnees || dureeAnnees <= 0) return null
+  const r = tauxAnnuel / 12
+  const n = dureeAnnees * 12
+  const mensualite = r > 0 ? montant * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) : montant / n
+  const coutTotal = mensualite * n
+  const interets = coutTotal - montant
+
+  // Économie mensuelle moyenne (avec inflation sur la durée du prêt)
+  const projection = []
+  let totalEco = 0
+  for (let y = 1; y <= dureeAnnees; y++) {
+    const ecoY = economieAn1 * Math.pow(1 + inflationElec, y - 1)
+    const mensualiteAn = mensualite * 12
+    totalEco += ecoY
+    projection.push({
+      annee: y,
+      economie: Math.round(ecoY),
+      remboursement: Math.round(mensualiteAn),
+      solde: Math.round(ecoY - mensualiteAn),
+    })
+  }
+  const ecoMoyenneMensuelle = totalEco / (dureeAnnees * 12)
+  return {
+    mensualite: Math.round(mensualite),
+    coutTotal: Math.round(coutTotal),
+    interets: Math.round(interets),
+    ecoMoyenneMensuelle: Math.round(ecoMoyenneMensuelle),
+    resteACharge: Math.round(mensualite - ecoMoyenneMensuelle),
+    autoFinance: ecoMoyenneMensuelle >= mensualite,
+    projection,
+  }
 }
 
 /**
