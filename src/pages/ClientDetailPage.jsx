@@ -21,6 +21,7 @@ import { getLocationInfo } from '../utils/postalCode'
 import { searchDPE, getDpeColor } from '../utils/dpeApi'
 import { getCompletion } from '../lib/completionGauge'
 import DpeDetailCard from '../components/dpe/DpeDetailCard'
+import MandatMprTab from '../components/project/MandatMprTab'
 
 const CAT_STYLE = {
   Bleu: { bg: 'bg-blue-500', text: 'text-white', light: 'bg-blue-50 text-blue-700 border-blue-200' },
@@ -528,6 +529,7 @@ export default function ClientDetailPage() {
                 { id: 'scenarios', label: 'Scenarios', icon: Layers, count: (project.scenarios || []).length },
                 { id: 'dpe', label: 'DPE & Diagnostic', icon: Thermometer, badge: dpe?.etiquetteDpe },
                 { id: 'documents', label: 'Documents', icon: FileText },
+                { id: 'mandat', label: 'Mandat MPR', icon: FileText },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -772,6 +774,14 @@ export default function ClientDetailPage() {
                   </button>
                 </div>
               </div>
+            )}
+
+            {/* ── TAB: Mandat MPR ── */}
+            {mainTab === 'mandat' && (
+              <MandatMprTab
+                project={project}
+                onUpdate={(data) => updateProject(id, data)}
+              />
             )}
           </div>
 

@@ -1,18 +1,22 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Save, Check, FileDown, ArrowLeft, LinkIcon, RefreshCw } from 'lucide-react'
+import { Save, Check, FileDown, ArrowLeft, LinkIcon, RefreshCw, Building2 } from 'lucide-react'
 import Button from '../ui/Button'
 import { useSimulationHistory } from '../../hooks/useSimulationHistory'
 import { useSettings } from '../../hooks/useSettings'
 import { useClientContext } from '../../hooks/useClientContext'
 import { useProjects } from '../../hooks/useProjects'
+import { useEstimationsImmo } from '../../hooks/useEstimationsImmo'
 import { generateSimulationPDF } from '../../lib/pdfGenerator'
+import { generateRenoGlobalePDF } from '../../lib/renoGlobalePdf'
+import { computeSimulationForAllCategories } from '../../lib/calculators/estimationImmo'
 
 export default function SimulationSaveBar({ type, title, inputs, results, pdfData }) {
   const { saveSimulation } = useSimulationHistory()
   const { settings } = useSettings()
   const { clientId, client, linkToClient } = useClientContext()
   const { projects, addSimToScenario, updateSimInScenario } = useProjects()
+  const { estimations, addSimulation: addEstimationSim, updateSimulation: updateEstimationSim } = useEstimationsImmo()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [saved, setSaved] = useState(false)
@@ -21,6 +25,8 @@ export default function SimulationSaveBar({ type, title, inputs, results, pdfDat
   const projectId = searchParams.get('projectId')
   const scenarioId = searchParams.get('scenarioId')
   const editSimId = searchParams.get('editSimId')
+  const estimationId = searchParams.get('estimationId')
+  const editEstimSimId = searchParams.get('editEstimSimId')
 
   // Trouver le projet et scénario correspondants
   const project = projectId ? projects.find((p) => p.id === projectId) : null
@@ -30,7 +36,34 @@ export default function SimulationSaveBar({ type, title, inputs, results, pdfDat
 
   const isEditMode = !!(editSimId && scenario)
 
+  // Estimation immo context
+  const estimation = estimationId ? estimations.find((e) => e.id === estimationId) : null
+  const isEstimationEditMode = !!(editEstimSimId && estimation)
+  const isEstimationMode = !!estimation
+
   function handleSave() {
+    // Estimation immo : compute for all 4 categories and save back
+    if (isEstimationMode) {
+      const allCatResults = computeSimulationForAllCategories(type, inputs, estimation)
+      const simData = {
+        ficheCode: type,
+        title,
+        prixTravaux: results.projectCost || inputs.projectCost || inputs.projectCostTTC || 0,
+        inputs,
+        results: allCatResults,
+      }
+
+      if (isEstimationEditMode) {
+        updateEstimationSim(estimationId, editEstimSimId, simData)
+      } else {
+        addEstimationSim(estimationId, simData)
+      }
+      setSavedToScenario(true)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+      return
+    }
+
     const entry = saveSimulation(type, title, inputs, results)
     if (clientId && entry) {
       linkToClient(entry.id)
@@ -66,6 +99,15 @@ export default function SimulationSaveBar({ type, title, inputs, results, pdfDat
 
   function handlePDF() {
     if (!pdfData) return
+    // BAR-TH-174 : document client dédié « Plan de financement »
+    if (type === 'BAR-TH-174') {
+      generateRenoGlobalePDF({
+        company: settings.company,
+        client,
+        ...pdfData,
+      })
+      return
+    }
     generateSimulationPDF({
       company: settings.company,
       ...pdfData,
@@ -73,26 +115,75 @@ export default function SimulationSaveBar({ type, title, inputs, results, pdfDat
   }
 
   function handleReturnToScenario() {
-    navigate(`/projets/${projectId}/scenario/${scenarioId}`)
+    if (isEstimationMode) {
+      navigate(`/admin/estimations-immo/${estimationId}`)
+    } else {
+      navigate(`/projets/${projectId}/scenario/${scenarioId}`)
+    }
   }
 
   // Libellé du bouton
-  const saveLabel = isEditMode
+  const saveLabel = isEstimationEditMode
     ? 'Mettre à jour la simulation'
-    : scenario
-      ? 'Sauvegarder et rattacher au scénario'
-      : 'Sauvegarder'
+    : isEstimationMode
+      ? 'Sauvegarder dans l\'estimation'
+      : isEditMode
+        ? 'Mettre à jour la simulation'
+        : scenario
+          ? 'Sauvegarder et rattacher au scénario'
+          : 'Sauvegarder'
 
-  const savedLabel = savedToScenario
-    ? isEditMode
+  const savedLabel = isEstimationMode
+    ? isEstimationEditMode
       ? 'Simulation mise à jour !'
-      : 'Sauvegardée et rattachée au scénario !'
-    : 'Simulation sauvegardée !'
+      : 'Sauvegardée dans l\'estimation !'
+    : savedToScenario
+      ? isEditMode
+        ? 'Simulation mise à jour !'
+        : 'Sauvegardée et rattachée au scénario !'
+      : 'Simulation sauvegardée !'
 
   return (
     <div className="space-y-3 pt-4 border-t border-gray-100">
+      {/* Contexte estimation immo */}
+      {estimation && (
+        <div className={`flex items-center justify-between p-3 rounded-xl border ${
+          isEstimationEditMode
+            ? 'bg-amber-50 border-amber-200'
+            : 'bg-indigo-50 border-indigo-200'
+        }`}>
+          <div className="text-sm">
+            <span className={`font-semibold ${isEstimationEditMode ? 'text-amber-600' : 'text-indigo-600'}`}>
+              {isEstimationEditMode ? (
+                <><RefreshCw className="w-3.5 h-3.5 inline mr-1" />Modification :</>
+              ) : (
+                <><Building2 className="w-3.5 h-3.5 inline mr-1" />Estimation immo :</>
+              )}
+            </span>{' '}
+            <span className={`font-bold ${isEstimationEditMode ? 'text-amber-800' : 'text-indigo-800'}`}>
+              {estimation.addressLabel || 'Sans adresse'}
+            </span>
+            {estimation.agenceNom && (
+              <>
+                <span className={`mx-2 ${isEstimationEditMode ? 'text-amber-400' : 'text-indigo-400'}`}>•</span>
+                <span className={isEstimationEditMode ? 'text-amber-700' : 'text-indigo-700'}>{estimation.agenceNom}</span>
+              </>
+            )}
+          </div>
+          <button
+            onClick={handleReturnToScenario}
+            className={`flex items-center gap-1 text-xs hover:underline ${
+              isEstimationEditMode ? 'text-amber-600' : 'text-indigo-600'
+            }`}
+          >
+            <ArrowLeft className="w-3 h-3" />
+            Retour estimation
+          </button>
+        </div>
+      )}
+
       {/* Contexte scénario projet */}
-      {project && scenario && (
+      {project && scenario && !estimation && (
         <div className={`flex items-center justify-between p-3 rounded-xl border ${
           isEditMode
             ? 'bg-amber-50 border-amber-200'
@@ -175,7 +266,7 @@ export default function SimulationSaveBar({ type, title, inputs, results, pdfDat
         )}
       </div>
 
-      {/* Bouton retour scénario après sauvegarde */}
+      {/* Bouton retour après sauvegarde */}
       {savedToScenario && (
         <div className="flex justify-center">
           <Button
@@ -184,7 +275,7 @@ export default function SimulationSaveBar({ type, title, inputs, results, pdfDat
             size="md"
           >
             <ArrowLeft className="w-4 h-4" />
-            Retour au scénario
+            {isEstimationMode ? 'Retour à l\'estimation' : 'Retour au scénario'}
           </Button>
         </div>
       )}
