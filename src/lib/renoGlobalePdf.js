@@ -746,12 +746,22 @@ export function buildRenoGlobalePDF({
   const cy2Start = y
   let cy2 = y
   if (isAnah) {
-    cy2 += callout(doc, cx2, cy2, halfW, [
-      { text: 'Plafond réglementaire.', bold: true },
-      {
-        text: `Pour un saut de 4 classes ou plus, la dépense éligible peut être retenue jusqu’à ${fmt0(mprPlafond || 70000)} HT. L’assiette retenue ici pourra être réévaluée lors du montage définitif du dossier.`,
-      },
-    ]) + 3
+    // Barème en vigueur depuis le 01/01/2026 : 30 000 € HT (2 sauts), 40 000 € HT (3 sauts et plus)
+    const marge = Math.max(0, (mprPlafond || 0) - (mprDepenseEligible || 0))
+    const trancheLabel = jumps >= 3 ? 'un saut de 3 classes ou plus' : `un saut de ${jumps} classes`
+    cy2 += callout(doc, cx2, cy2, halfW, marge > 500
+      ? [
+          { text: 'Marge sous le plafond.', bold: true },
+          {
+            text: `Pour ${trancheLabel}, la dépense subventionnable est plafonnée à ${fmt0(mprPlafond)} HT. Votre projet reste en dessous : ${fmt0(marge)} HT de travaux supplémentaires pourraient encore être financés, soit jusqu’à ${fmt0(marge * (mprTaux || 0))} d’aide en plus.`,
+          },
+        ]
+      : [
+          { text: 'Plafond atteint.', bold: true },
+          {
+            text: `Pour ${trancheLabel}, la dépense subventionnable est plafonnée à ${fmt0(mprPlafond)} HT, barème en vigueur depuis le 1er janvier 2026. La part des travaux au-delà de ce plafond reste à votre charge.`,
+          },
+        ]) + 3
     cy2 += callout(doc, cx2, cy2, halfW, [
       { text: 'Avance de trésorerie.', bold: true },
       { text: 'Selon votre catégorie de revenus, une avance pouvant atteindre 70 % du montant de l’aide peut être demandée, afin de ne pas avancer la totalité des travaux.' },
