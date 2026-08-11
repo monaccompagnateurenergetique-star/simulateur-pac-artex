@@ -413,17 +413,25 @@ function drawKpis(doc, y, { cost, aid, rac, aidLabel, costHT }) {
   return h
 }
 
-function drawWorkTable(doc, y, groups, totals, aidLabel, newPage) {
+/**
+ * @param {boolean} priced faux en saisie rapide : les postes sont coches sans prix,
+ *   on liste alors les postes sans colonnes de montants plutot que d'afficher des 0,00 EUR
+ */
+function drawWorkTable(doc, y, groups, totals, aidLabel, newPage, priced = true) {
   const colHT = W - MX - 62
   const colTVA = W - MX - 40
   const colTTC = W - MX - 2
   const LIMIT = H - 30
 
   function head() {
-    txt(doc, 'POSTE DE TRAVAUX', MX + 2, y, { size: 6.6, style: 'bold', color: C.muted })
-    txt(doc, 'MONTANT HT', colHT, y, { size: 6.6, style: 'bold', color: C.muted, align: 'right' })
-    txt(doc, 'TVA', colTVA, y, { size: 6.6, style: 'bold', color: C.muted, align: 'right' })
-    txt(doc, 'MONTANT TTC', colTTC, y, { size: 6.6, style: 'bold', color: C.muted, align: 'right' })
+    txt(doc, priced ? 'POSTE DE TRAVAUX' : 'POSTES DE TRAVAUX RETENUS', MX + 2, y, {
+      size: 6.6, style: 'bold', color: C.muted,
+    })
+    if (priced) {
+      txt(doc, 'MONTANT HT', colHT, y, { size: 6.6, style: 'bold', color: C.muted, align: 'right' })
+      txt(doc, 'TVA', colTVA, y, { size: 6.6, style: 'bold', color: C.muted, align: 'right' })
+      txt(doc, 'MONTANT TTC', colTTC, y, { size: 6.6, style: 'bold', color: C.muted, align: 'right' })
+    }
     y += 1.8
     doc.setDrawColor(...C.green700)
     doc.setLineWidth(0.4)
@@ -447,7 +455,9 @@ function drawWorkTable(doc, y, groups, totals, aidLabel, newPage) {
     txt(doc, clean(g.label).toUpperCase().split('').join(' '), MX + 2, y + 3.5, {
       size: 6.4, style: 'bold', color: C.green700,
     })
-    txt(doc, `${fmt2(groupHT)} HT`, colTTC, y + 3.5, { size: 6.4, style: 'bold', color: C.green700, align: 'right' })
+    if (priced) {
+      txt(doc, `${fmt2(groupHT)} HT`, colTTC, y + 3.5, { size: 6.4, style: 'bold', color: C.green700, align: 'right' })
+    }
     doc.setDrawColor(...C.line)
     doc.setLineWidth(0.2)
     doc.line(MX, y + 5.2, W - MX, y + 5.2)
@@ -459,9 +469,11 @@ function drawWorkTable(doc, y, groups, totals, aidLabel, newPage) {
       txt(doc, r.label, MX + 2, y + 4.4, { size: 8.2, style: 'bold', color: C.ink })
       if (r.desc) txtGte(doc, r.desc, MX + 2, y + 7.9, { size: 6.6, color: C.muted })
       const vy = r.desc ? y + 6 : y + 5
-      txt(doc, fmt2(r.ht), colHT, vy, { size: 8.2, align: 'right' })
-      txt(doc, `${String(r.tva).replace('.', ',')} %`, colTVA, vy, { size: 6.8, color: C.muted, align: 'right' })
-      txt(doc, fmt2(r.ht + r.tvaAmount), colTTC, vy, { size: 8.2, align: 'right' })
+      if (priced) {
+        txt(doc, fmt2(r.ht), colHT, vy, { size: 8.2, align: 'right' })
+        txt(doc, `${String(r.tva).replace('.', ',')} %`, colTVA, vy, { size: 6.8, color: C.muted, align: 'right' })
+        txt(doc, fmt2(r.ht + r.tvaAmount), colTTC, vy, { size: 8.2, align: 'right' })
+      }
       doc.setDrawColor(...C.rowLine)
       doc.setLineWidth(0.2)
       doc.line(MX, y + rowH, W - MX, y + rowH)
@@ -643,8 +655,17 @@ export function buildRenoGlobalePDF({
   const totalTTC = hasDetail ? totalHT + totalTVA : summary.projectCost || 0
   const aid = summary.totalAid || 0
   const rac = Math.max(0, totalTTC - aid)
-  const tvaRates = [...new Set(rows.map((r) => r.tva))]
-  const tvaLabel = tvaRates.length === 1 ? `${tvaRates[0]} %` : 'appliquée'
+  // Taux affiche : celui des lignes si elles sont chiffrees, sinon le taux effectif
+  // deduit du couple HT / TTC saisi en mode rapide.
+  const tvaRates = [...new Set(rows.filter((r) => r.ht > 0).map((r) => r.tva))]
+  const effectiveRate = totalHT > 0 ? Math.round((totalTVA / totalHT) * 1000) / 10 : 0
+  const tvaLabel = tvaRates.length === 1
+    ? `${tvaRates[0]} %`
+    : tvaRates.length > 1
+      ? 'appliquée'
+      : effectiveRate > 0
+        ? `${effectiveRate} %`
+        : 'appliquée'
   const financedPct = totalTTC > 0 ? Math.round((aid / totalTTC) * 100) : 0
 
   // ════════════ PAGE 1 ════════════
@@ -730,7 +751,7 @@ export function buildRenoGlobalePDF({
   if (groups.length > 0) {
     y += 8
     y = sectionTitle(doc, 'Détail des travaux envisagés', MX, y, CW)
-    y = drawWorkTable(doc, y, groups, { ht: totalHT, tva: totalTVA, ttc: totalTTC, aid, rac, tvaLabel }, aidLabel, newContinuationPage)
+    y = drawWorkTable(doc, y, groups, { ht: totalHT, tva: totalTVA, ttc: totalTTC, aid, rac, tvaLabel }, aidLabel, newContinuationPage, hasDetail)
   } else {
     // Mode rapide : pas de postes détaillés, on affiche le seul récapitulatif financier
     y += 8
@@ -742,9 +763,15 @@ export function buildRenoGlobalePDF({
   doc.setFontSize(6.4)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...C.muted)
-  const note = tvaRates.length === 1 && tvaRates[0] === 5.5
-    ? 'TVA à taux réduit de 5,5 % applicable aux travaux d’amélioration de la performance énergétique dans les logements achevés depuis plus de 2 ans. Montants issus des devis prévisionnels, à confirmer après visite technique.'
-    : 'Montants issus des devis prévisionnels, à confirmer après visite technique.'
+  const noteParts = []
+  if (Math.abs(effectiveRate - 5.5) < 0.05) {
+    noteParts.push('TVA à taux réduit de 5,5 % applicable aux travaux d’amélioration de la performance énergétique dans les logements achevés depuis plus de 2 ans.')
+  }
+  if (groups.length > 0 && !hasDetail) {
+    noteParts.push('Le coût indiqué est un montant global : la répartition par poste sera précisée sur les devis des entreprises.')
+  }
+  noteParts.push('Montants issus des devis prévisionnels, à confirmer après visite technique.')
+  const note = noteParts.join(' ')
   doc.splitTextToSize(clean(note), CW).forEach((l, i) => doc.text(l, MX, y + i * 2.8))
 
   // ════════════ PAGE 2 ════════════
