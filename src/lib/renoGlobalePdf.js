@@ -51,7 +51,7 @@ const POSTE_LABELS = {
   toiture_terrasse: 'Isolation de la toiture terrasse',
   murs_ite: 'Isolation des murs par l’extérieur (ITE)',
   murs_iti: 'Isolation des murs par l’intérieur (ITI)',
-  menuiseries: 'Fenêtres et menuiseries extérieures',
+  menuiseries: 'Fenêtres / Menuiseries extérieures',
   plancher: 'Isolation du plancher bas',
   pac_air_air: 'Pompe à chaleur air/air',
   pac_air_eau: 'Pompe à chaleur air/eau',
@@ -143,6 +143,42 @@ function txt(doc, s, x, y, opt = {}) {
   doc.setFont('helvetica', style)
   doc.setTextColor(...color)
   doc.text(clean(s), x, y, maxWidth ? { align, maxWidth } : { align })
+}
+
+/**
+ * Dessine un « ≥ » vectoriel : le glyphe est absent des polices standard jsPDF,
+ * et embarquer une police entiere pour un seul signe couterait ~100 ko de bundle.
+ * Retourne la largeur occupee, chasse comprise.
+ */
+function drawGte(doc, x, y, sizePt, color) {
+  const mm = sizePt * 0.3528
+  const c = mm * 0.62
+  const w = c * 0.82
+  const lead = mm * 0.14
+  const gx = x + lead
+  doc.setDrawColor(...color)
+  doc.setLineWidth(Math.max(0.12, mm * 0.06))
+  doc.line(gx, y - c, gx + w, y - c * 0.6)
+  doc.line(gx + w, y - c * 0.6, gx, y - c * 0.2)
+  doc.line(gx, y + c * 0.06, gx + w, y + c * 0.06)
+  doc.setLineWidth(0.2)
+  return lead + w + mm * 0.2
+}
+
+/** Comme txt(), mais rend les « ≥ » presents dans la chaine en vectoriel. */
+function txtGte(doc, s, x, y, opt = {}) {
+  const parts = String(s || '').split('≥')
+  if (parts.length === 1) return txt(doc, s, x, y, opt)
+  const { size = 8, style = 'normal', color = C.ink } = opt
+  let cx = x
+  parts.forEach((part, i) => {
+    if (i > 0) cx += drawGte(doc, cx, y, size, color)
+    if (!part) return
+    txt(doc, part, cx, y, opt)
+    doc.setFontSize(size)
+    doc.setFont('helvetica', style)
+    cx += doc.getTextWidth(clean(part))
+  })
 }
 
 function card(doc, x, y, w, h, opt = {}) {
@@ -418,11 +454,11 @@ function drawWorkTable(doc, y, groups, totals, aidLabel, newPage) {
     y += 5.2
 
     g.rows.forEach((r) => {
-      const rowH = r.desc ? 9.4 : 7.2
+      const rowH = r.desc ? 10.4 : 7.8
       ensure(rowH, true)
-      txt(doc, r.label, MX + 2, y + 4, { size: 8.2, style: 'bold', color: C.ink })
-      if (r.desc) txt(doc, r.desc, MX + 2, y + 7.2, { size: 6.6, color: C.muted })
-      const vy = r.desc ? y + 5.4 : y + 4.6
+      txt(doc, r.label, MX + 2, y + 4.4, { size: 8.2, style: 'bold', color: C.ink })
+      if (r.desc) txtGte(doc, r.desc, MX + 2, y + 7.9, { size: 6.6, color: C.muted })
+      const vy = r.desc ? y + 6 : y + 5
       txt(doc, fmt2(r.ht), colHT, vy, { size: 8.2, align: 'right' })
       txt(doc, `${String(r.tva).replace('.', ',')} %`, colTVA, vy, { size: 6.8, color: C.muted, align: 'right' })
       txt(doc, fmt2(r.ht + r.tvaAmount), colTTC, vy, { size: 8.2, align: 'right' })
@@ -638,7 +674,10 @@ export function buildRenoGlobalePDF({
   }
   y += 8.6
 
-  const clientName = client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() : ''
+  // Forme administrative francaise : civilite, NOM, prenom
+  const clientName = client
+    ? [client.civilite, client.lastName, client.firstName].filter(Boolean).join(' ').trim()
+    : ''
   const clientAddress = client
     ? [client.address, `${client.postalCode || ''} ${client.city || ''}`.trim()].filter(Boolean).join(', ')
     : ''
