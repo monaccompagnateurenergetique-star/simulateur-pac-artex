@@ -825,12 +825,12 @@ export function buildRenoGlobalePDF({
       : [
           { text: 'Plafond atteint.', bold: true },
           {
-            text: `Pour ${trancheLabel}, la dépense subventionnable est plafonnée à ${fmt0(mprPlafond)} HT, barème en vigueur depuis le 1er janvier 2026. La part des travaux au-delà de ce plafond reste à votre charge.`,
+            text: `Pour ${trancheLabel}, la dépense subventionnable est plafonnée à ${fmt0(mprPlafond)} HT, barème de l’Anah en vigueur en 2026. La part des travaux au-delà de ce plafond reste à votre charge.`,
           },
         ]) + 3
     cy2 += callout(doc, cx2, cy2, halfW, [
-      { text: 'Avance de trésorerie.', bold: true },
-      { text: 'Selon votre catégorie de revenus, une avance pouvant atteindre 70 % du montant de l’aide peut être demandée, afin de ne pas avancer la totalité des travaux.' },
+      { text: 'Avance possible.', bold: true },
+      { text: 'Une avance sur l’aide peut être demandée avant les travaux. Elle est demandée et versée directement au bénéficiaire, jamais à l’entreprise.' },
     ], { accent: C.violet, bg: C.violet050, titleColor: [76, 63, 196] })
   } else {
     cy2 += callout(doc, cx2, cy2, halfW, [
@@ -878,15 +878,16 @@ export function buildRenoGlobalePDF({
         { strong: 'Logement de plus de 15 ans,', rest: ' occupé à titre de résidence principale.' },
         { strong: 'Engagement d’occupation', rest: ' du logement pendant au moins 3 ans après les travaux.' },
         { strong: 'Au moins deux gestes d’isolation', rest: ' parmi les postes retenus au projet.' },
-        { strong: 'Saut minimum de 2 classes DPE', rest: `, le projet en vise ${jumps}.` },
+        { strong: 'Saut minimum de 2 classes DPE', rest: ` depuis une classe E, F ou G, le projet en vise ${jumps}.` },
+        { strong: 'Aucun équipement fossile', rest: ' : ni chauffage ni eau chaude au gaz, au fioul ou au charbon après travaux.' },
         { strong: 'Entreprises certifiées RGE', rest: ' pour l’ensemble des postes.' },
       ]
     : [
-        { strong: 'Logement de plus de 2 ans', rest: ' à la date d’engagement des travaux.' },
+        { strong: 'Maison classée E, F ou G', rest: ' avant travaux, selon l’audit énergétique.' },
         { strong: 'Dossier engagé avant devis', rest: ' : c’est la condition de recevabilité de la prime.' },
         { strong: 'Au moins deux gestes d’isolation', rest: ' parmi les postes retenus au projet.' },
         { strong: 'Saut minimum de 2 classes DPE', rest: `, le projet en vise ${jumps}.` },
-        { strong: 'Entreprises certifiées RGE', rest: ' pour l’ensemble des postes.' },
+        { strong: 'Aucun équipement fossile', rest: ' : ni chauffage ni eau chaude au gaz, au fioul ou au charbon après travaux.' },
       ]
   const benefits = [
     { strong: 'Facture de chauffage réduite', rest: ' durablement grâce à l’isolation et au nouveau système de chauffage.' },
@@ -913,7 +914,7 @@ export function buildRenoGlobalePDF({
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...C.muted)
   const mentions = isAnah
-    ? 'Simulation établie sur la base de MaPrimeRénov’ Parcours Accompagné seule ; aucune aide CEE n’est comptabilisée sur ces travaux. Les montants indiqués sont donnés à titre indicatif, sous réserve de l’éligibilité définitive du logement et du ménage, de l’audit énergétique et des devis d’entreprises. Le total des aides publiques ne peut excéder 100 % de la dépense TTC. Document non contractuel.'
+    ? `Simulation établie sur la base de MaPrimeRénov’ Parcours Accompagné seule ; aucune aide CEE n’est comptabilisée sur ces travaux, leur valorisation étant réservée à l’Anah. Les montants indiqués sont donnés à titre indicatif, sous réserve de l’éligibilité définitive du logement et du ménage, de l’audit énergétique et des devis d’entreprises. Le total des aides publiques ne peut excéder ${mprCategory === 'Jaune' ? '90' : '100'} % de la dépense TTC. Document non contractuel.`
     : 'Simulation établie sur la base de la fiche CEE BAR-TH-174. Les montants indiqués sont donnés à titre indicatif, sous réserve de l’éligibilité définitive du logement, de l’audit énergétique et des devis d’entreprises. Document non contractuel.'
   doc.splitTextToSize(clean(mentions), CW).forEach((l, i) => doc.text(l, MX, y + i * 2.8))
 
