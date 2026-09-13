@@ -11,6 +11,9 @@ const DEFAULT_ORG_SETTINGS = {
     email: '',
     siret: '',
     rge: '',
+    representantCivilite: 'M.',
+    representantNom: '',
+    representantPrenom: '',
   },
   ceePrices: {
     tresModeste: 12,

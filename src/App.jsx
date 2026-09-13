@@ -40,6 +40,10 @@ import TicketsPage from './pages/tickets/TicketsPage'
 import TicketDetailPage from './pages/tickets/TicketDetailPage'
 import NewTicketPage from './pages/tickets/NewTicketPage'
 import AdminTicketsPage from './pages/admin/AdminTicketsPage'
+import AgencesImmoPage from './pages/admin/AgencesImmoPage'
+import EstimationsImmoPage from './pages/admin/EstimationsImmoPage'
+import EstimationImmoFormPage from './pages/admin/EstimationImmoFormPage'
+import EstimationImmoDetailPage from './pages/admin/EstimationImmoDetailPage'
 import RgeProspectionPage from './pages/RgeProspectionPage'
 import MinisitePage from './pages/public/MinisitePage'
 import PublicSimulatorPage from './pages/public/PublicSimulatorPage'
@@ -147,6 +151,13 @@ export default function App() {
 
           {/* Prospection RGE (super admin) */}
           <Route path="/admin/prospection-rge" element={<ProtectedRoute requiredPermission="access_admin_panel"><RgeProspectionPage /></ProtectedRoute>} />
+
+          {/* Estimations immobilières (super admin) */}
+          <Route path="/admin/agences-immo" element={<ProtectedRoute requiredPermission="access_admin_panel"><AgencesImmoPage /></ProtectedRoute>} />
+          <Route path="/admin/estimations-immo" element={<ProtectedRoute requiredPermission="access_admin_panel"><EstimationsImmoPage /></ProtectedRoute>} />
+          <Route path="/admin/estimations-immo/nouveau" element={<ProtectedRoute requiredPermission="access_admin_panel"><EstimationImmoFormPage /></ProtectedRoute>} />
+          <Route path="/admin/estimations-immo/:id" element={<ProtectedRoute requiredPermission="access_admin_panel"><EstimationImmoDetailPage /></ProtectedRoute>} />
+          <Route path="/admin/estimations-immo/:id/modifier" element={<ProtectedRoute requiredPermission="access_admin_panel"><EstimationImmoFormPage /></ProtectedRoute>} />
 
           {/* Admin (super admin only) */}
           <Route path="/admin" element={<ProtectedRoute requiredPermission="access_admin_panel"><AdminPage /></ProtectedRoute>} />

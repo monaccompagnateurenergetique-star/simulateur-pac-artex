@@ -593,10 +593,17 @@ export default function BarTh174Page() {
               jumps,
               surface: Number(surface),
               workItems,
+              projectCostHT: effectiveCostHT,
               mprCategory,
               mprTaux: finalResult.taux,
               mprDepenseEligible: finalResult.depenseEligible,
               mprPlafond: finalResult.plafondHT,
+              ceeDetail: finalResult.mode === 'cee' ? {
+                volumeKWhc: finalResult.volumeCEE,
+                ceeEuros: finalResult.ceeEuros,
+                ceePercent,
+                ceeFinal: finalResult.ceeFinal,
+              } : null,
               params: [
                 { label: 'Beneficiaire', value: BENEFICIARY_TYPES.find(b => b.value === beneficiaryType)?.label || beneficiaryType },
                 { label: 'Occupation', value: occupation === 'principale' ? 'Residence principale' : 'Residence secondaire' },
