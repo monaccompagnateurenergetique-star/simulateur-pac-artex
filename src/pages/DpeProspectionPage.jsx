@@ -1,20 +1,19 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Search, Loader2, Thermometer, MapPin, Filter, ArrowUpDown,
-  ChevronLeft, ChevronRight, ExternalLink, UserPlus, BarChart3,
-  Home, Building2, Flame, Droplets, Wind, ChevronDown, ChevronUp, FolderPlus, X
+  ChevronLeft, ChevronRight, ExternalLink, UserPlus, BarChart3, Home, Building2,
+  Download, Flame, Zap
 } from 'lucide-react'
-import { searchDPE, prospectDPE, getDPEStats, getDpeColor, DPE_COLORS, geocodeAddress, searchAuditByBanId } from '../utils/dpeApi'
-import { useLeads } from '../hooks/useLeads'
-import AddressAutocomplete from '../components/ui/AddressAutocomplete'
-import DpeDetailCard from '../components/dpe/DpeDetailCard'
+import { searchDPE, prospectDPE, getDPEStats, getDpeColor } from '../utils/dpeApi'
 
 const SORT_OPTIONS = [
-  { value: '-date_etablissement_dpe', label: 'Plus recent' },
+  { value: '-date_etablissement_dpe', label: 'Plus récent' },
   { value: 'date_etablissement_dpe', label: 'Plus ancien' },
   { value: 'etiquette_dpe', label: 'DPE A → G' },
   { value: '-etiquette_dpe', label: 'DPE G → A' },
+  { value: '-surface_habitable_logement', label: 'Surface grande → petite' },
+  { value: 'surface_habitable_logement', label: 'Surface petite → grande' },
   { value: '-conso_5_usages_par_m2_ep', label: 'Conso haute → basse' },
   { value: 'conso_5_usages_par_m2_ep', label: 'Conso basse → haute' },
 ]
@@ -37,129 +36,72 @@ const TYPE_FILTERS = [
   { value: 'immeuble', label: 'Immeuble' },
 ]
 
-const CHAUFFAGE_INSTALL_FILTERS = [
-  { value: '', label: 'Tous' },
-  { value: 'collectif', label: 'Collectif' },
-  { value: 'individuel', label: 'Individuel' },
-]
-
-const ENERGIE_CHAUFFAGE_FILTERS = [
-  { value: '', label: 'Toutes energies' },
+const CHAUFFAGE_FILTERS = [
+  { value: '', label: 'Tous chauffages' },
+  { value: 'gaz_fioul', label: 'Gaz + Fioul (cibles PAC)', icon: '🎯' },
   { value: 'Gaz naturel', label: 'Gaz naturel' },
-  { value: 'Fioul domestique', label: 'Fioul' },
-  { value: "Electricite d'origine renouvelable utilisee dans le batiment", label: 'Electricite renouv.' },
-  { value: 'Electricite', label: 'Electricite' },
-  { value: 'Bois – Buches', label: 'Bois buches' },
-  { value: 'Bois – Granules (pellets) ou briquettes', label: 'Granules' },
-  { value: 'Bois – Plaquettes forestieres', label: 'Plaquettes' },
-  { value: 'Reseau de chaleur', label: 'Reseau de chaleur' },
+  { value: 'Fioul domestique', label: 'Fioul domestique' },
   { value: 'GPL', label: 'GPL' },
   { value: 'Propane', label: 'Propane' },
-  { value: 'Charbon', label: 'Charbon' },
+  { value: 'Butane', label: 'Butane' },
+  { value: 'Électricité', label: 'Électricité' },
+  { value: 'Bois – Bûches', label: 'Bois – Bûches' },
+  { value: 'Bois – Granulés (pellets)', label: 'Bois – Granulés' },
 ]
 
-const ECS_INSTALL_FILTERS = [
-  { value: '', label: 'Tous' },
-  { value: 'collectif', label: 'Collectif' },
-  { value: 'individuel', label: 'Individuel' },
-]
+function exportCSV(items, filename) {
+  const headers = [
+    'Adresse', 'Code postal', 'Commune', 'Type', 'Surface m²',
+    'DPE', 'GES', 'Conso kWh/m²/an', 'Chauffage',
+    'Période construction', 'Année', 'Isolation enveloppe',
+    'Isolation murs', 'Isolation menuiseries', 'Date DPE',
+    'N° DPE', 'Lien observatoire'
+  ]
+  const rows = items.map((d) => [
+    d.adresse || '',
+    d.codePostal || '',
+    d.commune || '',
+    d.typeBatiment || '',
+    d.surface || '',
+    d.etiquetteDpe || '',
+    d.etiquetteGes || '',
+    d.consoM2 || '',
+    d.energieChauffage || '',
+    d.periodeConstruction || '',
+    d.anneeConstruction || '',
+    d.isolationEnveloppe || '',
+    d.isolationMurs || '',
+    d.isolationMenuiseries || '',
+    d.dateEtablissement ? new Date(d.dateEtablissement).toLocaleDateString('fr-FR') : '',
+    d.numeroDpe || '',
+    d.observatoireUrl || '',
+  ])
+
+  const BOM = '﻿'
+  const csv = BOM + [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 export default function DpeProspectionPage() {
-  const navigate = useNavigate()
-  const { addLead } = useLeads()
   const [mode, setMode] = useState('prospect')
   const [query, setQuery] = useState('')
-
-  // Filtres
   const [etiquetteFilter, setEtiquetteFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
-  const [installChauffageFilter, setInstallChauffageFilter] = useState('')
-  const [energieChauffageFilter, setEnergieChauffageFilter] = useState('')
-  const [installEcsFilter, setInstallEcsFilter] = useState('')
+  const [chauffageFilter, setChauffageFilter] = useState('')
   const [sort, setSort] = useState('-date_etablissement_dpe')
-  const [showAdvanced, setShowAdvanced] = useState(false)
-
-  // Results
   const [results, setResults] = useState(null)
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState(null)
   const [page, setPage] = useState(1)
   const [geocoding, setGeocoding] = useState(null)
-  const [selectedDpe, setSelectedDpe] = useState(null)
-  const [selectedAudits, setSelectedAudits] = useState([])
-  const [loadingAudits, setLoadingAudits] = useState(false)
-  const modalRef = useRef(null)
-
-  // Lock body scroll + scroll modal to top + Escape to close
-  useEffect(() => {
-    if (selectedDpe) {
-      document.body.style.overflow = 'hidden'
-      setTimeout(() => { if (modalRef.current) modalRef.current.scrollTop = 0 }, 0)
-    } else {
-      document.body.style.overflow = ''
-    }
-    const handleEsc = (e) => { if (e.key === 'Escape') setSelectedDpe(null) }
-    window.addEventListener('keydown', handleEsc)
-    return () => {
-      window.removeEventListener('keydown', handleEsc)
-      document.body.style.overflow = ''
-    }
-  }, [selectedDpe])
-
-  const activeFilterCount = [installChauffageFilter, energieChauffageFilter, installEcsFilter].filter(Boolean).length
-
-  // ─── URL params auto-fill (from simulator CTA) ───
-  const [searchParams] = useSearchParams()
-  const autoSearchDone = useRef(false)
-
-  useEffect(() => {
-    if (autoSearchDone.current) return
-    const cp = searchParams.get('cp')
-    if (!cp) return
-    autoSearchDone.current = true
-
-    setQuery(cp)
-    setMode('prospect')
-    const chauffage = searchParams.get('chauffage') || ''
-    const energie = searchParams.get('energie') || ''
-    const type = searchParams.get('type') || ''
-    const ecs = searchParams.get('ecs') || ''
-    if (chauffage) { setInstallChauffageFilter(chauffage); setShowAdvanced(true) }
-    if (energie) { setEnergieChauffageFilter(energie); setShowAdvanced(true) }
-    if (type) setTypeFilter(type)
-    if (ecs) { setInstallEcsFilter(ecs); setShowAdvanced(true) }
-
-    // Trigger search after state updates — geocode CP via BAN first
-    setTimeout(async () => {
-      try {
-        setLoading(true)
-        const geo = await geocodeAddress(cp)
-        const cityName = geo?.city || ''
-        if (!cityName) throw new Error('Code postal introuvable')
-        const params = {
-          city: cityName,
-          typeBatiment: type || '',
-          installationChauffage: chauffage || '',
-          energieChauffage: energie || '',
-          installationEcs: ecs || '',
-          sort: '-date_etablissement_dpe',
-          page: 1,
-          size: 50,
-        }
-        const [data, statsData] = await Promise.all([
-          prospectDPE(params),
-          getDPEStats({ city: cityName }).catch(() => null),
-        ])
-        setResults({ items: data.results, total: data.total })
-        if (statsData) setStats(statsData)
-      } catch (err) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }, 50)
-  }, [searchParams])
 
   const handleSearch = useCallback(async (newPage = 1, newSort = sort) => {
     if (!query.trim()) return
@@ -175,27 +117,19 @@ export default function DpeProspectionPage() {
         setStats(null)
       } else {
         const isPostal = /^\d{5}$/.test(query.trim())
-        // Geocode postal code via BAN → city name (ADEME code_postal_ban returns 403)
-        let cityName = isPostal ? '' : query.trim()
-        if (isPostal) {
-          const geo = await geocodeAddress(query.trim())
-          cityName = geo?.city || ''
-          if (!cityName) throw new Error('Code postal introuvable. Essayez avec un nom de ville.')
-        }
         const params = {
-          city: cityName,
+          postalCode: isPostal ? query.trim() : '',
+          city: isPostal ? '' : query.trim(),
           etiquette: etiquetteFilter,
           typeBatiment: typeFilter,
-          installationChauffage: installChauffageFilter,
-          energieChauffage: energieChauffageFilter,
-          installationEcs: installEcsFilter,
+          chauffage: chauffageFilter,
           sort: newSort,
           page: newPage,
           size: 50,
         }
         const [data, statsData] = await Promise.all([
           prospectDPE(params),
-          newPage === 1 ? getDPEStats({ city: cityName }).catch(() => null) : Promise.resolve(stats),
+          newPage === 1 && isPostal ? getDPEStats(query.trim()).catch(() => null) : Promise.resolve(stats),
         ])
         setResults({ items: data.results, total: data.total })
         if (statsData && statsData !== stats) setStats(statsData)
@@ -207,7 +141,7 @@ export default function DpeProspectionPage() {
     } finally {
       setLoading(false)
     }
-  }, [query, mode, etiquetteFilter, typeFilter, installChauffageFilter, energieChauffageFilter, installEcsFilter, sort, stats])
+  }, [query, mode, etiquetteFilter, typeFilter, chauffageFilter, sort, stats])
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -224,79 +158,68 @@ export default function DpeProspectionPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  function resetAdvancedFilters() {
-    setInstallChauffageFilter('')
-    setEnergieChauffageFilter('')
-    setInstallEcsFilter('')
-  }
-
-  function handleCreateLead(dpe) {
-    const lead = addLead({
-      firstName: '',
-      lastName: '',
-      address: dpe.adresse || '',
-      postalCode: dpe.codePostal || '',
-      city: dpe.commune || '',
-      typeLogement: dpe.typeBatiment === 'maison' ? 'maison' : dpe.typeBatiment === 'appartement' ? 'appartement' : null,
-      surface: dpe.surface || null,
-      source: 'prospection_dpe',
-      dpe: dpe,
-    })
-    navigate(`/leads/${lead.id}/modifier`)
-  }
-
-  async function handleAddressSearch(address, postalCode, city) {
-    setLoading(true)
-    setError(null)
+  async function handleExportAll() {
+    if (!query.trim()) return
+    setExporting(true)
     try {
-      const data = await searchDPE(address, postalCode, city)
-      setResults({ items: data.results, total: data.results.length })
-      setGeocoding(data.geocoding)
-      setStats(null)
+      const isPostal = /^\d{5}$/.test(query.trim())
+      const allItems = []
+      let p = 1
+      const maxPages = 20
+      while (p <= maxPages) {
+        const data = await prospectDPE({
+          postalCode: isPostal ? query.trim() : '',
+          city: isPostal ? '' : query.trim(),
+          etiquette: etiquetteFilter,
+          typeBatiment: typeFilter,
+          chauffage: chauffageFilter,
+          sort,
+          page: p,
+          size: 100,
+        })
+        allItems.push(...data.results)
+        if (allItems.length >= data.total || data.results.length === 0) break
+        p++
+      }
+      const label = query.trim().replace(/\s+/g, '_')
+      const filters = [typeFilter, chauffageFilter ? chauffageFilter.replace(/\s+/g, '_') : '', etiquetteFilter].filter(Boolean).join('_')
+      exportCSV(allItems, `prospection_DPE_${label}${filters ? '_' + filters : ''}.csv`)
     } catch (err) {
-      setError(err.message)
-      setResults(null)
+      setError('Export échoué : ' + err.message)
     } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleSelectDpe(dpe) {
-    setSelectedDpe(dpe)
-    setSelectedAudits([])
-    if (dpe.identifiantBan) {
-      setLoadingAudits(true)
-      try {
-        const audits = await searchAuditByBanId(dpe.identifiantBan)
-        setSelectedAudits(audits)
-      } catch {}
-      setLoadingAudits(false)
+      setExporting(false)
     }
   }
 
   const totalPages = results ? Math.ceil(results.total / 50) : 0
 
+  const activeFiltersCount = [etiquetteFilter, typeFilter, chauffageFilter].filter(Boolean).length
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
       {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-100 rounded-2xl mb-3">
-          <Thermometer className="w-7 h-7 text-orange-600" />
+      <div className="mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+            <Thermometer className="w-5 h-5 text-orange-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Prospection DPE</h1>
+            <p className="text-sm text-gray-500">
+              Trouvez les DPE par adresse ou explorez une ville entière pour identifier vos prospects
+            </p>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Prospection DPE</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Identifiez les immeubles et logements par type de chauffage, energie, DPE
-        </p>
       </div>
 
       {/* Mode selector */}
-      <div className="flex justify-center gap-2 mb-6">
+      <div className="flex gap-2 mb-6">
         <button
           onClick={() => { setMode('address'); setResults(null); setStats(null) }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
             mode === 'address'
-              ? 'bg-indigo-600 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-slate-800 text-white shadow-sm'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
           }`}
         >
           <MapPin className="w-4 h-4" />
@@ -304,10 +227,10 @@ export default function DpeProspectionPage() {
         </button>
         <button
           onClick={() => { setMode('prospect'); setResults(null); setStats(null) }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
             mode === 'prospect'
-              ? 'bg-indigo-600 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-slate-800 text-white shadow-sm'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
           }`}
         >
           <BarChart3 className="w-4 h-4" />
@@ -316,55 +239,43 @@ export default function DpeProspectionPage() {
       </div>
 
       {/* Search bar */}
-      {mode === 'address' ? (
-        <div className="mb-6">
-          <AddressAutocomplete
-            value={query}
-            onChange={({ address, postalCode, city, label }) => {
-              setQuery(label || '')
-              if (address || postalCode) {
-                handleAddressSearch(address, postalCode, city)
+      <form onSubmit={handleSubmit} className="mb-6">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={mode === 'address'
+                ? 'Entrez une adresse complète (ex: 16 rue du bourg 57510 Ernesviller)'
+                : 'Entrez un code postal (ex: 57490) ou une ville (ex: CARLING)'
               }
-            }}
-            placeholder="Saisissez une adresse (ex: 16 rue du bourg 57510 Ernesviller)"
-          />
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="mb-6">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Entrez un code postal (ex: 57510) ou une ville (ex: Metz)"
-                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading || !query.trim()}
-              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition disabled:opacity-40"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-              Rechercher
-            </button>
+              className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
+            />
           </div>
-        </form>
-      )}
+          <button
+            type="submit"
+            disabled={loading || !query.trim()}
+            className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-xl font-semibold text-sm hover:bg-orange-700 transition disabled:opacity-40 shadow-sm"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            Rechercher
+          </button>
+        </div>
+      </form>
 
-      {/* Filters (prospect mode only) */}
+      {/* Filters (prospect mode) */}
       {mode === 'prospect' && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6 space-y-3">
-          {/* Ligne 1 : DPE + Type + Sort */}
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
+          <div className="flex flex-wrap items-center gap-3 mb-3">
             <div className="flex items-center gap-1.5">
               <Filter className="w-4 h-4 text-gray-400" />
-              <span className="text-xs font-semibold text-gray-500">Filtres :</span>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                Filtres {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+              </span>
             </div>
 
-            {/* DPE badges */}
             <div className="flex gap-1">
               {ETIQUETTE_FILTERS.map((f) => {
                 const color = f.value ? getDpeColor(f.value) : null
@@ -374,13 +285,13 @@ export default function DpeProspectionPage() {
                     key={f.value || 'all'}
                     onClick={() => { setEtiquetteFilter(f.value); if (results) handleSearch(1) }}
                     className={`flex flex-col items-center justify-center rounded-lg transition ${
-                      f.value ? 'w-11 h-11' : 'w-9 h-9'
-                    } ${active ? 'ring-2 ring-offset-1 ring-indigo-500' : 'opacity-60 hover:opacity-100'}`}
+                      f.value ? 'w-12 h-12' : 'w-10 h-10'
+                    } ${active ? 'ring-2 ring-offset-1 ring-orange-500' : 'opacity-60 hover:opacity-100'}`}
                     style={color
                       ? { backgroundColor: color.bg, color: color.text }
-                      : { backgroundColor: active ? '#6366f1' : '#f3f4f6', color: active ? 'white' : '#6b7280' }
+                      : { backgroundColor: active ? '#ea580c' : '#f3f4f6', color: active ? 'white' : '#6b7280' }
                     }
-                    title={f.seuil ? `${f.value} : ${f.seuil} kWh/m2/an` : 'Toutes etiquettes'}
+                    title={f.seuil ? `${f.value} : ${f.seuil} kWh/m²/an` : 'Toutes étiquettes'}
                   >
                     <span className="text-sm font-black leading-none">{f.value || '∀'}</span>
                     {f.seuil && <span className="text-[7px] font-semibold leading-tight mt-0.5 opacity-90">{f.seuil}</span>}
@@ -389,24 +300,12 @@ export default function DpeProspectionPage() {
               })}
             </div>
 
-            {/* Type */}
-            <select
-              value={typeFilter}
-              onChange={(e) => { setTypeFilter(e.target.value); if (results) handleSearch(1) }}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700"
-            >
-              {TYPE_FILTERS.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-
-            {/* Sort */}
             <div className="flex items-center gap-1.5 ml-auto">
               <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
               <select
                 value={sort}
                 onChange={(e) => handleSortChange(e.target.value)}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700"
+                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-700"
               >
                 {SORT_OPTIONS.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
@@ -415,96 +314,54 @@ export default function DpeProspectionPage() {
             </div>
           </div>
 
-          {/* Toggle filtres avances */}
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition"
-          >
-            {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            Filtres avances
-            {activeFilterCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold">
-                {activeFilterCount}
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={typeFilter}
+              onChange={(e) => { setTypeFilter(e.target.value); if (results) handleSearch(1) }}
+              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-700"
+            >
+              {TYPE_FILTERS.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+
+            <select
+              value={chauffageFilter}
+              onChange={(e) => { setChauffageFilter(e.target.value); if (results) handleSearch(1) }}
+              className={`px-3 py-2 border rounded-lg text-xs font-medium transition ${
+                chauffageFilter === 'gaz_fioul'
+                  ? 'bg-red-50 border-red-300 text-red-700'
+                  : chauffageFilter
+                    ? 'bg-orange-50 border-orange-200 text-orange-700'
+                    : 'bg-gray-50 border-gray-200 text-gray-700'
+              }`}
+            >
+              {CHAUFFAGE_FILTERS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.icon ? `${c.icon} ${c.label}` : c.label}
+                </option>
+              ))}
+            </select>
+
+            {chauffageFilter === 'gaz_fioul' && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700">
+                <Zap className="w-3.5 h-3.5" />
+                Prospects PAC Air/Eau
               </span>
             )}
-          </button>
-
-          {/* Ligne 2 : Filtres avances */}
-          {showAdvanced && (
-            <div className="flex flex-wrap items-end gap-4 pt-2 border-t border-gray-100">
-              {/* Chauffage type */}
-              <div className="space-y-1">
-                <label className="flex items-center gap-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                  <Flame className="w-3 h-3 text-orange-500" />
-                  Chauffage
-                </label>
-                <select
-                  value={installChauffageFilter}
-                  onChange={(e) => { setInstallChauffageFilter(e.target.value); if (results) handleSearch(1) }}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 min-w-[120px]"
-                >
-                  {CHAUFFAGE_INSTALL_FILTERS.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Energie chauffage */}
-              <div className="space-y-1">
-                <label className="flex items-center gap-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                  <Flame className="w-3 h-3 text-red-500" />
-                  Energie
-                </label>
-                <select
-                  value={energieChauffageFilter}
-                  onChange={(e) => { setEnergieChauffageFilter(e.target.value); if (results) handleSearch(1) }}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 min-w-[150px]"
-                >
-                  {ENERGIE_CHAUFFAGE_FILTERS.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* ECS */}
-              <div className="space-y-1">
-                <label className="flex items-center gap-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                  <Droplets className="w-3 h-3 text-blue-500" />
-                  ECS
-                </label>
-                <select
-                  value={installEcsFilter}
-                  onChange={(e) => { setInstallEcsFilter(e.target.value); if (results) handleSearch(1) }}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 min-w-[120px]"
-                >
-                  {ECS_INSTALL_FILTERS.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={() => { resetAdvancedFilters(); if (results) handleSearch(1) }}
-                  className="px-2 py-1.5 text-[10px] font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
-                >
-                  Reinitialiser
-                </button>
-              )}
-            </div>
-          )}
+          </div>
         </div>
       )}
 
       {/* Stats bar */}
       {stats && stats.distribution.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-gray-700">
-              Repartition DPE — {results?.total?.toLocaleString('fr-FR') || stats.total.toLocaleString('fr-FR')} diagnostics
+              Répartition DPE — {results?.total?.toLocaleString('fr-FR') || stats.total.toLocaleString('fr-FR')} diagnostics
             </h3>
           </div>
-          <div className="flex rounded-lg overflow-hidden h-8 mb-3">
+          <div className="flex rounded-xl overflow-hidden h-10 mb-3">
             {stats.distribution
               .sort((a, b) => 'ABCDEFG'.indexOf(a.etiquette) - 'ABCDEFG'.indexOf(b.etiquette))
               .map((d) => {
@@ -540,7 +397,7 @@ export default function DpeProspectionPage() {
                     className="flex items-center gap-1.5 text-xs hover:underline"
                   >
                     <div
-                      className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-black"
+                      className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black"
                       style={{ backgroundColor: color.bg, color: color.text }}
                     >
                       {d.etiquette}
@@ -553,12 +410,12 @@ export default function DpeProspectionPage() {
         </div>
       )}
 
-      {/* Geocoding info */}
+      {/* Geocoding */}
       {geocoding && mode === 'address' && (
-        <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+        <div className="flex items-center gap-2 mb-4 px-4 py-2.5 bg-green-50 border border-green-200 rounded-xl">
           <MapPin className="w-4 h-4 text-green-600" />
           <p className="text-xs text-green-700">
-            <span className="font-semibold">Adresse trouvee :</span> {geocoding.label}
+            <span className="font-semibold">Adresse trouvée :</span> {geocoding.label}
             <span className="text-green-500 ml-2">(score: {(geocoding.score * 100).toFixed(0)}%)</span>
           </p>
         </div>
@@ -566,181 +423,162 @@ export default function DpeProspectionPage() {
 
       {/* Error */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
 
-      {/* Results header */}
+      {/* Results header + export */}
       {results && !loading && (
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-gray-700">
-            {results.total.toLocaleString('fr-FR')} DPE trouve{results.total > 1 ? 's' : ''}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-bold text-gray-700">
+            {results.total.toLocaleString('fr-FR')} DPE trouvé{results.total > 1 ? 's' : ''}
+            {totalPages > 1 && (
+              <span className="text-xs text-gray-400 font-normal ml-2">
+                Page {page} / {totalPages.toLocaleString('fr-FR')}
+              </span>
+            )}
           </p>
-          {totalPages > 1 && (
-            <p className="text-xs text-gray-400">
-              Page {page} / {totalPages.toLocaleString('fr-FR')}
-            </p>
+          {mode === 'prospect' && results.total > 0 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => exportCSV(results.items, `prospection_DPE_page${page}.csv`)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Page ({results.items.length})
+              </button>
+              <button
+                onClick={handleExportAll}
+                disabled={exporting}
+                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-50"
+              >
+                {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                Tout exporter CSV ({Math.min(results.total, 2000).toLocaleString('fr-FR')})
+              </button>
+            </div>
           )}
         </div>
       )}
 
-      {/* Results list */}
+      {/* Results table */}
       {results && results.items.length > 0 && (
-        <div className="space-y-2 mb-6">
-          {results.items.map((dpe, idx) => {
-            const color = getDpeColor(dpe.etiquetteDpe)
-            const gesColor = getDpeColor(dpe.etiquetteGes)
-            const isCollectif = dpe.installationChauffage === 'collectif'
-            const isImmeuble = dpe.typeBatiment === 'immeuble'
-            return (
-              <div
-                key={dpe.numeroDpe || idx}
-                onClick={() => handleSelectDpe(dpe)}
-                className={`flex items-start gap-3 p-4 bg-white rounded-xl border transition group cursor-pointer ${
-                  isCollectif || isImmeuble
-                    ? 'border-orange-200 hover:border-orange-300 hover:shadow-sm'
-                    : 'border-gray-200 hover:border-indigo-200 hover:shadow-sm'
-                }`}
-              >
-                {/* DPE badge */}
-                <div className="flex flex-col items-center gap-1 shrink-0">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black"
-                    style={{ backgroundColor: color.bg, color: color.text }}
-                  >
-                    {dpe.etiquetteDpe || '?'}
-                  </div>
-                  {dpe.etiquetteGes && (
-                    <div
-                      className="w-8 h-6 rounded flex flex-col items-center justify-center"
-                      style={{ backgroundColor: gesColor.bg, color: gesColor.text }}
-                    >
-                      <span className="text-[10px] font-black leading-none">{dpe.etiquetteGes}</span>
-                      <span className="text-[5px] font-bold leading-none">GES</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">
-                    {dpe.adresse || 'Adresse non renseignee'}
-                    {dpe.commune ? `, ${dpe.commune}` : ''}
-                  </p>
-
-                  {/* Tags principaux */}
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {/* Type batiment */}
-                    {dpe.typeBatiment && (
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                        isImmeuble ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {dpe.typeBatiment === 'maison' ? <Home className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
-                        {dpe.typeBatiment}
-                        {dpe.nombreAppartements > 0 && ` (${dpe.nombreAppartements} logts)`}
-                      </span>
-                    )}
-
-                    {/* Chauffage */}
-                    {dpe.installationChauffage && (
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                        isCollectif ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        <Flame className="w-3 h-3" />
-                        {dpe.installationChauffage}
-                      </span>
-                    )}
-
-                    {/* Energie */}
-                    {dpe.energieChauffage && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700">
-                        {dpe.energieChauffage}
-                      </span>
-                    )}
-
-                    {/* ECS */}
-                    {dpe.installationEcs && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700">
-                        <Droplets className="w-3 h-3" />
-                        ECS {dpe.installationEcs}
-                      </span>
-                    )}
-
-                    {/* Ventilation */}
-                    {dpe.typeVentilation && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700">
-                        <Wind className="w-3 h-3" />
-                        {dpe.typeVentilation.length > 30 ? dpe.typeVentilation.slice(0, 30) + '...' : dpe.typeVentilation}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Details secondaires */}
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-xs text-gray-500">
-                    {dpe.consoM2 != null && <span>{dpe.consoM2} kWh/m2/an</span>}
-                    {dpe.surface > 0 && <span>{dpe.surface} m2</span>}
-                    {dpe.surfaceImmeuble > 0 && <span className="text-orange-600 font-medium">Imm. {dpe.surfaceImmeuble} m2</span>}
-                    {dpe.nombreNiveaux > 0 && <span>{dpe.nombreNiveaux} niveaux</span>}
-                    {dpe.periodeConstruction && <span>{dpe.periodeConstruction}</span>}
-                    {dpe.generateurChauffage && (
-                      <span className="text-gray-400" title={dpe.generateurChauffage}>
-                        {dpe.generateurChauffage.length > 40 ? dpe.generateurChauffage.slice(0, 40) + '...' : dpe.generateurChauffage}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Isolation + dates */}
-                  <div className="flex flex-wrap gap-x-3 mt-1 text-[10px] text-gray-400">
-                    {dpe.dateEtablissement && <span>DPE du {new Date(dpe.dateEtablissement).toLocaleDateString('fr-FR')}</span>}
-                    {dpe.isolationEnveloppe && <span>Enveloppe : {dpe.isolationEnveloppe}</span>}
-                    {dpe.isolationMurs && <span>Murs : {dpe.isolationMurs}</span>}
-                    {dpe.isolationMenuiseries && <span>Menuiseries : {dpe.isolationMenuiseries}</span>}
-                    {dpe.isolationPlancherBas && <span>Plancher : {dpe.isolationPlancherBas}</span>}
-                    {dpe.coutChauffage > 0 && <span className="text-amber-600 font-semibold">Cout chauffage : {dpe.coutChauffage} euros/an</span>}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-col gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
-                  {dpe.observatoireUrl && (
-                    <a
-                      href={dpe.observatoireUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      ADEME
-                    </a>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleCreateLead(dpe) }}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition"
-                  >
-                    <UserPlus className="w-3 h-3" />
-                    Lead
-                  </button>
-                  <Link
-                    to={`/projets/nouveau?address=${encodeURIComponent(dpe.adresse || '')}&postalCode=${dpe.codePostal || ''}&city=${encodeURIComponent(dpe.commune || '')}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
-                  >
-                    <FolderPlus className="w-3 h-3" />
-                    Projet
-                  </Link>
-                </div>
-              </div>
-            )
-          })}
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6 shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">DPE</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Adresse</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Surface</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                    <span className="flex items-center gap-1"><Flame className="w-3 h-3" /> Chauffage</span>
+                  </th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Conso</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Isolation</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Date DPE</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {results.items.map((dpe, idx) => {
+                  const color = getDpeColor(dpe.etiquetteDpe)
+                  const gesColor = getDpeColor(dpe.etiquetteGes)
+                  const isGazFioul = dpe.energieChauffage && /gaz|fioul|propane|butane|gpl/i.test(dpe.energieChauffage)
+                  return (
+                    <tr key={dpe.numeroDpe || idx} className={`hover:bg-gray-50 transition ${isGazFioul ? 'bg-red-50/30' : ''}`}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <div
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black shrink-0"
+                            style={{ backgroundColor: color.bg, color: color.text }}
+                          >
+                            {dpe.etiquetteDpe || '?'}
+                          </div>
+                          {dpe.etiquetteGes && (
+                            <div
+                              className="w-6 h-6 rounded flex flex-col items-center justify-center shrink-0"
+                              style={{ backgroundColor: gesColor.bg, color: gesColor.text }}
+                            >
+                              <span className="text-[9px] font-black leading-none">{dpe.etiquetteGes}</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-medium text-gray-800 max-w-[220px] truncate">{dpe.adresse || '—'}</p>
+                        <p className="text-[10px] text-gray-400">{dpe.codePostal} {dpe.commune}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-1 text-xs text-gray-600 capitalize">
+                          {dpe.typeBatiment === 'maison' ? <Home className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                          {dpe.typeBatiment || '—'}
+                        </span>
+                        {dpe.periodeConstruction && (
+                          <span className="text-[10px] text-gray-400">{dpe.periodeConstruction}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-700">
+                        {dpe.surface ? `${dpe.surface} m²` : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${
+                          isGazFioul
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {isGazFioul && <Flame className="w-3 h-3" />}
+                          {dpe.energieChauffage || '—'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {dpe.consoM2 ? `${dpe.consoM2} kWh/m²` : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-[10px] text-gray-500">{dpe.isolationEnveloppe || '—'}</span>
+                        {dpe.isolationMurs && <span className="block text-[10px] text-gray-400">Murs: {dpe.isolationMurs}</span>}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">
+                        {dpe.dateEtablissement ? new Date(dpe.dateEtablissement).toLocaleDateString('fr-FR') : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          {dpe.observatoireUrl && (
+                            <a
+                              href={dpe.observatoireUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              DPE
+                            </a>
+                          )}
+                          <Link
+                            to={`/leads/nouveau?address=${encodeURIComponent(dpe.adresse || '')}&postalCode=${dpe.codePostal || ''}&city=${encodeURIComponent(dpe.commune || '')}&chauffage=${encodeURIComponent(dpe.energieChauffage || '')}&surface=${dpe.surface || ''}&dpe=${dpe.etiquetteDpe || ''}`}
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition"
+                          >
+                            <UserPlus className="w-3 h-3" />
+                            Lead
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {results && results.items.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <Thermometer className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-400">Aucun DPE trouve pour cette recherche.</p>
+        <div className="text-center py-16">
+          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Thermometer className="w-7 h-7 text-gray-300" />
+          </div>
+          <p className="text-gray-400 font-medium">Aucun DPE trouvé pour cette recherche.</p>
         </div>
       )}
 
@@ -750,18 +588,18 @@ export default function DpeProspectionPage() {
           <button
             onClick={() => handlePageChange(page - 1)}
             disabled={page <= 1}
-            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
+            className="flex items-center gap-1 px-4 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 transition"
           >
             <ChevronLeft className="w-4 h-4" />
-            Precedent
+            Précédent
           </button>
-          <span className="px-4 py-2 text-sm font-semibold text-gray-700">
+          <span className="px-4 py-2.5 text-sm font-bold text-gray-700">
             {page} / {totalPages > 200 ? '200+' : totalPages}
           </span>
           <button
             onClick={() => handlePageChange(page + 1)}
             disabled={page >= totalPages || page >= 200}
-            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
+            className="flex items-center gap-1 px-4 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 transition"
           >
             Suivant
             <ChevronRight className="w-4 h-4" />
@@ -769,62 +607,9 @@ export default function DpeProspectionPage() {
         </div>
       )}
 
-      {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-        </div>
-      )}
-
-      {/* ═══ DPE Detail Modal ═══ */}
-      {selectedDpe && (
-        <div
-          ref={modalRef}
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm overflow-y-auto"
-          onClick={() => setSelectedDpe(null)}
-        >
-          <div
-            className="w-full max-w-4xl my-8 mx-4 animate-fade-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { handleCreateLead(selectedDpe); setSelectedDpe(null) }}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Creer un lead
-                </button>
-                <Link
-                  to={`/projets/nouveau?address=${encodeURIComponent(selectedDpe.adresse || '')}&postalCode=${selectedDpe.codePostal || ''}&city=${encodeURIComponent(selectedDpe.commune || '')}`}
-                  onClick={() => setSelectedDpe(null)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition"
-                >
-                  <FolderPlus className="w-4 h-4" />
-                  Creer un projet
-                </Link>
-              </div>
-              <button
-                onClick={() => setSelectedDpe(null)}
-                className="p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Full DPE Detail Card */}
-            <DpeDetailCard dpe={selectedDpe} audits={selectedAudits} />
-
-            {/* Loading audits indicator */}
-            {loadingAudits && (
-              <div className="flex items-center justify-center gap-2 mt-3 p-3 bg-white rounded-xl border border-gray-200">
-                <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
-                <span className="text-sm text-gray-500">Chargement des audits energetiques...</span>
-              </div>
-            )}
-          </div>
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
         </div>
       )}
     </div>

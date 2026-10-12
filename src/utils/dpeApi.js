@@ -285,6 +285,7 @@ function formatDPE(raw) {
 export async function prospectDPE({
   postalCode, city, etiquette, typeBatiment,
   installationChauffage, energieChauffage, installationEcs,
+  chauffage,
   sort = '-date_etablissement_dpe', page = 1, size = 50,
 }) {
   const filters = []
@@ -294,7 +295,15 @@ export async function prospectDPE({
   if (etiquette) filters.push(`etiquette_dpe:"${etiquette}"`)
   if (typeBatiment) filters.push(`type_batiment:"${typeBatiment}"`)
   if (installationChauffage) filters.push(`type_installation_chauffage:"${installationChauffage}"`)
-  if (energieChauffage) filters.push(`type_energie_principale_chauffage:"${energieChauffage}"`)
+  if (chauffage) {
+    if (chauffage === 'gaz_fioul') {
+      filters.push(`(type_energie_principale_chauffage:"Gaz naturel" OR type_energie_principale_chauffage:"GPL" OR type_energie_principale_chauffage:"Fioul domestique" OR type_energie_principale_chauffage:"Butane" OR type_energie_principale_chauffage:"Propane")`)
+    } else {
+      filters.push(`type_energie_principale_chauffage:"${chauffage}"`)
+    }
+  } else if (energieChauffage) {
+    filters.push(`type_energie_principale_chauffage:"${energieChauffage}"`)
+  }
   if (installationEcs) filters.push(`type_installation_ecs:"${installationEcs}"`)
 
   if (filters.length === 0) throw new Error('Ville ou code postal requis')

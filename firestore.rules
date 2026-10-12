@@ -138,6 +138,15 @@ service cloud.firestore {
       allow update: if isAuth();
     }
 
+    // ── Agences immobilières (super admin only) ──
+    match /agencies/{agencyId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /agencies/{agencyId}/estimations/{estId} {
+      allow read, write: if isSuperAdmin();
+    }
+
     // ── Public leads (unauthenticated write for lead capture) ──
     match /public_leads/{leadId} {
       allow read: if isAuth();
