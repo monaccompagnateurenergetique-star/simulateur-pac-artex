@@ -14,8 +14,8 @@ export default function AgencyDetailPage() {
   if (!agency) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-20 text-center">
-        <p className="text-gray-400">Agence non trouvée</p>
-        <Link to="/admin/agences" className="text-indigo-400 hover:underline mt-2 inline-block">
+        <p className="text-gray-500">Agence non trouvée</p>
+        <Link to="/admin/agences" className="text-indigo-600 hover:underline mt-2 inline-block">
           Retour aux agences
         </Link>
       </div>
@@ -37,28 +37,28 @@ export default function AgencyDetailPage() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       <Link
         to="/admin/agences"
-        className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Toutes les agences
       </Link>
 
       {/* Agency header */}
-      <div className="bg-white/5 border border-gray-700 rounded-2xl p-6 mb-8">
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-8">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 flex items-center justify-center">
               <Building2 className="w-7 h-7 text-indigo-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">{agency.name}</h1>
-              {agency.contact && <p className="text-gray-400">{agency.contact}</p>}
+              <h1 className="text-2xl font-bold text-gray-900">{agency.name}</h1>
+              {agency.contact && <p className="text-gray-500">{agency.contact}</p>}
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Link
               to={`/admin/agences/${id}/modifier`}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-gray-700 rounded-xl text-sm text-gray-300 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 transition-all"
             >
               <Edit className="w-3.5 h-3.5" />
               Modifier
@@ -72,7 +72,7 @@ export default function AgencyDetailPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-6 mt-4 text-sm text-gray-400">
+        <div className="flex flex-wrap gap-6 mt-4 text-sm text-gray-500">
           {(agency.address || agency.city) && (
             <div className="flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-gray-500" />
@@ -96,7 +96,7 @@ export default function AgencyDetailPage() {
 
       {/* Estimations */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-white">
+        <h2 className="text-lg font-bold text-gray-900">
           Estimations ({estimations.length})
         </h2>
         <Link
@@ -111,9 +111,9 @@ export default function AgencyDetailPage() {
       {loadingEst ? (
         <div className="text-center py-12 text-gray-500">Chargement...</div>
       ) : estimations.length === 0 ? (
-        <div className="text-center py-16 bg-white/5 border border-gray-700 rounded-2xl">
-          <FileText className="w-12 h-12 text-gray-700 mx-auto mb-3" />
-          <p className="text-gray-400 mb-4">Aucune estimation pour cette agence</p>
+        <div className="text-center py-16 bg-white border border-gray-200 rounded-2xl">
+          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 mb-4">Aucune estimation pour cette agence</p>
           <Link
             to={`/admin/agences/${id}/estimation/nouvelle`}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-all"
@@ -127,7 +127,7 @@ export default function AgencyDetailPage() {
           {estimations.map((est) => (
             <div
               key={est.id}
-              className="flex items-center justify-between bg-white/5 hover:bg-white/10 border border-gray-700 rounded-xl p-4 transition-all"
+              className="flex items-center justify-between bg-white hover:bg-gray-50 border border-gray-200 rounded-xl p-4 transition-all"
             >
               <Link
                 to={`/admin/agences/${id}/estimation/${est.id}`}
@@ -136,7 +136,7 @@ export default function AgencyDetailPage() {
                 <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${est.status === 'brouillon' ? 'bg-amber-500' : est.status === 'envoye' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
                   <div>
-                    <p className="text-white font-medium truncate">
+                    <p className="text-gray-900 font-medium truncate">
                       {est.address ? `${est.address}, ${est.city || ''}` : 'Sans adresse'}
                     </p>
                     <div className="flex items-center gap-4 text-xs text-gray-500 mt-0.5">

@@ -82,7 +82,7 @@ async function searchDPEByBanId(banId) {
     select: SELECTED_FIELDS,
     size: '20',
     sort: '-date_etablissement_dpe',
-    qs: `identifiant_ban:"${banId}"`,
+    identifiant_ban_eq: banId,
     count: 'false',
   })
 
@@ -101,12 +101,12 @@ export async function searchAuditByBanId(banId) {
     select: AUDIT_FIELDS,
     size: '50',
     sort: '-n_audit',
-    qs: `identifiant_ban:"${banId}"`,
+    identifiant_ban_eq: banId,
     count: 'false',
   })
 
   const res = await fetch(`${AUDIT_URL}/lines?${params}`)
-  if (!res.ok) return [] // silencieux si pas dispo
+  if (!res.ok) return []
   const data = await res.json()
   return groupAuditRows(data.results || [])
 }
@@ -119,7 +119,7 @@ async function searchAuditByPostalCode(postalCode, address) {
     select: AUDIT_FIELDS,
     size: '50',
     sort: '-n_audit',
-    qs: `code_postal_ban:"${postalCode}"`,
+    code_postal_ban_eq: postalCode,
   })
   if (address) {
     params.set('q', address)
@@ -280,41 +280,43 @@ function formatDPE(raw) {
 
 /**
  * Prospection : recherche tous les DPE d'une ville ou code postal
- * Avec pagination et filtres (étiquette, type de bâtiment)
+ * Utilise les filtres par champ (_eq, _in) au lieu de qs (bloqué par le WAF ADEME)
  */
 export async function prospectDPE({
   postalCode, city, etiquette, typeBatiment,
   installationChauffage, energieChauffage, installationEcs,
-  chauffage,
+  chauffage, periodeConstruction, isolationEnveloppe,
   sort = '-date_etablissement_dpe', page = 1, size = 50,
 }) {
-  const filters = []
-
-  if (postalCode) filters.push(`code_postal_ban:"${postalCode}"`)
-  if (city) filters.push(`nom_commune_ban:"${city}"`)
-  if (etiquette) filters.push(`etiquette_dpe:"${etiquette}"`)
-  if (typeBatiment) filters.push(`type_batiment:"${typeBatiment}"`)
-  if (installationChauffage) filters.push(`type_installation_chauffage:"${installationChauffage}"`)
-  if (chauffage) {
-    if (chauffage === 'gaz_fioul') {
-      filters.push(`(type_energie_principale_chauffage:"Gaz naturel" OR type_energie_principale_chauffage:"GPL" OR type_energie_principale_chauffage:"Fioul domestique" OR type_energie_principale_chauffage:"Butane" OR type_energie_principale_chauffage:"Propane")`)
-    } else {
-      filters.push(`type_energie_principale_chauffage:"${chauffage}"`)
-    }
-  } else if (energieChauffage) {
-    filters.push(`type_energie_principale_chauffage:"${energieChauffage}"`)
-  }
-  if (installationEcs) filters.push(`type_installation_ecs:"${installationEcs}"`)
-
-  if (filters.length === 0) throw new Error('Ville ou code postal requis')
+  if (!postalCode && !city) throw new Error('Ville ou code postal requis')
 
   const params = new URLSearchParams({
     select: SELECTED_FIELDS,
     size: String(size),
     page: String(page),
     sort,
-    qs: filters.join(' AND '),
   })
+
+  if (postalCode) params.set('code_postal_ban_eq', postalCode)
+  if (city) {
+    params.set('q', city)
+    params.set('q_fields', 'nom_commune_ban')
+  }
+  if (etiquette) params.set('etiquette_dpe_eq', etiquette)
+  if (typeBatiment) params.set('type_batiment_eq', typeBatiment)
+  if (installationChauffage) params.set('type_installation_chauffage_eq', installationChauffage)
+  if (chauffage) {
+    if (chauffage === 'gaz_fioul') {
+      params.set('type_energie_principale_chauffage_in', 'Gaz naturel,Fioul domestique,GPL,Butane,Propane')
+    } else {
+      params.set('type_energie_principale_chauffage_eq', chauffage)
+    }
+  } else if (energieChauffage) {
+    params.set('type_energie_principale_chauffage_eq', energieChauffage)
+  }
+  if (installationEcs) params.set('type_installation_ecs_eq', installationEcs)
+  if (periodeConstruction) params.set('periode_construction_eq', periodeConstruction)
+  if (isolationEnveloppe) params.set('qualite_isolation_enveloppe_eq', isolationEnveloppe)
 
   const res = await fetch(`${ADEME_URL}/lines?${params}`)
   if (!res.ok) throw new Error(`Erreur API ADEME: ${res.status}`)
@@ -335,17 +337,17 @@ export async function prospectDPE({
 export async function getDPEStats({ city, postalCode } = {}) {
   if (!city && !postalCode) throw new Error('Ville ou code postal requis')
 
-  // Prefer nom_commune_ban (code_postal_ban returns 403 on ADEME API)
-  const qs = city
-    ? `nom_commune_ban:"${city}"`
-    : `code_postal_ban:"${postalCode}"`
-
   const params = new URLSearchParams({
-    qs,
     size: '0',
     field: 'etiquette_dpe',
     count: 'false',
   })
+
+  if (postalCode) params.set('code_postal_ban_eq', postalCode)
+  if (city) {
+    params.set('q', city)
+    params.set('q_fields', 'nom_commune_ban')
+  }
 
   const res = await fetch(`${ADEME_URL}/values_agg?${params}`)
   if (!res.ok) throw new Error(`Erreur API ADEME: ${res.status}`)

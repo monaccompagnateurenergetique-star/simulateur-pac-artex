@@ -55,41 +55,41 @@ export default function AddressStep({ data, onChange, onSelectDpe }) {
           <MapPin className="w-5 h-5 text-blue-400" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-white">Adresse du bien</h3>
-          <p className="text-sm text-gray-400">Saisissez l'adresse pour rechercher le DPE existant</p>
+          <h3 className="text-lg font-bold text-gray-900">Adresse du bien</h3>
+          <p className="text-sm text-gray-500">Saisissez l'adresse pour rechercher le DPE existant</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-300 mb-1">Adresse</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Adresse</label>
           <input
             type="text"
             value={data.address || ''}
             onChange={(e) => onChange({ address: e.target.value })}
             placeholder="12 rue de la Paix"
-            className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Code postal</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Code postal</label>
           <input
             type="text"
             value={data.postalCode || ''}
             onChange={(e) => handlePostalCodeChange(e.target.value)}
             placeholder="75001"
             maxLength={5}
-            className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Ville</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Ville</label>
           <input
             type="text"
             value={data.city || ''}
             onChange={(e) => onChange({ city: e.target.value })}
             placeholder="Paris"
-            className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function AddressStep({ data, onChange, onSelectDpe }) {
           <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-medium">
             {locationInfo.region}
           </span>
-          <span className="px-3 py-1 rounded-full bg-gray-500/20 text-gray-300 text-xs font-medium">
+          <span className="px-3 py-1 rounded-full bg-gray-500/20 text-gray-600 text-xs font-medium">
             Dép. {locationInfo.departement}
           </span>
           {locationInfo.isIDF && (
@@ -128,7 +128,7 @@ export default function AddressStep({ data, onChange, onSelectDpe }) {
 
       {dpeResults?.results?.length > 0 && (
         <div className="space-y-3">
-          <p className="text-sm text-gray-400 font-medium">
+          <p className="text-sm text-gray-500 font-medium">
             {dpeResults.results.length} DPE trouvé{dpeResults.results.length > 1 ? 's' : ''}
           </p>
           <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -138,7 +138,7 @@ export default function AddressStep({ data, onChange, onSelectDpe }) {
                 <button
                   key={idx}
                   onClick={() => handleSelectDpe(dpe)}
-                  className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-gray-700 hover:border-blue-500 rounded-xl text-left transition-all"
+                  className="w-full flex items-center gap-4 p-4 bg-white hover:bg-gray-50 border border-gray-200 hover:border-blue-500 rounded-xl text-left transition-all"
                 >
                   <span
                     className="w-12 h-12 rounded-lg flex items-center justify-center text-lg font-black shrink-0"
@@ -147,8 +147,8 @@ export default function AddressStep({ data, onChange, onSelectDpe }) {
                     {dpe.etiquetteDpe}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-medium truncate">{dpe.adresse}</p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-400">
+                    <p className="text-gray-900 text-sm font-medium truncate">{dpe.adresse}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500">
                       {dpe.surface && <span>{dpe.surface} m²</span>}
                       {dpe.typeBatiment && <span>{dpe.typeBatiment}</span>}
                       {dpe.consoM2 && <span>{dpe.consoM2} kWh/m².an</span>}

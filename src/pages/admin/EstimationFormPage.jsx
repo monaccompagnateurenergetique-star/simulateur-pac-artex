@@ -152,14 +152,14 @@ export default function EstimationFormPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Link
         to={`/admin/agences/${agencyId}`}
-        className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         {agency?.name || 'Retour'}
       </Link>
 
-      <h1 className="text-2xl font-bold text-white mb-2">Nouvelle estimation</h1>
-      <p className="text-gray-400 text-sm mb-8">
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Nouvelle estimation</h1>
+      <p className="text-gray-500 text-sm mb-8">
         Agence : <span className="text-indigo-400 font-medium">{agency?.name}</span>
       </p>
 
@@ -179,7 +179,7 @@ export default function EstimationFormPage() {
                   ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40'
                   : done
                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 cursor-pointer'
-                    : 'bg-white/5 text-gray-500 border border-gray-700'
+                    : 'bg-white text-gray-500 border border-gray-200'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -190,7 +190,7 @@ export default function EstimationFormPage() {
       </div>
 
       {/* Step content */}
-      <div className="bg-white/5 border border-gray-700 rounded-2xl p-6 mb-6">
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6">
         {step === 0 && <AddressStep data={data} onChange={handleChange} onSelectDpe={handleSelectDpe} />}
         {step === 1 && <LogementStep data={data} onChange={handleChange} />}
         {step === 2 && <TravauxStep data={data} onChange={handleChange} />}
@@ -202,7 +202,7 @@ export default function EstimationFormPage() {
         <button
           onClick={() => setStep((s) => Math.max(0, s - 1))}
           disabled={step === 0}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-gray-700 text-gray-300 rounded-xl text-sm font-medium transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-gray-50 disabled:opacity-30 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium transition-all"
         >
           <ArrowLeft className="w-4 h-4" />
           Précédent

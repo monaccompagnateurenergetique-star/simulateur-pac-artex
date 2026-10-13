@@ -27,14 +27,14 @@ export default function LogementStep({ data, onChange }) {
           <Home className="w-5 h-5 text-emerald-400" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-white">Caractéristiques du logement</h3>
-          <p className="text-sm text-gray-400">Type, surface et performance énergétique</p>
+          <h3 className="text-lg font-bold text-gray-900">Caractéristiques du logement</h3>
+          <p className="text-sm text-gray-500">Type, surface et performance énergétique</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Type de logement</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Type de logement</label>
           <div className="flex gap-3">
             {['Maison', 'Appartement'].map((type) => (
               <button
@@ -43,7 +43,7 @@ export default function LogementStep({ data, onChange }) {
                 className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border transition-all ${
                   data.typeLogement === type
                     ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
-                    : 'bg-white/5 border-gray-700 text-gray-400 hover:bg-white/10'
+                    : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
                 }`}
               >
                 {type}
@@ -53,7 +53,7 @@ export default function LogementStep({ data, onChange }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Surface habitable (m²)</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Surface habitable (m²)</label>
           <input
             type="number"
             value={data.surface || ''}
@@ -61,16 +61,16 @@ export default function LogementStep({ data, onChange }) {
             placeholder={data.typeLogement === 'Appartement' ? '60' : '100'}
             min={10}
             max={500}
-            className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Classe DPE initiale</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Classe DPE initiale</label>
           <select
             value={data.classInitiale || ''}
             onChange={(e) => onChange({ classInitiale: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           >
             <option value="">Sélectionner</option>
             {ENERGY_CLASSES.map((c) => (
@@ -80,11 +80,11 @@ export default function LogementStep({ data, onChange }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Classe DPE cible</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Classe DPE cible</label>
           <select
             value={data.classeCible || ''}
             onChange={(e) => onChange({ classeCible: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           >
             <option value="">Sélectionner</option>
             {TARGET_CLASSES.map((c) => (
@@ -94,11 +94,11 @@ export default function LogementStep({ data, onChange }) {
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-300 mb-1">Chauffage actuel</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Chauffage actuel</label>
           <select
             value={data.chauffageActuel || ''}
             onChange={(e) => onChange({ chauffageActuel: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           >
             <option value="">Sélectionner</option>
             {CHAUFFAGE_OPTIONS.map((o) => (

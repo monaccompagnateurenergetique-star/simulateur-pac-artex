@@ -62,13 +62,13 @@ export default function TravauxStep({ data, onChange }) {
             <Hammer className="w-5 h-5 text-amber-400" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">Postes de travaux</h3>
-            <p className="text-sm text-gray-400">Définissez les travaux et le budget</p>
+            <h3 className="text-lg font-bold text-gray-900">Postes de travaux</h3>
+            <p className="text-sm text-gray-500">Définissez les travaux et le budget</p>
           </div>
         </div>
         <button
           onClick={() => handleModeChange(mode === 'rapide' ? 'detaille' : 'rapide')}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition-all"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-gray-50 text-sm text-gray-600 transition-all"
         >
           {mode === 'rapide' ? <ToggleLeft className="w-4 h-4" /> : <ToggleRight className="w-4 h-4 text-amber-400" />}
           {mode === 'rapide' ? 'Mode rapide' : 'Mode détaillé'}
@@ -79,23 +79,23 @@ export default function TravauxStep({ data, onChange }) {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Coût total HT (€)</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Coût total HT (€)</label>
               <input
                 type="number"
                 value={data.projectCostHT || ''}
                 onChange={(e) => handleRapideChange('projectCostHT', e.target.value)}
                 placeholder="30000"
-                className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Coût total TTC (€)</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Coût total TTC (€)</label>
               <input
                 type="number"
                 value={data.projectCostTTC || ''}
                 onChange={(e) => handleRapideChange('projectCostTTC', e.target.value)}
                 placeholder="31650"
-                className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -118,7 +118,7 @@ export default function TravauxStep({ data, onChange }) {
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                         selected
                           ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                          : 'bg-white/5 border-gray-700 text-gray-400 hover:bg-white/10'
+                          : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
                       }`}
                     >
                       {selected ? '✓ ' : '+ '}{item.label}
@@ -134,7 +134,7 @@ export default function TravauxStep({ data, onChange }) {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-gray-500 text-xs uppercase border-b border-gray-700">
+                  <tr className="text-gray-500 text-xs uppercase border-b border-gray-200">
                     <th className="text-left py-2 px-3">Poste</th>
                     <th className="text-right py-2 px-3">Prix HT</th>
                     <th className="text-right py-2 px-3">TVA</th>
@@ -144,18 +144,18 @@ export default function TravauxStep({ data, onChange }) {
                 </thead>
                 <tbody>
                   {travaux.map((t) => (
-                    <tr key={t.key} className="border-b border-gray-800">
-                      <td className="py-2.5 px-3 text-white">{t.label}</td>
+                    <tr key={t.key} className="border-b border-gray-100">
+                      <td className="py-2.5 px-3 text-gray-900">{t.label}</td>
                       <td className="py-2.5 px-3 text-right">
                         <input
                           type="number"
                           value={t.prixHT}
                           onChange={(e) => updateTravailPrix(t.key, e.target.value)}
-                          className="w-24 text-right px-2 py-1 bg-white/5 border border-gray-700 rounded-lg text-white focus:ring-1 focus:ring-amber-500"
+                          className="w-24 text-right px-2 py-1 bg-white border border-gray-200 rounded-lg text-gray-900 focus:ring-1 focus:ring-amber-500"
                         />
                       </td>
-                      <td className="py-2.5 px-3 text-right text-gray-400">{t.tva}%</td>
-                      <td className="py-2.5 px-3 text-right text-white font-medium">
+                      <td className="py-2.5 px-3 text-right text-gray-500">{t.tva}%</td>
+                      <td className="py-2.5 px-3 text-right text-gray-900 font-medium">
                         {calculerTTC(t.prixHT, t.tva).toLocaleString('fr-FR')} €
                       </td>
                       <td className="py-2.5 px-1">
@@ -167,9 +167,9 @@ export default function TravauxStep({ data, onChange }) {
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t border-gray-600">
-                    <td className="py-3 px-3 text-white font-bold">Total</td>
-                    <td className="py-3 px-3 text-right text-white font-bold">
+                  <tr className="border-t border-gray-200">
+                    <td className="py-3 px-3 text-gray-900 font-bold">Total</td>
+                    <td className="py-3 px-3 text-right text-gray-900 font-bold">
                       {totalHT.toLocaleString('fr-FR')} €
                     </td>
                     <td></td>
@@ -186,25 +186,25 @@ export default function TravauxStep({ data, onChange }) {
       )}
 
       {/* PAC Air/Eau option */}
-      <div className="border-t border-gray-700 pt-4">
+      <div className="border-t border-gray-200 pt-4">
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
             checked={data.includePAC || false}
             onChange={(e) => onChange({ includePAC: e.target.checked })}
-            className="w-4 h-4 rounded border-gray-600 text-amber-500 focus:ring-amber-500"
+            className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
           />
-          <span className="text-sm text-gray-300">Inclure BAR-TH-171 (PAC Air/Eau)</span>
+          <span className="text-sm text-gray-600">Inclure BAR-TH-171 (PAC Air/Eau)</span>
         </label>
 
         {data.includePAC && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 ml-7">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Performance ETAS</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Performance ETAS</label>
               <select
                 value={data.pacEtas || 'high'}
                 onChange={(e) => onChange({ pacEtas: e.target.value })}
-                className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               >
                 {BAR_TH_171.ETAS_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -216,29 +216,29 @@ export default function TravauxStep({ data, onChange }) {
       </div>
 
       {/* Paramètres CEE */}
-      <div className="border-t border-gray-700 pt-4">
+      <div className="border-t border-gray-200 pt-4">
         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Paramètres CEE</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Prix CEE (€/MWh cumac)</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Prix CEE (€/MWh cumac)</label>
             <input
               type="number"
               value={data.priceMWh ?? 7}
               onChange={(e) => onChange({ priceMWh: Number(e.target.value) || 0 })}
               step={0.5}
               min={0}
-              className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">% CEE déduit au client</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">% CEE déduit au client</label>
             <input
               type="number"
               value={data.ceePercent ?? 100}
               onChange={(e) => onChange({ ceePercent: Number(e.target.value) || 0 })}
               min={0}
               max={100}
-              className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function TravauxStep({ data, onChange }) {
       {/* Recap en mode détaillé */}
       {mode === 'detaille' && travaux.length > 0 && (
         <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-500">
             Les montants HT/TTC seront automatiquement utilisés pour la synthèse financière.
           </p>
           <p className="text-amber-400 font-bold mt-1">

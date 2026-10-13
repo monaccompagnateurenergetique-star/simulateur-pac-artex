@@ -57,24 +57,24 @@ export default function SyntheseStep({ data }) {
           <BarChart3 className="w-5 h-5 text-indigo-400" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-white">Synthèse financière</h3>
-          <p className="text-sm text-gray-400">Estimation des aides par catégorie de revenus</p>
+          <h3 className="text-lg font-bold text-gray-900">Synthèse financière</h3>
+          <p className="text-sm text-gray-500">Estimation des aides par catégorie de revenus</p>
         </div>
       </div>
 
       {/* Recap projet */}
-      <div className="bg-white/5 border border-gray-700 rounded-xl p-4 flex flex-wrap gap-6">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-wrap gap-6">
         <div>
           <p className="text-xs text-gray-500 uppercase">Logement</p>
-          <p className="text-white font-medium">{data.typeLogement} — {data.surface} m²</p>
+          <p className="text-gray-900 font-medium">{data.typeLogement} — {data.surface} m²</p>
         </div>
         <div>
           <p className="text-xs text-gray-500 uppercase">DPE</p>
-          <p className="text-white font-medium">{data.classInitiale} → {data.classeCible} ({results.Bleu?.jump || 0} sauts)</p>
+          <p className="text-gray-900 font-medium">{data.classInitiale} → {data.classeCible} ({results.Bleu?.jump || 0} sauts)</p>
         </div>
         <div>
           <p className="text-xs text-gray-500 uppercase">Budget TTC</p>
-          <p className="text-white font-medium">{fmt(projectCostTTC)} €</p>
+          <p className="text-gray-900 font-medium">{fmt(projectCostTTC)} €</p>
         </div>
         {data.includePAC && (
           <div>
@@ -94,7 +94,7 @@ export default function SyntheseStep({ data }) {
             <div key={cat} className={`rounded-xl border ${colors.border} overflow-hidden`}>
               <div className={`${colors.header} px-4 py-3`}>
                 <p className={`font-bold ${colors.text}`}>{cat}</p>
-                <p className="text-xs text-gray-400">{CATEGORY_LABELS[cat]}</p>
+                <p className="text-xs text-gray-500">{CATEGORY_LABELS[cat]}</p>
               </div>
               <div className="p-4 space-y-3">
                 <Row label="Prime CEE" value={r.ceeApplied} colors={colors} />
@@ -107,15 +107,15 @@ export default function SyntheseStep({ data }) {
                 {r.amoAmount > 0 && (
                   <Row label="AMO (MAR)" value={r.amoAmount} colors={colors} />
                 )}
-                <div className="border-t border-gray-700 pt-3">
+                <div className="border-t border-gray-200 pt-3">
                   <Row label="Total aides" value={r.totalAides} colors={colors} bold />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Reste à charge</span>
-                  <span className="text-white font-bold text-lg">{fmt(r.resteACharge)} €</span>
+                  <span className="text-sm text-gray-500">Reste à charge</span>
+                  <span className="text-gray-900 font-bold text-lg">{fmt(r.resteACharge)} €</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-2 rounded-full bg-gray-700 overflow-hidden">
+                  <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
                     <div
                       className={`h-full rounded-full ${colors.bg.replace('/20', '')}`}
                       style={{ width: `${Math.min(r.tauxCouverture, 100)}%`, backgroundColor: colors.text.includes('blue') ? '#3b82f6' : colors.text.includes('yellow') ? '#eab308' : colors.text.includes('purple') ? '#a855f7' : '#ec4899' }}
@@ -130,7 +130,7 @@ export default function SyntheseStep({ data }) {
       </div>
 
       {/* Légende */}
-      <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs text-gray-500 space-y-1">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 text-xs text-gray-500 space-y-1">
         <p>Les montants sont indicatifs et dépendent des revenus fiscaux de référence du futur acquéreur.</p>
         <p>CEE = Certificats d'Économie d'Énergie | MPR = MaPrimeRénov' Parcours Accompagné | AMO = Mon Accompagnateur Rénov'</p>
       </div>
@@ -141,7 +141,7 @@ export default function SyntheseStep({ data }) {
 function Row({ label, value, colors, bold }) {
   return (
     <div className="flex items-center justify-between">
-      <span className={`text-sm ${bold ? 'text-white font-medium' : 'text-gray-400'}`}>{label}</span>
+      <span className={`text-sm ${bold ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>{label}</span>
       <span className={`text-sm font-medium ${value > 0 ? colors.text : 'text-gray-600'}`}>
         {value > 0 ? `- ${fmt(value)} €` : '—'}
       </span>

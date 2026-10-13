@@ -22,12 +22,12 @@ export default function AgenciesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-indigo-400" />
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
+            <Building2 className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Agences immobilières</h1>
-            <p className="text-sm text-gray-400">{agencies.length} agence{agencies.length > 1 ? 's' : ''} enregistrée{agencies.length > 1 ? 's' : ''}</p>
+            <h1 className="text-2xl font-bold text-gray-900">Agences immobilières</h1>
+            <p className="text-sm text-gray-500">{agencies.length} agence{agencies.length > 1 ? 's' : ''} enregistrée{agencies.length > 1 ? 's' : ''}</p>
           </div>
         </div>
         <Link
@@ -47,7 +47,7 @@ export default function AgenciesPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher une agence..."
-          className="w-full pl-11 pr-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         />
       </div>
 
@@ -56,8 +56,8 @@ export default function AgenciesPage() {
         <div className="text-center py-20 text-gray-500">Chargement...</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
-          <Building2 className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-          <p className="text-gray-400 text-lg mb-2">
+          <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 text-lg mb-2">
             {search ? 'Aucune agence trouvée' : 'Aucune agence enregistrée'}
           </p>
           {!search && (
@@ -76,17 +76,17 @@ export default function AgenciesPage() {
             <Link
               key={agency.id}
               to={`/admin/agences/${agency.id}`}
-              className="group bg-white/5 hover:bg-white/10 border border-gray-700 hover:border-indigo-500/50 rounded-2xl p-5 transition-all"
+              className="group bg-white hover:bg-gray-50 border border-gray-200 hover:border-indigo-500/50 rounded-2xl p-5 transition-all"
             >
               <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0">
-                  <Building2 className="w-5 h-5 text-indigo-400" />
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5 text-indigo-600" />
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-indigo-400 transition-colors" />
               </div>
-              <h3 className="text-white font-bold text-lg mb-1 truncate">{agency.name}</h3>
+              <h3 className="text-gray-900 font-bold text-lg mb-1 truncate">{agency.name}</h3>
               {agency.contact && (
-                <p className="text-sm text-gray-400 mb-3">{agency.contact}</p>
+                <p className="text-sm text-gray-500 mb-3">{agency.contact}</p>
               )}
               <div className="space-y-1.5 text-xs text-gray-500">
                 {(agency.address || agency.city) && (

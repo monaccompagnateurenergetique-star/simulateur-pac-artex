@@ -19,6 +19,7 @@ export default function AgencyFormPage() {
     email: '',
   })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     if (isEdit) {
@@ -45,6 +46,7 @@ export default function AgencyFormPage() {
     e.preventDefault()
     if (!form.name.trim()) return
     setSaving(true)
+    setError(null)
     try {
       if (isEdit) {
         await updateAgency(id, form)
@@ -55,6 +57,7 @@ export default function AgencyFormPage() {
       }
     } catch (err) {
       console.error('Save error:', err)
+      setError(err.message || 'Une erreur est survenue lors de l\'enregistrement.')
     } finally {
       setSaving(false)
     }
@@ -74,7 +77,7 @@ export default function AgencyFormPage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       <Link
         to={isEdit ? `/admin/agences/${id}` : '/admin/agences'}
-        className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Retour
@@ -84,23 +87,29 @@ export default function AgencyFormPage() {
         <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center">
           <Building2 className="w-6 h-6 text-indigo-400" />
         </div>
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-gray-900">
           {isEdit ? 'Modifier l\'agence' : 'Nouvelle agence'}
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white/5 border border-gray-700 rounded-2xl p-6">
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {fields.map((f) => (
             <div key={f.key} className={f.colSpan === 2 ? 'md:col-span-2' : ''}>
-              <label className="block text-sm font-medium text-gray-300 mb-1">{f.label}</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">{f.label}</label>
               <input
                 type={f.type || 'text'}
                 value={form[f.key]}
                 onChange={(e) => handleChange(f.key, e.target.value)}
                 placeholder={f.placeholder}
                 maxLength={f.maxLength}
-                className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
           ))}
@@ -110,7 +119,7 @@ export default function AgencyFormPage() {
           <button
             type="submit"
             disabled={saving || !form.name.trim()}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl font-medium transition-all"
+            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-medium transition-all"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {isEdit ? 'Enregistrer' : 'Créer l\'agence'}

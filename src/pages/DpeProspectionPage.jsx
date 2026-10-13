@@ -49,6 +49,28 @@ const CHAUFFAGE_FILTERS = [
   { value: 'Bois – Granulés (pellets)', label: 'Bois – Granulés' },
 ]
 
+const PERIODE_FILTERS = [
+  { value: '', label: 'Toutes périodes' },
+  { value: 'avant 1948', label: 'Avant 1948' },
+  { value: '1948-1974', label: '1948–1974' },
+  { value: '1975-1977', label: '1975–1977' },
+  { value: '1978-1982', label: '1978–1982' },
+  { value: '1983-1988', label: '1983–1988' },
+  { value: '1989-2000', label: '1989–2000' },
+  { value: '2001-2005', label: '2001–2005' },
+  { value: '2006-2012', label: '2006–2012' },
+  { value: '2013-2021', label: '2013–2021' },
+  { value: 'après 2021', label: 'Après 2021' },
+]
+
+const ISOLATION_FILTERS = [
+  { value: '', label: 'Toutes isolations' },
+  { value: 'insuffisante', label: 'Insuffisante' },
+  { value: 'moyenne', label: 'Moyenne' },
+  { value: 'bonne', label: 'Bonne' },
+  { value: 'très bonne', label: 'Très bonne' },
+]
+
 function exportCSV(items, filename) {
   const headers = [
     'Adresse', 'Code postal', 'Commune', 'Type', 'Surface m²',
@@ -94,6 +116,8 @@ export default function DpeProspectionPage() {
   const [etiquetteFilter, setEtiquetteFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [chauffageFilter, setChauffageFilter] = useState('')
+  const [periodeFilter, setPeriodeFilter] = useState('')
+  const [isolationFilter, setIsolationFilter] = useState('')
   const [sort, setSort] = useState('-date_etablissement_dpe')
   const [results, setResults] = useState(null)
   const [stats, setStats] = useState(null)
@@ -123,13 +147,15 @@ export default function DpeProspectionPage() {
           etiquette: etiquetteFilter,
           typeBatiment: typeFilter,
           chauffage: chauffageFilter,
+          periodeConstruction: periodeFilter,
+          isolationEnveloppe: isolationFilter,
           sort: newSort,
           page: newPage,
           size: 50,
         }
         const [data, statsData] = await Promise.all([
           prospectDPE(params),
-          newPage === 1 && isPostal ? getDPEStats(query.trim()).catch(() => null) : Promise.resolve(stats),
+          newPage === 1 ? getDPEStats({ postalCode: isPostal ? query.trim() : '', city: isPostal ? '' : query.trim() }).catch(() => null) : Promise.resolve(stats),
         ])
         setResults({ items: data.results, total: data.total })
         if (statsData && statsData !== stats) setStats(statsData)
@@ -141,7 +167,7 @@ export default function DpeProspectionPage() {
     } finally {
       setLoading(false)
     }
-  }, [query, mode, etiquetteFilter, typeFilter, chauffageFilter, sort, stats])
+  }, [query, mode, etiquetteFilter, typeFilter, chauffageFilter, periodeFilter, isolationFilter, sort, stats])
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -173,6 +199,8 @@ export default function DpeProspectionPage() {
           etiquette: etiquetteFilter,
           typeBatiment: typeFilter,
           chauffage: chauffageFilter,
+          periodeConstruction: periodeFilter,
+          isolationEnveloppe: isolationFilter,
           sort,
           page: p,
           size: 100,
@@ -193,7 +221,7 @@ export default function DpeProspectionPage() {
 
   const totalPages = results ? Math.ceil(results.total / 50) : 0
 
-  const activeFiltersCount = [etiquetteFilter, typeFilter, chauffageFilter].filter(Boolean).length
+  const activeFiltersCount = [etiquetteFilter, typeFilter, chauffageFilter, periodeFilter, isolationFilter].filter(Boolean).length
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
@@ -340,6 +368,32 @@ export default function DpeProspectionPage() {
                 <option key={c.value} value={c.value}>
                   {c.icon ? `${c.icon} ${c.label}` : c.label}
                 </option>
+              ))}
+            </select>
+
+            <select
+              value={periodeFilter}
+              onChange={(e) => { setPeriodeFilter(e.target.value); if (results) handleSearch(1) }}
+              className={`px-3 py-2 border rounded-lg text-xs font-medium transition ${
+                periodeFilter ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-700'
+              }`}
+            >
+              {PERIODE_FILTERS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+
+            <select
+              value={isolationFilter}
+              onChange={(e) => { setIsolationFilter(e.target.value); if (results) handleSearch(1) }}
+              className={`px-3 py-2 border rounded-lg text-xs font-medium transition ${
+                isolationFilter === 'insuffisante' ? 'bg-red-50 border-red-200 text-red-700'
+                  : isolationFilter ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-700'
+              }`}
+            >
+              {ISOLATION_FILTERS.map((i) => (
+                <option key={i.value} value={i.value}>{i.label}</option>
               ))}
             </select>
 
@@ -615,3 +669,4 @@ export default function DpeProspectionPage() {
     </div>
   )
 }
+
