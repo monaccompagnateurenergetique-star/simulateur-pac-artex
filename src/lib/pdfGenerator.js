@@ -5,7 +5,7 @@ import autoTable from 'jspdf-autotable'
 const C = {
   primary:      [17, 19, 24],
   primaryLight: [30, 34, 42],
-  brand:        [116, 191, 22],
+  brand:        [132, 204, 22],
   brandDark:    [74, 122, 15],
   brandLight:   [136, 219, 27],
   brandBg:      [245, 255, 235],

@@ -3,21 +3,22 @@ import autoTable from 'jspdf-autotable'
 
 /* ── Palette Artex ── */
 const C = {
-  primary: [17, 19, 24],
-  brand: [116, 191, 22],
-  brandDark: [74, 122, 15],
-  brandBg: [245, 255, 235],
-  indigo: [99, 102, 241],
-  indigoBg: [238, 242, 255],
-  amber: [245, 158, 11],
-  emerald: [16, 185, 129],
-  emeraldBg: [236, 253, 245],
-  red: [239, 68, 68],
-  text: [30, 41, 59],
-  textMuted: [100, 116, 139],
-  border: [226, 232, 240],
-  surface: [248, 250, 252],
-  white: [255, 255, 255],
+  primary:      [17, 19, 24],
+  primaryLight: [30, 34, 42],
+  brand:        [132, 204, 22],
+  brandDark:    [74, 122, 15],
+  brandLight:   [136, 219, 27],
+  brandBg:      [245, 255, 235],
+  amber:        [245, 158, 11],
+  emerald:      [16, 185, 129],
+  emeraldBg:    [236, 253, 245],
+  red:          [239, 68, 68],
+  text:         [30, 41, 59],
+  textMuted:    [100, 116, 139],
+  textLight:    [148, 163, 184],
+  border:       [226, 232, 240],
+  surface:      [248, 250, 252],
+  white:        [255, 255, 255],
 }
 
 const eur = (v) => `${Math.round(Number(v) || 0).toLocaleString('fr-FR')} EUR`
@@ -32,7 +33,7 @@ function drawCard(doc, x, y, w, h, { radius = 3, fill = C.white } = {}) {
   doc.roundedRect(x, y, w, h, radius, radius, 'S')
 }
 
-function drawSection(doc, title, x, y, accent = C.indigo) {
+function drawSection(doc, title, x, y, accent = C.brand) {
   doc.setFillColor(...accent)
   doc.roundedRect(x, y, 1.2, 6, 0.6, 0.6, 'F')
   doc.setFontSize(10.5)
@@ -42,7 +43,7 @@ function drawSection(doc, title, x, y, accent = C.indigo) {
   return y + 10
 }
 
-function drawKpi(doc, x, y, w, label, value, sub, accent = C.indigo) {
+function drawKpi(doc, x, y, w, label, value, sub, accent = C.brand) {
   drawCard(doc, x, y, w, 26)
   doc.setFillColor(...accent)
   doc.roundedRect(x + 4, y + 4, 6, 6, 1.5, 1.5, 'F')
@@ -91,10 +92,12 @@ export function generatePvPdf({
   const pw = W - 2 * M // page width usable
 
   // ═══════ HEADER ═══════
+  doc.setFillColor(...C.brandLight)
+  doc.rect(0, 0, W, 1.8, 'F')
   doc.setFillColor(...C.primary)
-  doc.rect(0, 0, W, 36, 'F')
+  doc.rect(0, 1.8, W, 34.2, 'F')
   doc.setFillColor(...C.brand)
-  doc.rect(0, 36, W, 2, 'F')
+  doc.rect(0, 36, W, 0.6, 'F')
 
   doc.setFontSize(18)
   doc.setFont('helvetica', 'bold')
@@ -119,10 +122,10 @@ export function generatePvPdf({
   let y = 44
 
   // ═══════ HERO — Installation ═══════
-  drawCard(doc, M, y, pw, 28, { fill: [79, 70, 229] }) // indigo-600
+  drawCard(doc, M, y, pw, 28, { fill: C.primary })
   doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(200, 200, 255)
+  doc.setTextColor(140, 150, 170)
 
   const col3 = pw / 3
   doc.text('INSTALLATION', M + 6, y + 7)
@@ -132,7 +135,7 @@ export function generatePvPdf({
   doc.text(`${kwc} kWc`, M + 6, y + 16)
   doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(200, 200, 255)
+  doc.setTextColor(140, 150, 170)
   doc.text(`${nbPanneaux} panneaux${batteryKwh > 0 ? ` + batterie ${batteryKwh} kWh` : ''}`, M + 6, y + 22)
 
   doc.text('PRODUCTION', M + col3 + 4, y + 7)
@@ -142,7 +145,7 @@ export function generatePvPdf({
   doc.text(kwh(production.annualKwh), M + col3 + 4, y + 16)
   doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(200, 200, 255)
+  doc.setTextColor(140, 150, 170)
   doc.text(`par an — ${regionLabel}`, M + col3 + 4, y + 22)
 
   doc.text('COUVERTURE', M + col3 * 2 + 4, y + 7)
@@ -152,17 +155,17 @@ export function generatePvPdf({
   doc.text(`${fin.tauxCouvertureProd} %`, M + col3 * 2 + 4, y + 16)
   doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(200, 200, 255)
+  doc.setTextColor(140, 150, 170)
   doc.text(`autoconso ${fin.autoconsoEffective}%`, M + col3 * 2 + 4, y + 22)
 
   y += 34
 
   // ═══════ KPIs ═══════
   const kpiW = (pw - 6) / 4
-  drawKpi(doc, M, y, kpiW, 'Cout net', eur(fin.coutNet), `${eur(fin.coutBrut)} - ${eur(fin.prime)} prime`, C.indigo)
+  drawKpi(doc, M, y, kpiW, 'Cout net', eur(fin.coutNet), `${eur(fin.coutBrut)} - ${eur(fin.prime)} prime`, C.brand)
   drawKpi(doc, M + kpiW + 2, y, kpiW, 'Economie an 1', eur(fin.economieAn1), `${fin.tauxAutoproduction}% autoproduction`, C.emerald)
   drawKpi(doc, M + (kpiW + 2) * 2, y, kpiW, 'Amortissement', fin.paybackAnnee ? `${fin.paybackAnnee.toFixed(1)} ans` : '> duree vie', 'Retour sur investissement', C.amber)
-  drawKpi(doc, M + (kpiW + 2) * 3, y, kpiW, `Gain net 30 ans`, eur(fin.gainNetFinal), `ROI ${fin.roi}%`, C.indigo)
+  drawKpi(doc, M + (kpiW + 2) * 3, y, kpiW, `Gain net 30 ans`, eur(fin.gainNetFinal), `ROI ${fin.roi}%`, C.brand)
 
   y += 32
 
@@ -197,7 +200,7 @@ export function generatePvPdf({
         `${s.fin.roi}%`,
       ]),
       styles: { fontSize: 7.5, cellPadding: 3, textColor: C.text },
-      headStyles: { fillColor: C.indigo, textColor: C.white, fontStyle: 'bold', fontSize: 7 },
+      headStyles: { fillColor: C.brand, textColor: C.white, fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: C.surface },
       columnStyles: {
         0: { fontStyle: 'bold' },
@@ -261,7 +264,7 @@ export function generatePvPdf({
         0: { fontStyle: 'bold' },
         1: { halign: 'right' },
         2: { halign: 'right' },
-        3: { halign: 'right', textColor: C.indigo },
+        3: { halign: 'right', textColor: C.brand },
         4: { halign: 'right', textColor: C.emerald },
         5: { halign: 'right', textColor: C.red },
       },
@@ -289,16 +292,17 @@ export function generatePvPdf({
 
   // ═══════ Footer ═══════
   const pageH = 297
+  doc.setDrawColor(...C.border)
+  doc.setLineWidth(0.3)
+  doc.line(M, pageH - 15, W - M, pageH - 15)
+  doc.setLineWidth(0.2)
   doc.setFontSize(6)
-  doc.setFont('helvetica', 'italic')
-  doc.setTextColor(...C.textMuted)
-  doc.text('Estimation indicative — modele de productible regional. Tarifs et couts par defaut, a ajuster selon devis reel. Document non contractuel.', M, pageH - 12)
-  doc.setFillColor(...C.brand)
-  doc.rect(0, pageH - 6, W, 6, 'F')
-  doc.setFontSize(7)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...C.white)
-  doc.text('Artex360 — Simulateurs CEE & Aides', W / 2, pageH - 2.5, { align: 'center' })
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...C.textLight)
+  doc.text('Estimation indicative — modele de productible regional. Tarifs et couts par defaut, a ajuster selon devis reel. Non contractuel.', W / 2, pageH - 11, { align: 'center', maxWidth: pw })
+  doc.text(`Artex360 — Document genere le ${new Date().toLocaleDateString('fr-FR')}`, W / 2, pageH - 7, { align: 'center' })
+  doc.setFillColor(...C.brandLight)
+  doc.rect(0, pageH - 2, W, 2, 'F')
 
   return doc
 }

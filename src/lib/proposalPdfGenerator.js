@@ -3,11 +3,13 @@ import autoTable from 'jspdf-autotable'
 
 // ─── Palette ───
 const C = {
-  primary:      [30, 27, 75],
-  primaryLight: [99, 102, 241],
+  primary:      [17, 19, 24],
+  primaryLight: [148, 163, 184],
+  brand:        [132, 204, 22],
+  brandDark:    [74, 122, 15],
+  brandLight:   [136, 219, 27],
   green:        [22, 101, 52],
   greenLight:   [34, 197, 94],
-  emerald:      [16, 185, 129],
   blue:         [37, 99, 235],
   blueLight:    [59, 130, 246],
   orange:       [234, 88, 12],
@@ -131,7 +133,7 @@ function drawBar(doc, x, y, w, totalCost, cee, mpr, rac) {
   if (cee > 0) {
     const pct = cee / totalCost
     const bw = Math.max(5, w * pct)
-    doc.setFillColor(...C.emerald)
+    doc.setFillColor(...C.brand)
     doc.roundedRect(bx, y, bw, h, 1.5, 1.5, 'F')
     if (bw > 14) {
       doc.setFontSize(5)
@@ -176,7 +178,7 @@ function drawBar(doc, x, y, w, totalCost, cee, mpr, rac) {
   let lx = x
 
   if (cee > 0) {
-    doc.setFillColor(...C.emerald)
+    doc.setFillColor(...C.brand)
     doc.roundedRect(lx, y - 2, 3, 3, 0.8, 0.8, 'F')
     doc.setTextColor(...C.text)
     doc.setFont('helvetica', 'bold')
@@ -206,7 +208,9 @@ function drawFooter(doc, W, mx, cw, dateStr) {
   const H = doc.internal.pageSize.getHeight()
   const fy = H - 12
   doc.setDrawColor(...C.border)
+  doc.setLineWidth(0.3)
   doc.line(mx, fy - 4, W - mx, fy - 4)
+  doc.setLineWidth(0.2)
   doc.setFontSize(6)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...C.textLight)
@@ -215,9 +219,12 @@ function drawFooter(doc, W, mx, cw, dateStr) {
     W / 2, fy, { align: 'center', maxWidth: cw }
   )
   doc.text(
-    `Document genere le ${dateStr} via Artex360 — Plateforme d'outils pour artisans en renovation energetique.`,
+    `Artex360 — Document genere le ${dateStr}`,
     W / 2, fy + 4, { align: 'center', maxWidth: cw }
   )
+  // Bottom accent stripe
+  doc.setFillColor(...C.brandLight)
+  doc.rect(0, H - 2, W, 2, 'F')
 }
 
 /**
@@ -244,10 +251,12 @@ export function generateProposalPDF({
   // ════════════════════════════════════════════
   //  PAGE 1 — EN-TETE
   // ════════════════════════════════════════════
+  doc.setFillColor(...C.brandLight)
+  doc.rect(0, 0, W, 1.8, 'F')
   doc.setFillColor(...C.primary)
-  doc.rect(0, 0, W, 38, 'F')
-  doc.setFillColor(...C.emerald)
-  doc.rect(0, 38, W, 1.2, 'F')
+  doc.rect(0, 1.8, W, 37.2, 'F')
+  doc.setFillColor(...C.brand)
+  doc.rect(0, 39, W, 0.6, 'F')
 
   if (company.logo) {
     try { doc.addImage(company.logo, 'AUTO', mx, 5, 26, 26) } catch (e) { /* skip */ }
@@ -270,7 +279,7 @@ export function generateProposalPDF({
 
   if (company.siret || company.rge) {
     doc.setFontSize(6.5)
-    doc.setTextColor(180, 180, 210)
+    doc.setTextColor(110, 120, 140)
     if (company.siret) doc.text(`SIRET : ${company.siret}`, W - mx, 14, { align: 'right' })
     if (company.rge) doc.text(`RGE : ${company.rge}`, W - mx, 18, { align: 'right' })
   }
@@ -286,7 +295,7 @@ export function generateProposalPDF({
   doc.text('PROPOSITION COMMERCIALE', W / 2, y, { align: 'center' })
 
   y += 5
-  const accentLine = C.emerald
+  const accentLine = C.brand
   doc.setDrawColor(...accentLine)
   doc.setLineWidth(0.8)
   doc.line(W / 2 - 30, y, W / 2 + 30, y)
@@ -308,7 +317,7 @@ export function generateProposalPDF({
   doc.roundedRect(mx, y, leftW, 30, 3, 3, 'S')
 
   doc.setFontSize(7)
-  doc.setTextColor(...C.emerald)
+  doc.setTextColor(...C.brand)
   doc.setFont('helvetica', 'bold')
   doc.text('BENEFICIAIRE', mx + 5, y + 6)
 
@@ -332,7 +341,7 @@ export function generateProposalPDF({
   doc.roundedRect(rightX, y, rightW, 30, 3, 3, 'S')
 
   doc.setFontSize(7)
-  doc.setTextColor(...C.emerald)
+  doc.setTextColor(...C.brand)
   doc.setFont('helvetica', 'bold')
   doc.text('REFERENCE', rightX + 5, y + 6)
 
@@ -349,7 +358,7 @@ export function generateProposalPDF({
   if (project.surface) infoParts.push(`${project.surface} m2`)
   if (infoParts.length > 0) {
     doc.setFontSize(7)
-    doc.setTextColor(...C.primaryLight)
+    doc.setTextColor(...C.brand)
     doc.setFont('helvetica', 'bold')
     doc.text(infoParts.join(' | '), rightX + 5, y + 28)
   }
@@ -384,7 +393,7 @@ export function generateProposalPDF({
     // Badge jumps
     if (jumps > 0) {
       const jumpLabel = `+${jumps} classe${jumps > 1 ? 's' : ''}`
-      doc.setFillColor(...C.emerald)
+      doc.setFillColor(...C.brand)
       const jw = doc.getTextWidth(jumpLabel) + 7
       doc.roundedRect(W - mx - jw - 4, y + 2, jw, 7, 2.5, 2.5, 'F')
       doc.setFontSize(6)
@@ -482,7 +491,7 @@ export function generateProposalPDF({
       textColor: C.text,
       cellPadding: 2.5,
       fontStyle: 'bold',
-      fillColor: [238, 242, 255],
+      fillColor: [245, 255, 235],
     },
     columnStyles: {
       0: { cellWidth: cw * 0.28 },
@@ -509,8 +518,8 @@ export function generateProposalPDF({
   const isMainlyAnah = mprTotal > 0 && mprTotal >= ceeTotal
   const synthDarkBg = isMainlyAnah ? [5, 46, 22] : C.primary
   const synthAccent = isMainlyAnah ? C.greenLight : C.yellow
-  const synthMuted = isMainlyAnah ? [150, 200, 170] : [180, 190, 220]
-  const synthSep = isMainlyAnah ? [40, 90, 50] : [80, 70, 140]
+  const synthMuted = isMainlyAnah ? [150, 200, 170] : [140, 150, 170]
+  const synthSep = isMainlyAnah ? [40, 90, 50] : [50, 55, 70]
 
   // Bandeau info MPR si ANAH
   if (isMainlyAnah && renoSim) {
@@ -662,7 +671,7 @@ export function generateProposalPDF({
     // Cout total
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
-    doc.setTextColor(180, 190, 220)
+    doc.setTextColor(140, 150, 170)
     doc.text('Cout total des travaux', synthLeft, sy)
     doc.setTextColor(...C.white)
     doc.setFont('helvetica', 'bold')
@@ -672,7 +681,7 @@ export function generateProposalPDF({
     // CEE
     if (ceeTotal > 0) {
       doc.setFont('helvetica', 'normal')
-      doc.setTextColor(180, 190, 220)
+      doc.setTextColor(140, 150, 170)
       doc.text('Prime CEE deduite', synthLeft, sy)
       doc.setTextColor(...C.yellow)
       doc.setFont('helvetica', 'bold')
@@ -683,7 +692,7 @@ export function generateProposalPDF({
     // MPR
     if (mprTotal > 0) {
       doc.setFont('helvetica', 'normal')
-      doc.setTextColor(180, 190, 220)
+      doc.setTextColor(140, 150, 170)
       doc.text("MaPrimeRenov'", synthLeft, sy)
       doc.setTextColor(...C.greenLight)
       doc.setFont('helvetica', 'bold')
@@ -694,23 +703,23 @@ export function generateProposalPDF({
     // PTZ
     if (scenario.ptz && totals.ptzMontant > 0) {
       doc.setFont('helvetica', 'normal')
-      doc.setTextColor(180, 190, 220)
+      doc.setTextColor(140, 150, 170)
       doc.text(`Pret a Taux Zero (${scenario.ptz.dureeTotale || 0} ans)`, synthLeft, sy)
-      doc.setTextColor(...C.primaryLight)
+      doc.setTextColor(...C.blueLight)
       doc.setFont('helvetica', 'bold')
       doc.text(fmt(totals.ptzMontant), synthRight, sy, { align: 'right' })
       sy += 8
     }
 
     // Separateur
-    doc.setDrawColor(80, 70, 140)
+    doc.setDrawColor(50, 55, 70)
     doc.line(synthLeft, sy, synthRight, sy)
     sy += 7
 
     // Total Aides
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(180, 190, 220)
+    doc.setTextColor(140, 150, 170)
     doc.text('TOTAL DES AIDES', synthLeft, sy)
     doc.setTextColor(...C.yellow)
     doc.setFontSize(13)
@@ -741,14 +750,14 @@ export function generateProposalPDF({
   //  PTZ DETAIL
   // ════════════════════════════════════════════
   if (scenario.ptz && totals.ptzMontant > 0) {
-    doc.setFillColor(238, 242, 255)
+    doc.setFillColor(245, 255, 235)
     doc.roundedRect(mx, y, cw, 16, 2, 2, 'F')
-    doc.setDrawColor(...C.primaryLight)
+    doc.setDrawColor(...C.blueLight)
     doc.roundedRect(mx, y, cw, 16, 2, 2, 'S')
 
     doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...C.primaryLight)
+    doc.setTextColor(...C.blueLight)
     doc.text('Pret a Taux Zero (PTZ)', mx + 5, y + 6)
 
     doc.setFontSize(7)
@@ -773,7 +782,7 @@ export function generateProposalPDF({
   doc.text('VOS AVANTAGES', mx, y)
   y += 5
 
-  const advAccent = isMainlyAnah ? C.greenLight : C.emerald
+  const advAccent = isMainlyAnah ? C.greenLight : C.brand
   const advantages = isMainlyAnah ? [
     { icon: 'M', text: "MaPrimeRenov' : jusqu'a 80% de prise en charge selon vos revenus" },
     { icon: 'E', text: "Economies d'energie : reduisez vos factures de chauffage durablement" },
@@ -811,7 +820,7 @@ export function generateProposalPDF({
     // Mini header page 2
     doc.setFillColor(...C.primary)
     doc.rect(0, 0, W, 12, 'F')
-    doc.setFillColor(...(isMainlyAnah ? C.greenLight : C.emerald))
+    doc.setFillColor(...(isMainlyAnah ? C.greenLight : C.brand))
     doc.rect(0, 12, W, 1, 'F')
     doc.setTextColor(...C.white)
     doc.setFontSize(9)
@@ -832,11 +841,11 @@ export function generateProposalPDF({
       // Bandeau titre du poste
       doc.setFillColor(245, 247, 250)
       doc.roundedRect(mx, y, cw, 10, 2, 2, 'F')
-      doc.setDrawColor(...(isMainlyAnah ? C.greenLight : C.emerald))
+      doc.setDrawColor(...(isMainlyAnah ? C.greenLight : C.brand))
       doc.roundedRect(mx, y, cw, 10, 2, 2, 'S')
 
       // Numero
-      doc.setFillColor(...(isMainlyAnah ? C.greenLight : C.emerald))
+      doc.setFillColor(...(isMainlyAnah ? C.greenLight : C.brand))
       doc.circle(mx + 6, y + 5, 3.5, 'F')
       doc.setFontSize(7)
       doc.setTextColor(...C.white)
@@ -845,7 +854,7 @@ export function generateProposalPDF({
 
       // Code fiche
       doc.setFontSize(7)
-      doc.setTextColor(...C.primaryLight)
+      doc.setTextColor(...C.brand)
       doc.text(sim.type || '', mx + 12, y + 5)
 
       // Titre
