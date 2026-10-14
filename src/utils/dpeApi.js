@@ -50,6 +50,32 @@ const SELECTED_FIELDS = [
   'adresse_ban',
   'code_postal_ban',
   'nom_commune_ban',
+  '_geopoint',
+  'deperditions_murs',
+  'deperditions_baies_vitrees',
+  'deperditions_planchers_bas',
+  'deperditions_planchers_hauts',
+  'deperditions_ponts_thermiques',
+  'deperditions_renouvellement_air',
+  'deperditions_enveloppe',
+  'deperditions_portes',
+  'description_generateur_chauffage_n1_installation_n1',
+  'description_generateur_n1_ecs_n1',
+  'ubat_w_par_m2_k',
+  'zone_climatique',
+  'classe_inertie_batiment',
+  'hauteur_sous_plafond',
+  'indicateur_confort_ete',
+  'nombre_niveau_logement',
+  'qualite_isolation_plancher_haut_comble_perdu',
+  'cout_ecs',
+  'cout_eclairage',
+  'emission_ges_5_usages_par_m2',
+  'emission_ges_chauffage',
+  'emission_ges_ecs',
+  'conso_chauffage_ep',
+  'conso_ecs_ep',
+  'date_visite_diagnostiqueur',
 ].join(',')
 
 /**
@@ -275,7 +301,127 @@ function formatDPE(raw) {
     observatoireUrl: raw.numero_dpe
       ? `https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${raw.numero_dpe}`
       : null,
+    geopoint: raw._geopoint || null,
+    deperditions: {
+      murs: raw.deperditions_murs ? Number(raw.deperditions_murs) : null,
+      baiesVitrees: raw.deperditions_baies_vitrees ? Number(raw.deperditions_baies_vitrees) : null,
+      planchersBas: raw.deperditions_planchers_bas ? Number(raw.deperditions_planchers_bas) : null,
+      planchersHauts: raw.deperditions_planchers_hauts ? Number(raw.deperditions_planchers_hauts) : null,
+      pontsThermiques: raw.deperditions_ponts_thermiques ? Number(raw.deperditions_ponts_thermiques) : null,
+      renouvellementAir: raw.deperditions_renouvellement_air ? Number(raw.deperditions_renouvellement_air) : null,
+      portes: raw.deperditions_portes ? Number(raw.deperditions_portes) : null,
+      enveloppe: raw.deperditions_enveloppe ? Number(raw.deperditions_enveloppe) : null,
+    },
+    descriptionChauffage: raw.description_generateur_chauffage_n1_installation_n1 || null,
+    descriptionEcs: raw.description_generateur_n1_ecs_n1 || null,
+    ubat: raw.ubat_w_par_m2_k ? Number(raw.ubat_w_par_m2_k) : null,
+    zoneClimatique: raw.zone_climatique || null,
+    inertie: raw.classe_inertie_batiment || null,
+    hauteurSousPlafond: raw.hauteur_sous_plafond ? Number(raw.hauteur_sous_plafond) : null,
+    confortEte: raw.indicateur_confort_ete || null,
+    nombreNiveauxLogement: raw.nombre_niveau_logement ? Number(raw.nombre_niveau_logement) : null,
+    isolationPlancherHaut: raw.qualite_isolation_plancher_haut_comble_perdu || null,
+    coutEcs: raw.cout_ecs ? Math.round(Number(raw.cout_ecs)) : null,
+    coutEclairage: raw.cout_eclairage ? Math.round(Number(raw.cout_eclairage)) : null,
+    emissionGesM2: raw.emission_ges_5_usages_par_m2 ? Math.round(Number(raw.emission_ges_5_usages_par_m2)) : null,
+    emissionGesChauffage: raw.emission_ges_chauffage ? Math.round(Number(raw.emission_ges_chauffage)) : null,
+    emissionGesEcs: raw.emission_ges_ecs ? Math.round(Number(raw.emission_ges_ecs)) : null,
+    consoChauffage: raw.conso_chauffage_ep ? Math.round(Number(raw.conso_chauffage_ep)) : null,
+    consoEcs: raw.conso_ecs_ep ? Math.round(Number(raw.conso_ecs_ep)) : null,
+    dateVisite: raw.date_visite_diagnostiqueur || null,
   }
+}
+
+export function computeRenoScore(dpe) {
+  let score = 0
+  const details = { gestesIsolation: [], remplacementChauffage: false, passoire: false }
+
+  // Passoire thermique (E/F/G)
+  if ('EFG'.includes(dpe.etiquetteDpe)) {
+    score += dpe.etiquetteDpe === 'G' ? 30 : dpe.etiquetteDpe === 'F' ? 25 : 15
+    details.passoire = 'FG'.includes(dpe.etiquetteDpe)
+  }
+
+  // Isolation insuffisante = geste de reno necessaire
+  const isoChecks = [
+    { key: 'isolationMurs', label: 'Isolation murs' },
+    { key: 'isolationPlancherBas', label: 'Isolation plancher bas' },
+    { key: 'isolationPlancherHaut', label: 'Isolation combles/toiture' },
+    { key: 'isolationMenuiseries', label: 'Remplacement menuiseries' },
+  ]
+  for (const { key, label } of isoChecks) {
+    const val = (dpe[key] || '').toLowerCase()
+    if (val.includes('insuffisante')) {
+      score += 15
+      details.gestesIsolation.push(label)
+    } else if (val.includes('moyenne')) {
+      score += 5
+    }
+  }
+
+  // Chauffage gaz/fioul -> remplacement PAC
+  const energie = (dpe.energieChauffage || '').toLowerCase()
+  if (/gaz|fioul|propane|butane|gpl/.test(energie)) {
+    score += 20
+    details.remplacementChauffage = true
+  }
+
+  // Bonus surface (>80m2 = plus rentable pour PAC)
+  if (dpe.surface && dpe.surface >= 80) score += 5
+
+  // Cible reno globale: E/F/G + >=2 gestes isolation + remplacement chauffage
+  details.cibleRenoGlobale = 'EFG'.includes(dpe.etiquetteDpe) && details.gestesIsolation.length >= 2 && details.remplacementChauffage
+  if (details.cibleRenoGlobale) score += 10
+
+  details.score = Math.min(score, 100)
+  details.niveau = score >= 70 ? 'excellent' : score >= 50 ? 'bon' : score >= 30 ? 'moyen' : 'faible'
+
+  return details
+}
+
+export function computePacScore(dpe) {
+  let score = 0
+  const details = { eligible: false, raisons: [] }
+
+  const energie = (dpe.energieChauffage || '').toLowerCase()
+  const isGazFioul = /gaz|fioul|propane|butane|gpl/.test(energie)
+
+  if (!isGazFioul) return { score: 0, eligible: false, raisons: ['Chauffage non gaz/fioul'], niveau: 'non-eligible' }
+
+  score += 30
+  details.eligible = true
+  if (/fioul/.test(energie)) {
+    score += 15
+    details.raisons.push('Fioul = remplacement prioritaire')
+  } else {
+    details.raisons.push('Gaz = éligible PAC')
+  }
+
+  if ('EFG'.includes(dpe.etiquetteDpe)) {
+    score += dpe.etiquetteDpe === 'G' ? 20 : dpe.etiquetteDpe === 'F' ? 15 : 10
+    details.raisons.push(`DPE ${dpe.etiquetteDpe} = aides majorées`)
+  }
+
+  if (dpe.surface) {
+    if (dpe.surface >= 100) { score += 15; details.raisons.push('Grande surface = rentabilité PAC élevée') }
+    else if (dpe.surface >= 60) { score += 10; details.raisons.push('Surface adaptée PAC') }
+    else { score += 5 }
+  }
+
+  if (dpe.typeBatiment === 'maison') {
+    score += 10
+    details.raisons.push('Maison individuelle = installation facile')
+  }
+
+  if (dpe.coutChauffage && dpe.coutChauffage >= 1500) {
+    score += 10
+    details.raisons.push(`Facture chauffage élevée (${dpe.coutChauffage} €/an)`)
+  }
+
+  details.score = Math.min(score, 100)
+  details.niveau = score >= 70 ? 'excellent' : score >= 50 ? 'bon' : score >= 30 ? 'moyen' : 'faible'
+
+  return details
 }
 
 /**

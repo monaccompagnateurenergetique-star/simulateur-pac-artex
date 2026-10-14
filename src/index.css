@@ -89,6 +89,12 @@
 .animate-slide-up { animation: slide-up 0.5s ease-out; }
 .animate-result-pop { animation: result-pop 0.35s ease-out; }
 
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-right { animation: slide-in-right 0.3s ease-out; }
+
 /* ── Leaflet z-index containment ──
    Leaflet uses z-index 400+ internally. This constrains the map
    container so its internal layers don't overlap page elements
