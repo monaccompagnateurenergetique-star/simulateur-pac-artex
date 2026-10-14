@@ -74,6 +74,12 @@ const ISOLATION_FILTERS = [
   { value: 'très bonne', label: 'Très bonne' },
 ]
 
+const INSTALLATION_FILTERS = [
+  { value: '', label: 'Collectif / Individuel' },
+  { value: 'collectif', label: 'Collectif' },
+  { value: 'individuel', label: 'Individuel' },
+]
+
 function exportCSV(items, filename) {
   const headers = [
     'Adresse', 'Code postal', 'Commune', 'Type', 'Surface m²',
@@ -194,6 +200,7 @@ export default function DpeProspectionPage() {
   const [chauffageFilter, setChauffageFilter] = useState('')
   const [periodeFilter, setPeriodeFilter] = useState('')
   const [isolationFilter, setIsolationFilter] = useState('')
+  const [installationFilter, setInstallationFilter] = useState('')
   const [sort, setSort] = useState('-date_etablissement_dpe')
   const [results, setResults] = useState(null)
   const [stats, setStats] = useState(null)
@@ -252,6 +259,7 @@ export default function DpeProspectionPage() {
           chauffage: chauffageFilter,
           periodeConstruction: periodeFilter,
           isolationEnveloppe: isolationFilter,
+          installationChauffage: installationFilter,
           sort: newSort,
           page: newPage,
           size: 50,
@@ -270,7 +278,7 @@ export default function DpeProspectionPage() {
     } finally {
       setLoading(false)
     }
-  }, [query, mode, etiquetteFilter, typeFilter, chauffageFilter, periodeFilter, isolationFilter, sort, stats])
+  }, [query, mode, etiquetteFilter, typeFilter, chauffageFilter, periodeFilter, isolationFilter, installationFilter, sort, stats])
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -303,6 +311,7 @@ export default function DpeProspectionPage() {
           typeBatiment: typeFilter,
           chauffage: chauffageFilter,
           periodeConstruction: periodeFilter,
+          installationChauffage: installationFilter,
           isolationEnveloppe: isolationFilter,
           sort,
           page: p,
@@ -324,7 +333,7 @@ export default function DpeProspectionPage() {
 
   const totalPages = results ? Math.ceil(results.total / 50) : 0
 
-  const activeFiltersCount = [etiquetteFilter, typeFilter, chauffageFilter, periodeFilter, isolationFilter].filter(Boolean).length
+  const activeFiltersCount = [etiquetteFilter, typeFilter, chauffageFilter, periodeFilter, isolationFilter, installationFilter].filter(Boolean).length
 
   const renoStats = useMemo(() => {
     if (!results?.items?.length) return null
@@ -507,10 +516,30 @@ export default function DpeProspectionPage() {
               ))}
             </select>
 
+            <select
+              value={installationFilter}
+              onChange={(e) => { setInstallationFilter(e.target.value); if (results) handleSearch(1) }}
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-[11px] sm:text-xs font-medium transition ${
+                installationFilter === 'collectif' ? 'bg-purple-50 border-purple-300 text-purple-700'
+                  : installationFilter ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-700'
+              }`}
+            >
+              {INSTALLATION_FILTERS.map((inst) => (
+                <option key={inst.value} value={inst.value}>{inst.label}</option>
+              ))}
+            </select>
+
             {chauffageFilter === 'gaz_fioul' && (
               <span className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700">
                 <Droplets className="w-3.5 h-3.5" />
                 Prospects PAC Air/Eau
+              </span>
+            )}
+            {installationFilter === 'collectif' && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg text-xs font-semibold text-purple-700">
+                <Building2 className="w-3.5 h-3.5" />
+                PAC Collective BAR-TH-179
               </span>
             )}
           </div>
