@@ -125,6 +125,25 @@ export function useNotifications() {
       })
     }
 
+    // Scan leads "à rappeler" depuis plus de 24h
+    const _24h = 24 * 60 * 60 * 1000
+    for (const lead of leads) {
+      if (lead.status !== 'a_rappeler') continue
+      const statusDate = lead.statusChangedAt || lead.createdAt
+      const age = now - new Date(statusDate)
+      if (age < _24h) continue
+      const key = lead.id + '_rappel_24h'
+      if (existingIds.has(key)) continue
+      newNotifs.push({
+        type: 'lead_followup',
+        title: `Rappel en attente depuis 24h`,
+        message: `${lead.firstName || lead.phone || lead.email || 'Sans nom'} doit être rappelé`,
+        entityType: 'lead',
+        entityId: lead.id,
+        dueAt: null,
+      })
+    }
+
     // Ajouter les nouvelles notifications
     if (newNotifs.length > 0) {
       setNotifications((prev) => [

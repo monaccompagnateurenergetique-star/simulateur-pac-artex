@@ -215,12 +215,12 @@ export default function LeadDetailPage() {
       {!isConverted && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Statut du lead</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="flex flex-wrap gap-2">
             {LEAD_STATUSES.filter((s) => s.value !== 'converti').map((s) => (
               <button
                 key={s.value}
                 onClick={() => updateLeadStatus(lead.id, s.value)}
-                className={`p-2.5 rounded-lg border-2 text-sm font-semibold transition ${
+                className={`flex-1 min-w-[100px] p-2.5 rounded-lg border-2 text-sm font-semibold transition ${
                   lead.status === s.value
                     ? `${s.color} border-current ring-2 ring-offset-1`
                     : 'border-gray-200 text-gray-400 hover:border-gray-300'

@@ -87,7 +87,7 @@ export default function LeadsPage() {
       </div>
 
       {/* Pipeline summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6">
         {activeStatuses.map((s) => (
           <button
             key={s.value}
